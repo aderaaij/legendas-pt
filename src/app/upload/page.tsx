@@ -5,13 +5,11 @@ import {
   ArrowLeft,
   Upload,
   BookOpen,
-  Download,
   FileText,
   Languages,
 } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
-import AnkiExporter from "@/app/components/AnkiExporter";
 import Link from "next/link";
 
 export interface SubtitleMetadata {
@@ -74,7 +72,7 @@ export default function UploadPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Step 1: Upload Subtitles */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -106,18 +104,6 @@ export default function UploadPage() {
             />
           </div>
 
-          {/* Step 3: Export to Anki */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-purple-100 p-2 rounded-full">
-                <Download className="w-5 h-5 text-purple-600" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                3. Export to Anki
-              </h2>
-            </div>
-            <AnkiExporter phrases={phrases} />
-          </div>
         </div>
 
         {/* Phrases Preview */}

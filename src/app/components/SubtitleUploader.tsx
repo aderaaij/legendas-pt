@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { SubtitleMetadata } from "../upload/page";
+import { useSubtitleUploader } from "@/hooks/useSubtitleUploade";
 
 interface SubtitleUploaderProps {
   onSubtitleLoad: (
@@ -12,208 +13,25 @@ interface SubtitleUploaderProps {
   ) => void;
 }
 
-interface DetectedMetadata {
-  source?: string;
-  showName?: string;
-  season?: number;
-  episodeNumber?: number;
-  language?: string;
-  confidence: number;
-}
-
 export default function SubtitleUploader({
   onSubtitleLoad,
 }: SubtitleUploaderProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [fileName, setFileName] = useState<string>("");
-  const [detectedMetadata, setDetectedMetadata] =
-    useState<DetectedMetadata | null>(null);
-  const [metadata, setMetadata] = useState<SubtitleMetadata>({
-    source: "RTP",
-    showName: "",
-    season: undefined,
-    episodeNumber: undefined,
-  });
-  const [showMetadataForm, setShowMetadataForm] = useState(false);
-  const [subtitleContent, setSubtitleContent] = useState<string>("");
+  const {
+    isLoading,
+    fileName,
+    showMetadataForm,
+    metadata,
+    setMetadata,
+    setShowMetadataForm,
+    handleMetadataConfirm,
+    handleDrop,
+    isDragging,
+    setIsDragging,
+    handleFileSelect,
+    error,
+  } = useSubtitleUploader({ onSubtitleLoad });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const parseVTT = (content: string): string => {
-    // Remove VTT header and metadata
-    const lines = content.split("\n");
-    const textLines: string[] = [];
-
-    let isTextLine = false;
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Skip empty lines, timestamps, and metadata
-      if (
-        !trimmedLine ||
-        trimmedLine.startsWith("WEBVTT") ||
-        trimmedLine.includes("-->") ||
-        /^\d+$/.test(trimmedLine)
-      ) {
-        isTextLine = false;
-        continue;
-      }
-
-      // This is subtitle text
-      if (trimmedLine && !trimmedLine.includes("-->")) {
-        textLines.push(trimmedLine);
-      }
-    }
-
-    return textLines.join(" ");
-  };
-
-  const parseSRT = (content: string): string => {
-    const lines = content.split("\n");
-    const textLines: string[] = [];
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Skip sequence numbers, timestamps, and empty lines
-      if (
-        !trimmedLine ||
-        /^\d+$/.test(trimmedLine) ||
-        trimmedLine.includes("-->")
-      ) {
-        continue;
-      }
-
-      textLines.push(trimmedLine);
-    }
-
-    return textLines.join(" ");
-  };
-
-  const detectMetadataFromFilename = (filename: string): DetectedMetadata => {
-    // Try to parse common patterns like "Show.Name.S01E01.vtt" or "Show Name - 1x01.vtt"
-    const seasonEpisodeMatch = filename.match(/[Ss](\d+)[Ee](\d+)|(\d+)x(\d+)/);
-    const showNameMatch = filename
-      .replace(/\.(vtt|srt)$/i, "")
-      .replace(/[Ss]\d+[Ee]\d+|\d+x\d+.*/, "")
-      .replace(/[._-]/g, " ")
-      .trim();
-
-    // Try to detect source from filename patterns
-    let detectedSource = "RTP"; // default
-    if (filename.toLowerCase().includes("rtp")) detectedSource = "RTP";
-    else if (filename.toLowerCase().includes("sic")) detectedSource = "SIC";
-    else if (filename.toLowerCase().includes("tvi")) detectedSource = "TVI";
-
-    const confidence = seasonEpisodeMatch && showNameMatch ? 0.8 : 0.5;
-
-    return {
-      source: detectedSource,
-      showName: showNameMatch || "Unknown Show",
-      season: seasonEpisodeMatch
-        ? parseInt(seasonEpisodeMatch[1] || seasonEpisodeMatch[3])
-        : undefined,
-      episodeNumber: seasonEpisodeMatch
-        ? parseInt(seasonEpisodeMatch[2] || seasonEpisodeMatch[4])
-        : undefined,
-      language: "pt",
-      confidence,
-    };
-  };
-
-  const handleFileUpload = async (file: File) => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const text = await file.text();
-      let parsedText = "";
-
-      if (file.name.toLowerCase().endsWith(".vtt")) {
-        parsedText = parseVTT(text);
-      } else if (file.name.toLowerCase().endsWith(".srt")) {
-        parsedText = parseSRT(text);
-      } else {
-        // Assume it's plain text
-        parsedText = text;
-      }
-
-      if (parsedText.length < 50) {
-        throw new Error("The subtitle file appears to be too short or empty");
-      }
-
-      // Detect metadata from filename
-      const detected = detectMetadataFromFilename(file.name);
-      setDetectedMetadata(detected);
-
-      // Auto-populate metadata form
-      setMetadata({
-        source: detected.source || "RTP",
-        showName: detected.showName || "",
-        season: detected.season,
-        episodeNumber: detected.episodeNumber,
-      });
-
-      setFileName(file.name);
-      setSubtitleContent(parsedText);
-      setShowMetadataForm(true); // Show metadata form for user to review/edit
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to parse subtitle file"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMetadataConfirm = () => {
-    if (!metadata.showName.trim()) {
-      setError("Show name is required");
-      return;
-    }
-
-    onSubtitleLoad(subtitleContent, fileName, metadata);
-    setShowMetadataForm(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const subtitleFile = files.find(
-      (file) =>
-        file.name.toLowerCase().endsWith(".vtt") ||
-        file.name.toLowerCase().endsWith(".srt") ||
-        file.type === "text/plain"
-    );
-
-    if (subtitleFile) {
-      handleFileUpload(subtitleFile);
-    } else {
-      setError("Please upload a .vtt or .srt subtitle file");
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileUpload(file);
-    }
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return "bg-green-100 text-green-800";
-    if (confidence >= 0.6) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
-  };
-
-  const getConfidenceText = (confidence: number) => {
-    if (confidence >= 0.8) return "High";
-    if (confidence >= 0.6) return "Medium";
-    return "Low";
-  };
 
   return (
     <div className="space-y-4">
@@ -368,51 +186,6 @@ export default function SubtitleUploader({
           </div>
         )}
       </div>
-
-      {detectedMetadata && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            Auto-Detected Metadata
-            <span
-              className={`text-xs px-2 py-1 rounded-full ${getConfidenceColor(
-                detectedMetadata.confidence
-              )}`}
-            >
-              {getConfidenceText(detectedMetadata.confidence)}
-            </span>
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {detectedMetadata.source && (
-              <div>
-                <span className="font-medium">Source:</span>{" "}
-                {detectedMetadata.source.toUpperCase()}
-              </div>
-            )}
-            {detectedMetadata.showName && (
-              <div>
-                <span className="font-medium">Show:</span>{" "}
-                {detectedMetadata.showName}
-              </div>
-            )}
-            {detectedMetadata.season && (
-              <div>
-                <span className="font-medium">Season:</span>{" "}
-                {detectedMetadata.season}
-              </div>
-            )}
-            {detectedMetadata.episodeNumber && (
-              <div>
-                <span className="font-medium">Episode:</span>{" "}
-                {detectedMetadata.episodeNumber}
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-blue-700 mt-2">
-            You can override these values below if they&apos;re incorrect.
-          </p>
-        </div>
-      )}
 
       {fileName && (
         <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">

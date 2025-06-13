@@ -67,3 +67,52 @@ export const createFallbackPhrases = (
     })
   );
 };
+
+export const parseVTT = (content: string): string => {
+  // Remove VTT header and metadata
+  const lines = content.split("\n");
+  const textLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Skip empty lines, timestamps, and metadata
+    if (
+      !trimmedLine ||
+      trimmedLine.startsWith("WEBVTT") ||
+      trimmedLine.includes("-->") ||
+      /^\d+$/.test(trimmedLine)
+    ) {
+      continue;
+    }
+
+    // This is subtitle text
+    if (trimmedLine && !trimmedLine.includes("-->")) {
+      textLines.push(trimmedLine);
+    }
+  }
+
+  return textLines.join(" ");
+};
+
+export const parseSRT = (content: string): string => {
+  const lines = content.split("\n");
+  const textLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Skip sequence numbers, timestamps, and empty lines
+    if (
+      !trimmedLine ||
+      /^\d+$/.test(trimmedLine) ||
+      trimmedLine.includes("-->")
+    ) {
+      continue;
+    }
+
+    textLines.push(trimmedLine);
+  }
+
+  return textLines.join(" ");
+};
