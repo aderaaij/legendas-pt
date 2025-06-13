@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 interface PhraseExtractionRequest {
   content: string;
-  maxPhrases?: number;
   language: string;
 }
 
 interface ExtractedPhrase {
   phrase: string;
   translation: string;
-  context?: string;
   frequency?: number;
 }
 
@@ -30,12 +28,8 @@ const phraseExtractionSchema = {
             type: "string",
             description: "Natural English translation",
           },
-          context: {
-            type: "string",
-            description: "Brief usage note or context",
-          },
         },
-        required: ["phrase", "translation", "context"],
+        required: ["phrase", "translation"],
         additionalProperties: false,
       },
     },
@@ -46,18 +40,7 @@ const phraseExtractionSchema = {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Received request to extract phrases");
-    const {
-      content,
-      maxPhrases = 50,
-      language,
-    }: PhraseExtractionRequest = await request.json();
-
-    console.log("Request parameters:", {
-      contentLength: content ? content.length : 0,
-      maxPhrases,
-      language,
-    });
+    const { content, language }: PhraseExtractionRequest = await request.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -74,12 +57,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `You are a Portuguese language learning expert. Analyze the following Portuguese subtitle content and extract ${maxPhrases} useful phrases for language learners.
+    const prompt = `You are a Portuguese language learning expert. Analyze the following Portuguese subtitle content and extract all useful phrases for language learners.
 
 For each phrase, provide:
 1. The exact Portuguese phrase (preserve original capitalization and structure)
 2. A natural English translation
-3. A brief context or usage note
 
 Focus on:
 - Complete, meaningful phrases (not fragments)
@@ -172,15 +154,12 @@ ${content}`;
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(content_text);
-      console.log("Successfully parsed structured response");
     } catch (parseError) {
       console.error("Failed to parse OpenAI response:", content_text);
       console.error("Parse error:", parseError);
 
       // If parsing fails due to truncation, try to handle it gracefully
       if (finishReason === "length") {
-        console.log("Attempting to handle truncated JSON response");
-
         // Try to find the last complete phrase entry
         const lastCompleteEntry = content_text.lastIndexOf('{"phrase":');
         if (lastCompleteEntry > 0) {
@@ -193,7 +172,6 @@ ${content}`;
             const repairedJson = beforeLastEntry.substring(0, lastComma) + "]}";
             try {
               parsedResponse = JSON.parse(repairedJson);
-              console.log("Successfully repaired truncated JSON");
             } catch (repairError) {
               console.error("Failed to repair truncated JSON:", repairError);
             }
@@ -225,16 +203,14 @@ ${content}`;
     }
 
     // Filter and validate phrases (extra safety, though structured outputs should ensure this)
-    const validPhrases = parsedResponse.phrases
-      .filter(
-        (phrase: any) =>
-          phrase.phrase &&
-          phrase.translation &&
-          typeof phrase.phrase === "string" &&
-          typeof phrase.translation === "string" &&
-          phrase.phrase.trim().length > 5
-      )
-      .slice(0, maxPhrases);
+    const validPhrases = parsedResponse.phrases.filter(
+      (phrase: any) =>
+        phrase.phrase &&
+        phrase.translation &&
+        typeof phrase.phrase === "string" &&
+        typeof phrase.translation === "string" &&
+        phrase.phrase.trim().length > 5
+    );
 
     return NextResponse.json({
       phrases: validPhrases,

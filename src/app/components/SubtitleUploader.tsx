@@ -2,9 +2,23 @@
 
 import { useState, useRef } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
+import { SubtitleMetadata } from "../upload/page";
 
 interface SubtitleUploaderProps {
-  onSubtitleLoad: (content: string) => void;
+  onSubtitleLoad: (
+    content: string,
+    fileName: string,
+    metadata: SubtitleMetadata
+  ) => void;
+}
+
+interface DetectedMetadata {
+  source?: string;
+  showName?: string;
+  season?: number;
+  episodeNumber?: number;
+  language?: string;
+  confidence: number;
 }
 
 export default function SubtitleUploader({
@@ -14,6 +28,16 @@ export default function SubtitleUploader({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [detectedMetadata, setDetectedMetadata] =
+    useState<DetectedMetadata | null>(null);
+  const [metadata, setMetadata] = useState<SubtitleMetadata>({
+    source: "RTP",
+    showName: "",
+    season: undefined,
+    episodeNumber: undefined,
+  });
+  const [showMetadataForm, setShowMetadataForm] = useState(false);
+  const [subtitleContent, setSubtitleContent] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parseVTT = (content: string): string => {
@@ -67,6 +91,37 @@ export default function SubtitleUploader({
     return textLines.join(" ");
   };
 
+  const detectMetadataFromFilename = (filename: string): DetectedMetadata => {
+    // Try to parse common patterns like "Show.Name.S01E01.vtt" or "Show Name - 1x01.vtt"
+    const seasonEpisodeMatch = filename.match(/[Ss](\d+)[Ee](\d+)|(\d+)x(\d+)/);
+    const showNameMatch = filename
+      .replace(/\.(vtt|srt)$/i, "")
+      .replace(/[Ss]\d+[Ee]\d+|\d+x\d+.*/, "")
+      .replace(/[._-]/g, " ")
+      .trim();
+
+    // Try to detect source from filename patterns
+    let detectedSource = "RTP"; // default
+    if (filename.toLowerCase().includes("rtp")) detectedSource = "RTP";
+    else if (filename.toLowerCase().includes("sic")) detectedSource = "SIC";
+    else if (filename.toLowerCase().includes("tvi")) detectedSource = "TVI";
+
+    const confidence = seasonEpisodeMatch && showNameMatch ? 0.8 : 0.5;
+
+    return {
+      source: detectedSource,
+      showName: showNameMatch || "Unknown Show",
+      season: seasonEpisodeMatch
+        ? parseInt(seasonEpisodeMatch[1] || seasonEpisodeMatch[3])
+        : undefined,
+      episodeNumber: seasonEpisodeMatch
+        ? parseInt(seasonEpisodeMatch[2] || seasonEpisodeMatch[4])
+        : undefined,
+      language: "pt",
+      confidence,
+    };
+  };
+
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
     setError("");
@@ -88,8 +143,21 @@ export default function SubtitleUploader({
         throw new Error("The subtitle file appears to be too short or empty");
       }
 
+      // Detect metadata from filename
+      const detected = detectMetadataFromFilename(file.name);
+      setDetectedMetadata(detected);
+
+      // Auto-populate metadata form
+      setMetadata({
+        source: detected.source || "RTP",
+        showName: detected.showName || "",
+        season: detected.season,
+        episodeNumber: detected.episodeNumber,
+      });
+
       setFileName(file.name);
-      onSubtitleLoad(parsedText);
+      setSubtitleContent(parsedText);
+      setShowMetadataForm(true); // Show metadata form for user to review/edit
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to parse subtitle file"
@@ -97,6 +165,16 @@ export default function SubtitleUploader({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleMetadataConfirm = () => {
+    if (!metadata.showName.trim()) {
+      setError("Show name is required");
+      return;
+    }
+
+    onSubtitleLoad(subtitleContent, fileName, metadata);
+    setShowMetadataForm(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -125,8 +203,127 @@ export default function SubtitleUploader({
     }
   };
 
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return "bg-green-100 text-green-800";
+    if (confidence >= 0.6) return "bg-yellow-100 text-yellow-800";
+    return "bg-red-100 text-red-800";
+  };
+
+  const getConfidenceText = (confidence: number) => {
+    if (confidence >= 0.8) return "High";
+    if (confidence >= 0.6) return "Medium";
+    return "Low";
+  };
+
   return (
     <div className="space-y-4">
+      {/* Metadata Form Modal */}
+      {showMetadataForm && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-4">
+            Configure Show Metadata
+          </h3>
+          <p className="text-sm text-blue-700 mb-4">
+            Please review and complete the show information below:
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Source *
+              </label>
+              <select
+                value={metadata.source}
+                onChange={(e) =>
+                  setMetadata((prev) => ({ ...prev, source: e.target.value }))
+                }
+                className="w-full text-gray-800 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="RTP">RTP (Rádio e Televisão de Portugal)</option>
+                <option value="SIC">
+                  SIC (Sociedade Independente de Comunicação)
+                </option>
+                <option value="TVI">TVI (Televisão Independente)</option>
+                <option value="RTP2">RTP2</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Show Name *
+              </label>
+              <input
+                type="text"
+                value={metadata.showName}
+                onChange={(e) =>
+                  setMetadata((prev) => ({ ...prev, showName: e.target.value }))
+                }
+                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter show name..."
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Season (optional)
+              </label>
+              <input
+                type="number"
+                value={metadata.season || ""}
+                onChange={(e) =>
+                  setMetadata((prev) => ({
+                    ...prev,
+                    season: e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined,
+                  }))
+                }
+                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 1"
+                min="1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Episode Number (optional)
+              </label>
+              <input
+                type="number"
+                value={metadata.episodeNumber || ""}
+                onChange={(e) =>
+                  setMetadata((prev) => ({
+                    ...prev,
+                    episodeNumber: e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined,
+                  }))
+                }
+                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 1"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-6">
+            <button
+              onClick={() => setShowMetadataForm(false)}
+              className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleMetadataConfirm}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Continue with Extraction
+            </button>
+          </div>
+        </div>
+      )}
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           isDragging
@@ -171,6 +368,51 @@ export default function SubtitleUploader({
           </div>
         )}
       </div>
+
+      {detectedMetadata && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Auto-Detected Metadata
+            <span
+              className={`text-xs px-2 py-1 rounded-full ${getConfidenceColor(
+                detectedMetadata.confidence
+              )}`}
+            >
+              {getConfidenceText(detectedMetadata.confidence)}
+            </span>
+          </h3>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {detectedMetadata.source && (
+              <div>
+                <span className="font-medium">Source:</span>{" "}
+                {detectedMetadata.source.toUpperCase()}
+              </div>
+            )}
+            {detectedMetadata.showName && (
+              <div>
+                <span className="font-medium">Show:</span>{" "}
+                {detectedMetadata.showName}
+              </div>
+            )}
+            {detectedMetadata.season && (
+              <div>
+                <span className="font-medium">Season:</span>{" "}
+                {detectedMetadata.season}
+              </div>
+            )}
+            {detectedMetadata.episodeNumber && (
+              <div>
+                <span className="font-medium">Episode:</span>{" "}
+                {detectedMetadata.episodeNumber}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-blue-700 mt-2">
+            You can override these values below if they&apos;re incorrect.
+          </p>
+        </div>
+      )}
 
       {fileName && (
         <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">

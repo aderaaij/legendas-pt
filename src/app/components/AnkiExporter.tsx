@@ -2,9 +2,8 @@
 
 import { Download, FileDown } from "lucide-react";
 
-interface PhraseItem {
+export interface PhraseItem {
   phrase: string;
-  context: string;
   translation: string;
   frequency: number;
 }
@@ -15,11 +14,11 @@ interface AnkiExporterProps {
 
 export default function AnkiExporter({ phrases }: AnkiExporterProps) {
   const generateAnkiCSV = (): string => {
-    const headers = ["Front", "Back", "Context", "Frequency"];
+    const headers = ["Front", "Back", "Frequency"];
     const rows = phrases.map((item) => [
       `"${item.phrase}"`,
       `"${item.translation}"`,
-      `"${item.context.replace(/"/g, '""')}"`,
+
       `"${item.frequency}"`,
     ]);
 
@@ -29,12 +28,7 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
   const generateAnkiTSV = (): string => {
     return phrases
       .map((item) =>
-        [
-          item.phrase,
-          item.translation,
-          item.context.replace(/\t/g, " "),
-          item.frequency.toString(),
-        ].join("\t")
+        [item.phrase, item.translation, item.frequency.toString()].join("\t")
       )
       .join("\n");
   };
@@ -60,11 +54,6 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
     downloadFile(csv, "portuguese-phrases.csv", "text/csv");
   };
 
-  const handleDownloadTSV = () => {
-    const tsv = generateAnkiTSV();
-    downloadFile(tsv, "portuguese-phrases.txt", "text/plain");
-  };
-
   const handleDownloadAnki = () => {
     const ankiContent = generateAnkiTSV();
     downloadFile(ankiContent, "portuguese-phrases-anki.txt", "text/plain");
@@ -80,8 +69,8 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-blue-50 p-4 rounded-lg">
+    <div className="space-y-4 flex gap-4">
+      <div className="bg-blue-50 p-4 rounded-lg h-full">
         <h3 className="font-semibold text-blue-800 mb-2">Ready to Export</h3>
         <p className="text-sm text-blue-700 mb-4">
           {phrases.length} phrases ready for Anki import
@@ -114,7 +103,7 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
           <li>Open Anki and select your Portuguese deck</li>
           <li>Go to File → Import</li>
           <li>Select the downloaded .txt file</li>
-          <li>Map fields: Front, Back, Context, Frequency</li>
+          <li>Map fields: Front, Back, Frequency</li>
           <li>Click Import to add your vocabulary cards</li>
         </ol>
       </div>
