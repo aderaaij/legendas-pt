@@ -26,7 +26,11 @@ export default function UploadPage() {
     }>
   >([]);
 
-  const handleSubtitleLoad = (content: string, filename: string, subtitleMetadata?: SubtitleMetadata) => {
+  const handleSubtitleLoad = (
+    content: string,
+    filename: string,
+    subtitleMetadata?: SubtitleMetadata
+  ) => {
     setSubtitleContent(content);
     setFileName(filename);
     setMetadata(subtitleMetadata || null);
@@ -107,7 +111,7 @@ export default function UploadPage() {
 
             {/* Phrases Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto">
-              {phrases.slice(0, 50).map((item, index) => (
+              {phrases.map((item, index) => (
                 <div
                   key={index}
                   className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-green-50"

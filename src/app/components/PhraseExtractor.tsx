@@ -21,14 +21,12 @@ interface PhraseExtractorProps {
 export interface ExtractionSettings {
   minPhraseLength: number;
   maxPhraseLength: number;
-  maxPhrases: number;
   saveToDatabase: boolean;
 }
 
 const DEFAULT_SETTINGS: ExtractionSettings = {
   minPhraseLength: 3,
   maxPhraseLength: 6,
-  maxPhrases: 100,
   saveToDatabase: true,
 };
 
@@ -41,13 +39,11 @@ export default function PhraseExtractor({
   const [showSettings, setShowSettings] = useState(false);
   const [minPhraseLength, setMinPhraseLength] = useState(3);
   const [maxPhraseLength, setMaxPhraseLength] = useState(6);
-  const [maxPhrases, setMaxPhrases] = useState(100);
   const [saveToDatabase, setSaveToDatabase] = useState(true);
 
   const settings: ExtractionSettings = {
     minPhraseLength,
     maxPhraseLength,
-    maxPhrases,
     saveToDatabase,
   };
 
@@ -76,7 +72,7 @@ export default function PhraseExtractor({
     if (subtitleContent) {
       handleExtract();
     }
-  }, [subtitleContent, minPhraseLength, maxPhraseLength, maxPhrases]);
+  }, [subtitleContent, minPhraseLength, maxPhraseLength]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 mb-6">
@@ -110,7 +106,7 @@ export default function PhraseExtractor({
 
       {showSettings && (
         <div className="border-t pt-4 mt-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Min Phrase Length
@@ -138,20 +134,6 @@ export default function PhraseExtractor({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Phrases
-              </label>
-              <input
-                type="number"
-                min="10"
-                max="500"
-                value={maxPhrases}
-                onChange={(e) => setMaxPhrases(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
 
           <div>
@@ -164,6 +146,10 @@ export default function PhraseExtractor({
               />
               <span className="text-sm text-gray-700">Save to database</span>
             </label>
+          </div>
+
+          <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+            <strong>Note:</strong> The system will now extract ALL useful phrases from the content without any artificial limits. This provides maximum exposure to Portuguese language patterns.
           </div>
         </div>
       )}

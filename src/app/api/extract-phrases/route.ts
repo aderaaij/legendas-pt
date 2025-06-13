@@ -57,23 +57,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `You are a Portuguese language learning expert. Analyze the following Portuguese subtitle content and extract all useful phrases for language learners.
+    const prompt = `You are a Portuguese language learning expert. Analyze the following Portuguese subtitle content and extract ALL useful phrases for language learners. Be extremely comprehensive and thorough - extract as many valuable learning phrases as possible.
 
 For each phrase, provide:
 1. The exact Portuguese phrase (preserve original capitalization and structure)
 2. A natural English translation
 
-Focus on:
-- Complete, meaningful phrases (not fragments)
-- Common expressions and idioms
-- Useful conversational phrases
-- Phrases that would help someone learning Portuguese
+Extract EVERYTHING useful including:
+- Complete sentences and meaningful phrases
+- Common expressions, idioms, and sayings
+- Conversational phrases and responses
+- Colloquialisms and everyday language
+- Question forms, exclamations, and responses
+- Emotional expressions and reactions
+- Transitional phrases and connectors
+- Greetings, farewells, and social expressions
+- Commands, requests, and suggestions
+- Time expressions and descriptive phrases
+- Short but meaningful phrases (3+ words)
+- Interjections and common Portuguese exclamations
+- Verb phrases and common constructions
+- Adjective phrases that are commonly used
+- Any phrase pattern that would help someone learning Portuguese
 
-Avoid:
-- Single words
-- Incomplete fragments
-- Technical terms or proper nouns
-- Very short phrases (under 3 words)
+Only avoid:
+- Isolated single words (unless they're meaningful interjections like "Nossa!" or "Puxa!")
+- Incomplete fragments that don't make grammatical sense
+- Highly technical jargon
+- Proper nouns unless they're part of common expressions
+
+IMPORTANT: Be extremely thorough. Extract hundreds of phrases if they exist in the content. This is for dedicated language learners who want maximum exposure to authentic Portuguese. Don't hold back - extract everything that could be useful for learning.
 
 Content:
 ${content}`;
@@ -99,6 +112,7 @@ ${content}`;
         ],
 
         temperature: 0.3,
+        max_tokens: 32000, // Maximum for GPT-4o-mini (128k context, 16k output)
         // Use structured outputs instead of manual JSON parsing
         response_format: {
           type: "json_schema",

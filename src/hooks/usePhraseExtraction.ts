@@ -111,7 +111,7 @@ export const usePhraseExtraction = ({
           source: fileName || "uploaded_file",
           capture_timestamp: new Date().toISOString(),
           language: "pt",
-          max_phrases: settings.maxPhrases,
+          max_phrases: phrases.length, // Use actual number extracted
           total_phrases_found: phrases.length,
           was_truncated: false,
           extraction_params: {
