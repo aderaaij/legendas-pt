@@ -484,6 +484,7 @@ export class PhraseExtractionService {
     const { data, error } = await supabase.from("phrase_extractions").select(`
         id,
         source,
+        show_id,
         show:shows(name),
         total_phrases_found,
         created_at,
@@ -792,5 +793,190 @@ export class PhraseExtractionService {
         message: error instanceof Error ? error.message : "Failed to delete show",
       };
     }
+  }
+
+  // Get shows with their extraction statistics for homepage
+  static async getShowsWithExtractionStats() {
+    // First get all shows
+    const { data: shows, error: showsError } = await supabase
+      .from("shows")
+      .select("*")
+      .order("name");
+
+    if (showsError) {
+      throw new Error(`Failed to get shows: ${showsError.message}`);
+    }
+
+    if (!shows || shows.length === 0) {
+      return [];
+    }
+
+    // Get extraction counts and total phrases for each show
+    const showsWithStats = await Promise.all(
+      shows.map(async (show) => {
+        const { data: extractions, error: extractionsError } = await supabase
+          .from("phrase_extractions")
+          .select("id, total_phrases_found, created_at")
+          .eq("show_id", show.id)
+          .order("created_at", { ascending: false });
+
+        if (extractionsError) {
+          console.error(`Error getting extractions for show ${show.id}:`, extractionsError);
+          return null;
+        }
+
+        const extractionCount = extractions?.length || 0;
+        const totalPhrases = extractions?.reduce((sum, ext) => sum + (ext.total_phrases_found || 0), 0) || 0;
+        const lastExtraction = extractions?.[0]?.created_at || show.created_at;
+
+        // Only return shows that have extractions
+        if (extractionCount > 0) {
+          return {
+            id: show.id,
+            name: show.name,
+            source: show.source,
+            extractionCount,
+            totalPhrases,
+            lastExtraction,
+            network: show.network,
+            rating: show.rating,
+            poster_url: show.poster_url,
+            tvdb_confidence: show.tvdb_confidence,
+          };
+        }
+        
+        return null;
+      })
+    );
+
+    // Filter out null results and sort by last extraction date
+    return showsWithStats
+      .filter(Boolean)
+      .sort((a, b) => new Date(b!.lastExtraction).getTime() - new Date(a!.lastExtraction).getTime()) as Array<{
+        id: string;
+        name: string;
+        source: string;
+        extractionCount: number;
+        totalPhrases: number;
+        lastExtraction: string;
+        network?: string;
+        rating?: number;
+        poster_url?: string;
+        tvdb_confidence?: number;
+      }>;
+  }
+
+  // Get episodes for a show with their extraction statistics
+  static async getEpisodesWithExtractionStats(showId: string) {
+    const { data: episodes, error: episodesError } = await supabase
+      .from("episodes")
+      .select("*")
+      .eq("show_id", showId)
+      .order("season", { ascending: true })
+      .order("episode_number", { ascending: true });
+
+    if (episodesError) {
+      throw new Error(`Failed to get episodes: ${episodesError.message}`);
+    }
+
+    if (!episodes || episodes.length === 0) {
+      return [];
+    }
+
+    // Get extraction counts and total phrases for each episode
+    const episodesWithStats = await Promise.all(
+      episodes.map(async (episode) => {
+        const { data: extractions, error: extractionsError } = await supabase
+          .from("phrase_extractions")
+          .select("id, total_phrases_found, created_at")
+          .eq("episode_id", episode.id)
+          .order("created_at", { ascending: false });
+
+        if (extractionsError) {
+          console.error(`Error getting extractions for episode ${episode.id}:`, extractionsError);
+          return {
+            ...episode,
+            extractionCount: 0,
+            totalPhrases: 0,
+            lastExtraction: null,
+          };
+        }
+
+        const extractionCount = extractions?.length || 0;
+        const totalPhrases = extractions?.reduce((sum, ext) => sum + (ext.total_phrases_found || 0), 0) || 0;
+        const lastExtraction = extractions?.[0]?.created_at || null;
+
+        return {
+          ...episode,
+          extractionCount,
+          totalPhrases,
+          lastExtraction,
+        };
+      })
+    );
+
+    // Only return episodes that have extractions
+    return episodesWithStats.filter(ep => ep.extractionCount > 0);
+  }
+
+  // Get phrases for a specific episode
+  static async getPhrasesForEpisode(episodeId: string) {
+    const { data: extractions, error: extractionsError } = await supabase
+      .from("phrase_extractions")
+      .select("id")
+      .eq("episode_id", episodeId);
+
+    if (extractionsError) {
+      throw new Error(`Failed to get extractions: ${extractionsError.message}`);
+    }
+
+    if (!extractions || extractions.length === 0) {
+      return [];
+    }
+
+    // Get all phrases for all extractions of this episode
+    const allPhrases = await Promise.all(
+      extractions.map(async (extraction) => {
+        const phrases = await this.getExtractedPhrases(extraction.id);
+        return phrases.map(phrase => ({
+          ...phrase,
+          extractionId: extraction.id,
+        }));
+      })
+    );
+
+    // Flatten the array of arrays
+    return allPhrases.flat();
+  }
+
+  // Get phrases for a specific show (all episodes)
+  static async getPhrasesForShow(showId: string) {
+    const { data: extractions, error: extractionsError } = await supabase
+      .from("phrase_extractions")
+      .select("id, episode_id")
+      .eq("show_id", showId);
+
+    if (extractionsError) {
+      throw new Error(`Failed to get extractions: ${extractionsError.message}`);
+    }
+
+    if (!extractions || extractions.length === 0) {
+      return [];
+    }
+
+    // Get all phrases for all extractions of this show
+    const allPhrases = await Promise.all(
+      extractions.map(async (extraction) => {
+        const phrases = await this.getExtractedPhrases(extraction.id);
+        return phrases.map(phrase => ({
+          ...phrase,
+          extractionId: extraction.id,
+          episodeId: extraction.episode_id,
+        }));
+      })
+    );
+
+    // Flatten the array of arrays
+    return allPhrases.flat();
   }
 }

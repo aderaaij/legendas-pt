@@ -38,46 +38,8 @@ export function useHomePage(): UseShowsReturn {
       setLoading(true);
       setError("");
 
-      const stats = await PhraseExtractionService.getExtractionStats();
-
-      const showsMap = new Map<string, ShowWithExtractions>();
-
-      for (const stat of stats) {
-        const showName = stat.show?.name || "Unknown Show";
-        const showKey = showName;
-
-        if (!showsMap.has(showKey)) {
-          showsMap.set(showKey, {
-            id: showKey,
-            name: showName,
-            source: stat.source || "Unknown",
-            extractionCount: 0,
-            totalPhrases: 0,
-            lastExtraction: stat.created_at || "",
-            network: undefined,
-            rating: undefined,
-            poster_url: undefined,
-            tvdb_confidence: undefined,
-          });
-        }
-
-        const show = showsMap.get(showKey)!;
-        show.extractionCount += 1;
-        show.totalPhrases += stat.total_phrases_found || 0;
-
-        // Keep the most recent extraction date
-        if (stat.created_at && stat.created_at > show.lastExtraction) {
-          show.lastExtraction = stat.created_at;
-        }
-      }
-
-      const showsArray = Array.from(showsMap.values()).sort(
-        (a, b) =>
-          new Date(b.lastExtraction).getTime() -
-          new Date(a.lastExtraction).getTime()
-      );
-
-      setShows(showsArray);
+      const showsWithStats = await PhraseExtractionService.getShowsWithExtractionStats();
+      setShows(showsWithStats);
     } catch (err) {
       setError(
         `Failed to load shows: ${

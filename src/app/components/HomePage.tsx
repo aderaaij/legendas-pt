@@ -136,11 +136,7 @@ export default function HomePage() {
                 {shows.map((show) => (
                   <Link
                     key={show.id}
-                    href={`/${generateShowSlug(
-                      show.name,
-                      show.season,
-                      show.episodeNumber
-                    )}`}
+                    href={`/${generateShowSlug(show.name)}`}
                     className="bg-gray-50 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer border border-gray-200 hover:border-blue-300 block"
                   >
                     <div className="flex items-start justify-between mb-4">

@@ -21,8 +21,6 @@ export default function SubtitleUploader({
     isLoading,
     fileName,
     showMetadataForm,
-    metadata,
-    setMetadata,
     setShowMetadataForm,
     handleShowSelected,
     handleDrop,
