@@ -1,6 +1,7 @@
 import { SubtitleMetadata } from "@/app/upload/page";
 import { parseSRT, parseVTT } from "@/utils/subtitleUtils";
 import { useState } from "react";
+import { Show, Episode } from "@/lib/supabase";
 
 interface SubtitleUploaderProps {
   onSubtitleLoad: (
@@ -24,6 +25,8 @@ export const useSubtitleUploader = ({
     episodeNumber: undefined,
   });
   const [showMetadataForm, setShowMetadataForm] = useState(false);
+  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const [subtitleContent, setSubtitleContent] = useState<string>("");
 
   const handleFileUpload = async (file: File) => {
@@ -47,17 +50,9 @@ export const useSubtitleUploader = ({
         throw new Error("The subtitle file appears to be too short or empty");
       }
 
-      // Reset metadata form
-      setMetadata({
-        source: "RTP",
-        showName: "",
-        season: undefined,
-        episodeNumber: undefined,
-      });
-
       setFileName(file.name);
       setSubtitleContent(parsedText);
-      setShowMetadataForm(true); // Show metadata form for user to review/edit
+      setShowMetadataForm(true); // Show show selection form
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to parse subtitle file"
@@ -67,12 +62,19 @@ export const useSubtitleUploader = ({
     }
   };
 
-  const handleMetadataConfirm = () => {
-    if (!metadata.showName.trim()) {
-      setError("Show name is required");
-      return;
-    }
+  const handleShowSelected = (show: Show, episode?: Episode) => {
+    setSelectedShow(show);
+    setSelectedEpisode(episode || null);
 
+    // Build metadata from selected show and episode
+    const metadata: SubtitleMetadata = {
+      source: show.source,
+      showName: show.name,
+      season: episode?.season,
+      episodeNumber: episode?.episode_number,
+    };
+
+    setMetadata(metadata);
     onSubtitleLoad(subtitleContent, fileName, metadata);
     setShowMetadataForm(false);
   };
@@ -111,12 +113,14 @@ export const useSubtitleUploader = ({
     setError,
     showMetadataForm,
     handleFileSelect,
-    handleMetadataConfirm,
+    handleShowSelected,
     isDragging,
     setIsDragging,
     setMetadata,
     metadata,
     setShowMetadataForm,
     handleDrop,
+    selectedShow,
+    selectedEpisode,
   };
 };

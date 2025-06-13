@@ -646,4 +646,151 @@ export class PhraseExtractionService {
 
     return data;
   }
+
+  // Show management methods for ShowSelector
+  static async getAllShows(): Promise<Show[]> {
+    const { data, error } = await supabase
+      .from("shows")
+      .select("*")
+      .order("name");
+
+    if (error) {
+      throw new Error(`Failed to get shows: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  static async showHasPhraseExtractions(showId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("phrase_extractions")
+      .select("id")
+      .eq("show_id", showId)
+      .limit(1);
+
+    if (error) {
+      console.error("Error checking phrase extractions:", error);
+      return false;
+    }
+
+    return (data?.length || 0) > 0;
+  }
+
+  static async getEpisodesForShow(showId: string): Promise<Episode[]> {
+    const { data, error } = await supabase
+      .from("episodes")
+      .select("*")
+      .eq("show_id", showId)
+      .order("season", { ascending: true })
+      .order("episode_number", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to get episodes: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  static async createShowFromTVDB(tvdbShow: any): Promise<Show> {
+    const { data, error } = await supabase
+      .from("shows")
+      .insert({
+        name: tvdbShow.name,
+        source: "tvdb",
+        language: "pt",
+        tvdb_id: tvdbShow.id,
+        tvdb_slug: tvdbShow.slug,
+        overview: tvdbShow.overview,
+        first_aired: tvdbShow.firstAired,
+        network: tvdbShow.network,
+        status: tvdbShow.status,
+        poster_url: tvdbShow.image,
+        genres: tvdbShow.genres,
+        rating: tvdbShow.rating,
+        tvdb_confidence: 1.0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create show: ${error.message}`);
+    }
+
+    return data!;
+  }
+
+  static async fetchAndSaveEpisodesFromTVDB(show: Show): Promise<Episode[]> {
+    if (!show.tvdb_id) {
+      throw new Error("Show does not have TVDB ID");
+    }
+
+    try {
+      // Fetch episodes from TVDB
+      const tvdbEpisodes = await TVDBService.getAllEpisodes(show.tvdb_id);
+      
+      if (!tvdbEpisodes || tvdbEpisodes.length === 0) {
+        return [];
+      }
+
+      // Prepare episodes for database insertion
+      const episodesToInsert = tvdbEpisodes.map((tvdbEpisode) => ({
+        show_id: show.id,
+        season: tvdbEpisode.seasonNumber,
+        episode_number: tvdbEpisode.number,
+        title: tvdbEpisode.name,
+        air_date: tvdbEpisode.aired,
+        duration_minutes: tvdbEpisode.runtime,
+        description: tvdbEpisode.overview,
+        tvdb_id: tvdbEpisode.id,
+        overview: tvdbEpisode.overview,
+        aired: tvdbEpisode.aired,
+        runtime: tvdbEpisode.runtime,
+        episode_image: tvdbEpisode.image,
+      }));
+
+      // Use upsert to handle duplicates
+      const { data, error } = await supabase
+        .from("episodes")
+        .upsert(episodesToInsert, {
+          onConflict: "show_id,season,episode_number",
+        })
+        .select();
+
+      if (error) {
+        throw new Error(`Failed to save episodes: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching episodes from TVDB:", error);
+      throw error;
+    }
+  }
+
+  static async safeDeleteShow(showId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Check if show has phrase extractions
+      const hasExtractions = await this.showHasPhraseExtractions(showId);
+      
+      if (hasExtractions) {
+        return {
+          success: false,
+          message: "Cannot delete show with existing phrase extractions. Delete extractions first.",
+        };
+      }
+
+      // Delete the show (episodes will be cascade deleted if foreign key is set up properly)
+      await this.deleteShow(showId);
+
+      return {
+        success: true,
+        message: "Show deleted successfully",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to delete show",
+      };
+    }
+  }
 }

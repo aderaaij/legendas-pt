@@ -225,6 +225,52 @@ class TVDBService {
     }
   }
 
+  static async getAllEpisodes(showId: number): Promise<TVDBEpisode[]> {
+    try {
+      const episodes: TVDBEpisode[] = [];
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await this.makeRequest(`/series/${showId}/episodes/default?page=${page}`);
+
+        if (data.data && data.data.episodes) {
+          const pageEpisodes = data.data.episodes
+            .filter((ep: any) => ep.seasonNumber > 0) // Filter out specials (season 0)
+            .map((ep: any) => ({
+              id: ep.id,
+              name: ep.name,
+              overview: ep.overview,
+              aired: ep.aired,
+              seasonNumber: ep.seasonNumber,
+              number: ep.number,
+              runtime: ep.runtime,
+              image: ep.image,
+            }));
+
+          episodes.push(...pageEpisodes);
+
+          // Check if there are more pages
+          hasMore = data.data.episodes.length > 0 && page < 10; // Safety limit
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Sort episodes by season and episode number
+      return episodes.sort((a, b) => {
+        if (a.seasonNumber !== b.seasonNumber) {
+          return (a.seasonNumber || 0) - (b.seasonNumber || 0);
+        }
+        return (a.number || 0) - (b.number || 0);
+      });
+    } catch (error) {
+      console.error("Failed to get all episodes:", error);
+      return [];
+    }
+  }
+
   static async findBestMatch(showName: string): Promise<{
     show: TVDBShow | null;
     confidence: number;

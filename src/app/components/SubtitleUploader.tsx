@@ -3,7 +3,8 @@
 import { useRef } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { SubtitleMetadata } from "../upload/page";
-import { useSubtitleUploader } from "@/hooks/useSubtitleUploade";
+import { useSubtitleUploader } from "@/hooks/useSubtitleUploader";
+import ShowSelector from "./ShowSelector";
 
 interface SubtitleUploaderProps {
   onSubtitleLoad: (
@@ -23,7 +24,7 @@ export default function SubtitleUploader({
     metadata,
     setMetadata,
     setShowMetadataForm,
-    handleMetadataConfirm,
+    handleShowSelected,
     handleDrop,
     isDragging,
     setIsDragging,
@@ -35,96 +36,17 @@ export default function SubtitleUploader({
 
   return (
     <div className="space-y-4">
-      {/* Metadata Form Modal */}
+      {/* Show Selection Modal */}
       {showMetadataForm && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-4">
-            Configure Show Metadata
+            Select Show and Episode
           </h3>
           <p className="text-sm text-blue-700 mb-4">
-            Please review and complete the show information below:
+            Choose an existing show or add a new one from TVDB:
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Source *
-              </label>
-              <select
-                value={metadata.source}
-                onChange={(e) =>
-                  setMetadata((prev) => ({ ...prev, source: e.target.value }))
-                }
-                className="w-full text-gray-800 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="RTP">RTP (Rádio e Televisão de Portugal)</option>
-                <option value="SIC">
-                  SIC (Sociedade Independente de Comunicação)
-                </option>
-                <option value="TVI">TVI (Televisão Independente)</option>
-                <option value="RTP2">RTP2</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Show Name *
-              </label>
-              <input
-                type="text"
-                value={metadata.showName}
-                onChange={(e) =>
-                  setMetadata((prev) => ({ ...prev, showName: e.target.value }))
-                }
-                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter show name..."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Season (optional)
-              </label>
-              <input
-                type="number"
-                value={metadata.season || ""}
-                onChange={(e) =>
-                  setMetadata((prev) => ({
-                    ...prev,
-                    season: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
-                  }))
-                }
-                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. 1"
-                min="1"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Episode Number (optional)
-              </label>
-              <input
-                type="number"
-                value={metadata.episodeNumber || ""}
-                onChange={(e) =>
-                  setMetadata((prev) => ({
-                    ...prev,
-                    episodeNumber: e.target.value
-                      ? parseInt(e.target.value)
-                      : undefined,
-                  }))
-                }
-                className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. 1"
-                min="1"
-              />
-            </div>
-          </div>
+          <ShowSelector onShowSelected={handleShowSelected} />
 
           <div className="flex items-center justify-between mt-6">
             <button
@@ -132,12 +54,6 @@ export default function SubtitleUploader({
               className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
             >
               Cancel
-            </button>
-            <button
-              onClick={handleMetadataConfirm}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Continue with Extraction
             </button>
           </div>
         </div>

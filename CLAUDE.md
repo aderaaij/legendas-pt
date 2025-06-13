@@ -83,3 +83,6 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 - `/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction)
 - `/lib/` - Service layer (supabase.ts, tvdb.ts)
 - `/utils/` - Utility functions for content processing and API interactions
+
+## Code instructions
+- If a component has a lot of logic, try and extract to hooks and helper functions

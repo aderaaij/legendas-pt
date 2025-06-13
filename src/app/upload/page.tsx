@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Upload,
-  BookOpen,
-  FileText,
-  Languages,
-} from "lucide-react";
+import { ArrowLeft, Upload, BookOpen, FileText, Languages } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
 import Link from "next/link";
@@ -22,8 +16,8 @@ export interface SubtitleMetadata {
 export default function UploadPage() {
   const [subtitleContent, setSubtitleContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
-  const [subtitleMetadata, setSubtitleMetadata] =
-    useState<SubtitleMetadata | null>(null);
+  const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
+
   const [phrases, setPhrases] = useState<
     Array<{
       phrase: string;
@@ -32,19 +26,10 @@ export default function UploadPage() {
     }>
   >([]);
 
-  const handleSubtitleLoad = (
-    content: string,
-    filename: string,
-    metadata: {
-      source: string;
-      showName: string;
-      season?: number;
-      episodeNumber?: number;
-    }
-  ) => {
+  const handleSubtitleLoad = (content: string, filename: string, subtitleMetadata?: SubtitleMetadata) => {
     setSubtitleContent(content);
     setFileName(filename);
-    setSubtitleMetadata(metadata);
+    setMetadata(subtitleMetadata || null);
   };
 
   return (
@@ -100,10 +85,9 @@ export default function UploadPage() {
               subtitleContent={subtitleContent}
               onPhrasesExtracted={setPhrases}
               fileName={fileName}
-              metadata={subtitleMetadata}
+              metadata={metadata}
             />
           </div>
-
         </div>
 
         {/* Phrases Preview */}

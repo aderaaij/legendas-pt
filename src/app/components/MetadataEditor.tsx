@@ -148,7 +148,7 @@ export default function MetadataEditor({
               season: episodeData.season,
               episode_number: episodeData.episode_number,
               air_date: episodeData.air_date,
-              duration_minutes: episodeData.duration_minutes,
+              duration_minutes: episodeData.duration_minutes || undefined,
               description: episodeData.description,
             }
           );

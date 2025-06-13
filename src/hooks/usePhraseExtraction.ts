@@ -160,10 +160,7 @@ export const usePhraseExtraction = ({
         }
 
         // Call API for new extraction
-        const phrases = await callPhraseExtractionAPI(
-          cleanContent,
-          settings.maxPhrases
-        );
+        const phrases = await callPhraseExtractionAPI(cleanContent);
         const processingTime = Date.now() - startTime;
 
         // Save to database
@@ -180,7 +177,7 @@ export const usePhraseExtraction = ({
         return createFallbackPhrases(subtitleContent);
       }
     },
-    [settings, checkExistingExtraction, saveToDatabase]
+    [checkExistingExtraction, saveToDatabase]
   );
 
   const handleExtraction = useCallback(
