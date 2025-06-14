@@ -1047,4 +1047,118 @@ export class PhraseExtractionService {
 
     return data;
   }
+
+  // Find duplicate phrases within an extraction
+  static async findDuplicatePhrasesInExtraction(extractionId: string): Promise<{
+    duplicateGroups: Array<{
+      normalizedPhrase: string;
+      phrases: ExtractedPhrase[];
+    }>;
+    totalDuplicates: number;
+  }> {
+    const phrases = await this.getExtractedPhrases(extractionId);
+    
+    // Group phrases by normalized version (lowercase, trimmed, punctuation removed)
+    const phraseGroups = new Map<string, ExtractedPhrase[]>();
+    
+    for (const phrase of phrases) {
+      const normalized = this.normalizePhrase(phrase.phrase);
+      if (!phraseGroups.has(normalized)) {
+        phraseGroups.set(normalized, []);
+      }
+      phraseGroups.get(normalized)!.push(phrase);
+    }
+    
+    // Filter to only groups with duplicates
+    const duplicateGroups = Array.from(phraseGroups.entries())
+      .filter(([_, phrases]) => phrases.length > 1)
+      .map(([normalizedPhrase, phrases]) => ({
+        normalizedPhrase,
+        phrases: phrases.sort((a, b) => a.phrase.localeCompare(b.phrase))
+      }));
+    
+    const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.phrases.length - 1, 0);
+    
+    return { duplicateGroups, totalDuplicates };
+  }
+
+  // Normalize phrase for comparison (remove case, punctuation, extra spaces)
+  private static normalizePhrase(phrase: string): string {
+    return phrase
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ')     // Normalize spaces
+      .trim();
+  }
+
+  // Merge multiple phrases into one, keeping the best translation
+  static async mergePhrases(
+    phrasesToMerge: ExtractedPhrase[],
+    selectedPhrase: string,
+    selectedTranslation: string
+  ): Promise<ExtractedPhrase> {
+    if (phrasesToMerge.length < 2) {
+      throw new Error("Need at least 2 phrases to merge");
+    }
+
+    // Keep the phrase with the earliest position_in_content as the "primary" one
+    const primaryPhrase = phrasesToMerge.reduce((earliest, current) => 
+      (current.position_in_content || 0) < (earliest.position_in_content || 0) ? current : earliest
+    );
+
+    // Update the primary phrase with the selected text and translation
+    const updatedPhrase = await this.updatePhrase(primaryPhrase.id, {
+      phrase: selectedPhrase,
+      translation: selectedTranslation,
+      // Keep the earliest position
+      position_in_content: primaryPhrase.position_in_content
+    });
+
+    // Delete all other phrases
+    const phrasesToDelete = phrasesToMerge.filter(p => p.id !== primaryPhrase.id);
+    await Promise.all(phrasesToDelete.map(phrase => this.deletePhrase(phrase.id)));
+
+    return updatedPhrase;
+  }
+
+  // Get phrases with duplicate analysis for an extraction
+  static async getPhrasesWithDuplicateAnalysis(extractionId: string): Promise<{
+    phrases: (ExtractedPhrase & { 
+      isDuplicate: boolean;
+      duplicateGroup?: string;
+      duplicateCount?: number;
+    })[];
+    duplicateGroups: Array<{
+      normalizedPhrase: string;
+      phrases: ExtractedPhrase[];
+    }>;
+  }> {
+    const phrases = await this.getExtractedPhrases(extractionId);
+    const { duplicateGroups } = await this.findDuplicatePhrasesInExtraction(extractionId);
+    
+    // Create a map of phrase ID to duplicate info
+    const duplicateMap = new Map<string, { group: string; count: number }>();
+    
+    for (const group of duplicateGroups) {
+      for (const phrase of group.phrases) {
+        duplicateMap.set(phrase.id, {
+          group: group.normalizedPhrase,
+          count: group.phrases.length
+        });
+      }
+    }
+    
+    // Enhance phrases with duplicate information
+    const enhancedPhrases = phrases.map(phrase => {
+      const duplicateInfo = duplicateMap.get(phrase.id);
+      return {
+        ...phrase,
+        isDuplicate: !!duplicateInfo,
+        duplicateGroup: duplicateInfo?.group,
+        duplicateCount: duplicateInfo?.count
+      };
+    });
+    
+    return { phrases: enhancedPhrases, duplicateGroups };
+  }
 }

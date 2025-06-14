@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Save, Trash2, Plus, Edit3, Settings } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Plus, Edit3, Settings, Copy } from "lucide-react";
 import {
   PhraseExtractionService,
   ExtractedPhrase,
@@ -10,6 +10,7 @@ import {
 } from "../../lib/supabase";
 import AnkiExporter from "./AnkiExporter";
 import MetadataEditor from "./MetadataEditor";
+import DuplicatePhraseManager from "./DuplicatePhraseManager";
 
 interface PhraseEditorProps {
   extractionId: string;
@@ -21,6 +22,8 @@ interface PhraseEditorProps {
 interface EditablePhrase extends ExtractedPhrase {
   isEditing: boolean;
   hasChanges: boolean;
+  isDuplicate?: boolean;
+  duplicateCount?: number;
 }
 
 export default function PhraseEditor({
@@ -39,6 +42,14 @@ export default function PhraseEditor({
   });
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Duplicate management state
+  const [showDuplicateManager, setShowDuplicateManager] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<Array<{
+    normalizedPhrase: string;
+    phrases: ExtractedPhrase[];
+  }>>([]);
+  const [duplicateCount, setDuplicateCount] = useState(0);
+
   // Metadata state
   const [showMetadataEditor, setShowMetadataEditor] = useState(false);
   const [currentShow, setCurrentShow] = useState<Show | undefined>();
@@ -50,16 +61,19 @@ export default function PhraseEditor({
     try {
       setLoading(true);
 
-      const extractedPhrases =
-        await PhraseExtractionService.getExtractedPhrases(extractionId);
+      const { phrases: phrasesWithDuplicates, duplicateGroups: foundDuplicates } =
+        await PhraseExtractionService.getPhrasesWithDuplicateAnalysis(extractionId);
 
       setPhrases(
-        extractedPhrases.map((phrase) => ({
+        phrasesWithDuplicates.map((phrase) => ({
           ...phrase,
           isEditing: false,
           hasChanges: false,
         }))
       );
+
+      setDuplicateGroups(foundDuplicates);
+      setDuplicateCount(foundDuplicates.reduce((sum, group) => sum + group.phrases.length - 1, 0));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(`Failed to load phrases: ${errorMessage}`);
@@ -197,6 +211,12 @@ export default function PhraseEditor({
     }
   };
 
+  const handleDuplicateManageComplete = () => {
+    setShowDuplicateManager(false);
+    // Reload phrases to get updated duplicate analysis
+    loadPhrases();
+  };
+
   const handleMetadataUpdate = (
     updatedShow?: Show,
     updatedEpisode?: Episode
@@ -275,6 +295,15 @@ export default function PhraseEditor({
 
         <div className="flex items-center space-x-3">
           <AnkiExporter phrases={ankiPhrases} />
+          {duplicateCount > 0 && (
+            <button
+              onClick={() => setShowDuplicateManager(true)}
+              className="flex items-center space-x-1 bg-orange-600 text-white px-3 py-2 rounded-md hover:bg-orange-700 transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Manage Duplicates ({duplicateCount})</span>
+            </button>
+          )}
           <button
             onClick={() => setShowAddForm(true)}
             className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
@@ -356,9 +385,16 @@ export default function PhraseEditor({
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>{phrases.length} phrases total</span>
-          <span>
-            {phrases.filter((p) => p.hasChanges).length} unsaved changes
-          </span>
+          <div className="flex items-center space-x-4">
+            {duplicateCount > 0 && (
+              <span className="text-orange-600 font-medium">
+                {duplicateCount} duplicates found
+              </span>
+            )}
+            <span>
+              {phrases.filter((p) => p.hasChanges).length} unsaved changes
+            </span>
+          </div>
         </div>
       </div>
 
@@ -370,6 +406,8 @@ export default function PhraseEditor({
             className={`bg-white rounded-lg border p-4 transition-all ${
               phrase.hasChanges
                 ? "border-yellow-300 bg-yellow-50"
+                : phrase.isDuplicate
+                ? "border-orange-300 bg-orange-50"
                 : "border-gray-200"
             }`}
           >
@@ -425,8 +463,15 @@ export default function PhraseEditor({
               /* View Mode */
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-900 mb-1">
-                    {phrase.phrase}
+                  <div className="flex items-center space-x-2 mb-1">
+                    <div className="font-semibold text-gray-900">
+                      {phrase.phrase}
+                    </div>
+                    {phrase.isDuplicate && (
+                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Duplicate ({phrase.duplicateCount})
+                      </span>
+                    )}
                   </div>
                   <div className="text-gray-600 mb-2">{phrase.translation}</div>
                 </div>
@@ -472,6 +517,16 @@ export default function PhraseEditor({
           currentEpisode={currentEpisode}
           onUpdate={handleMetadataUpdate}
           onClose={() => setShowMetadataEditor(false)}
+        />
+      )}
+
+      {/* Duplicate Phrase Manager Modal */}
+      {showDuplicateManager && (
+        <DuplicatePhraseManager
+          extractionId={extractionId}
+          duplicateGroups={duplicateGroups}
+          onClose={() => setShowDuplicateManager(false)}
+          onMergeComplete={handleDuplicateManageComplete}
         />
       )}
     </div>
