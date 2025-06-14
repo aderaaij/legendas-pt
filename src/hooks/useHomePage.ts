@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PhraseExtractionService } from "../lib/supabase";
 
-interface ShowWithExtractions {
+export interface ShowWithExtractions {
   id: string;
   name: string;
   source: string;
@@ -38,7 +38,9 @@ export function useHomePage(): UseShowsReturn {
       setLoading(true);
       setError("");
 
-      const showsWithStats = await PhraseExtractionService.getShowsWithExtractionStats();
+      const showsWithStats =
+        await PhraseExtractionService.getShowsWithExtractionStats();
+
       setShows(showsWithStats);
     } catch (err) {
       setError(

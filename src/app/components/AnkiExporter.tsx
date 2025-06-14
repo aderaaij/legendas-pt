@@ -5,7 +5,7 @@ import { Download, FileDown } from "lucide-react";
 export interface PhraseItem {
   phrase: string;
   translation: string;
-  frequency: number;
+  frequency?: number;
 }
 
 interface AnkiExporterProps {
@@ -14,12 +14,10 @@ interface AnkiExporterProps {
 
 export default function AnkiExporter({ phrases }: AnkiExporterProps) {
   const generateAnkiCSV = (): string => {
-    const headers = ["Front", "Back", "Frequency"];
+    const headers = ["Front", "Back"];
     const rows = phrases.map((item) => [
       `"${item.phrase}"`,
       `"${item.translation}"`,
-
-      `"${item.frequency}"`,
     ]);
 
     return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
@@ -27,9 +25,7 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
 
   const generateAnkiTSV = (): string => {
     return phrases
-      .map((item) =>
-        [item.phrase, item.translation, item.frequency.toString()].join("\t")
-      )
+      .map((item) => [item.phrase, item.translation].join("\t"))
       .join("\n");
   };
 
@@ -103,7 +99,7 @@ export default function AnkiExporter({ phrases }: AnkiExporterProps) {
           <li>Open Anki and select your Portuguese deck</li>
           <li>Go to File → Import</li>
           <li>Select the downloaded .txt file</li>
-          <li>Map fields: Front, Back, Frequency</li>
+          <li>Map fields: Front, Back</li>
           <li>Click Import to add your vocabulary cards</li>
         </ol>
       </div>
