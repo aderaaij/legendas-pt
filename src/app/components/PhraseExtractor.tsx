@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import { Play, Settings, BookOpen } from "lucide-react";
 import { usePhraseExtraction } from "../../hooks/usePhraseExtraction";
 import { SubtitleMetadata } from "../upload/page";
-
-interface PhraseItem {
-  phrase: string;
-  translation: string;
-  frequency: number;
-}
+import { PhraseItem } from "./AnkiExporter";
 
 interface PhraseExtractorProps {
   subtitleContent: string;

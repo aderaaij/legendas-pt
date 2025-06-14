@@ -5,12 +5,6 @@ interface PhraseExtractionRequest {
   language: string;
 }
 
-interface ExtractedPhrase {
-  phrase: string;
-  translation: string;
-  frequency?: number;
-}
-
 // Define the JSON schema for structured outputs
 const phraseExtractionSchema = {
   type: "object",
@@ -71,7 +65,6 @@ Extract EVERYTHING useful including:
 - Question forms, exclamations, and responses
 - Emotional expressions and reactions
 - Transitional phrases and connectors
-- Greetings, farewells, and social expressions
 - Commands, requests, and suggestions
 - Time expressions and descriptive phrases
 - Short but meaningful phrases (3+ words)
@@ -85,6 +78,12 @@ Only avoid:
 - Incomplete fragments that don't make grammatical sense
 - Highly technical jargon
 - Proper nouns unless they're part of common expressions
+- Extremely common basic phrases that beginners already know: "boa noite", "bom dia", "boa tarde", "obrigado", "obrigada", "por favor", "desculpa", "com licença", "olá", "tchau", "sim", "não"
+
+CRITICAL REQUIREMENTS:
+- NEVER include duplicate phrases - each phrase should appear only once in your response
+- Skip overly basic greetings and common courtesy phrases that every beginner knows
+- Focus on phrases that provide real learning value beyond basic politeness
 
 IMPORTANT: Be extremely thorough. Extract hundreds of phrases if they exist in the content. This is for dedicated language learners who want maximum exposure to authentic Portuguese. Don't hold back - extract everything that could be useful for learning.
 
@@ -98,7 +97,7 @@ ${content}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Updated to supported model
+        model: "gpt-4.1-mini", // use 4.1 mini
         messages: [
           {
             role: "system",
@@ -112,7 +111,7 @@ ${content}`;
         ],
 
         temperature: 0.3,
-        max_tokens: 32000, // Maximum for GPT-4o-mini (128k context, 16k output)
+        max_tokens: 32000, // Maximum for GPT-4.1-mini (128k context, 32k output)
         // Use structured outputs instead of manual JSON parsing
         response_format: {
           type: "json_schema",

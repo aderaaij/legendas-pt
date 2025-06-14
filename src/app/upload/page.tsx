@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Upload, BookOpen, FileText, Languages } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
+import { PhraseItem } from "@/app/components/AnkiExporter";
 import Link from "next/link";
 
 export interface SubtitleMetadata {
@@ -18,13 +19,7 @@ export default function UploadPage() {
   const [fileName, setFileName] = useState<string>("");
   const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
 
-  const [phrases, setPhrases] = useState<
-    Array<{
-      phrase: string;
-      translation: string;
-      frequency: number;
-    }>
-  >([]);
+  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
 
   const handleSubtitleLoad = (
     content: string,

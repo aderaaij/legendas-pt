@@ -85,4 +85,7 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 - `/utils/` - Utility functions for content processing and API interactions
 
 ## Code instructions
-- If a component has a lot of logic, try and extract to hooks and helper functions
+- Try and put hooks and hook related logic into custom hooks 
+- Create util files and functions for utility functions
+- Separate components logically, i.e. when we map over a list to create a card, this card should be its own component
+- Don't forget to clean up. use knip (`npx knip`) to find and evaluate unused imports/exports
