@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Play, Settings, BookOpen } from "lucide-react";
 import { usePhraseExtraction } from "../../hooks/usePhraseExtraction";
 import { SubtitleMetadata } from "../upload/page";
-import { PhraseItem } from "./AnkiExporter";
+import { parseShowInfo } from "@/utils/extractPhrasesUitls";
 
 interface PhraseExtractorProps {
   subtitleContent: string;
-  onPhrasesExtracted: (phrases: PhraseItem[]) => void;
+  onExtractionSuccess: (showName: string, season?: number, episodeNumber?: number) => void;
   fileName?: string;
   metadata: SubtitleMetadata | null;
 }
@@ -22,7 +22,7 @@ export interface ExtractionSettings {
 
 export default function PhraseExtractor({
   subtitleContent,
-  onPhrasesExtracted,
+  onExtractionSuccess,
   fileName,
   metadata,
 }: PhraseExtractorProps) {
@@ -47,7 +47,11 @@ export default function PhraseExtractor({
     if (!subtitleContent) return;
 
     try {
-      await handleExtraction(subtitleContent, onPhrasesExtracted);
+      await handleExtraction(subtitleContent, () => {
+        // Get show info from metadata or filename
+        const { showName, season, episodeNumber } = metadata || parseShowInfo(fileName);
+        onExtractionSuccess(showName, season, episodeNumber);
+      });
     } catch (error) {
       console.error("Error extracting phrases:", error);
       alert(

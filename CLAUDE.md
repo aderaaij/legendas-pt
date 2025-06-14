@@ -78,11 +78,21 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 
 ## File Structure Notes
 
-- `/app/[slug]/` - Dynamic routes for show pages (slug format: show-name-s01e01)
-- `/app/api/extract-phrases/` - API endpoint for phrase extraction processing
-- `/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction)
-- `/lib/` - Service layer (supabase.ts, tvdb.ts)
-- `/utils/` - Utility functions for content processing and API interactions
+### Routes
+- `/` - Homepage showing library of all shows and episodes
+- `/upload/` - Subtitle upload and phrase extraction interface
+- `/[series]/` - Show detail page (e.g., `/breaking-bad`)
+- `/[series]/edit/` - Show management and bulk operations
+- `/[series]/[episode]/` - Episode detail page (e.g., `/breaking-bad/s01e01`)
+- `/[series]/[episode]/edit/` - Episode management interface
+- `/api/extract-phrases/` - API endpoint for phrase extraction processing
+
+### Directories
+- `/src/app/` - Next.js App Router pages and layouts
+- `/src/app/components/` - Reusable UI components
+- `/src/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction)
+- `/src/lib/` - Service layer (supabase.ts, tvdb.ts)
+- `/src/utils/` - Utility functions for content processing and API interactions
 
 ## Code instructions
 - Try and put hooks and hook related logic into custom hooks 

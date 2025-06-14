@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Upload, BookOpen, FileText, Languages } from "lucide-react";
+import { ArrowLeft, Upload, BookOpen, Languages } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
-import { PhraseItem } from "@/app/components/AnkiExporter";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { generateShowSlug } from "@/utils/slugify";
 
 export interface SubtitleMetadata {
   source: string;
@@ -18,8 +19,9 @@ export default function UploadPage() {
   const [subtitleContent, setSubtitleContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
-
-  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
+  const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
+  
+  const router = useRouter();
 
   const handleSubtitleLoad = (
     content: string,
@@ -36,7 +38,23 @@ export default function UploadPage() {
     setSubtitleContent("");
     setFileName("");
     setMetadata(null);
-    setPhrases([]);
+    setIsRedirecting(false);
+  };
+
+  const handleExtractionSuccess = async (showName: string, season?: number, episodeNumber?: number) => {
+    setIsRedirecting(true);
+    
+    // Generate the appropriate redirect URL
+    if (season && episodeNumber) {
+      // Redirect to episode edit page
+      const seriesSlug = generateShowSlug(showName);
+      const episodeSlug = `s${String(season).padStart(2, '0')}e${String(episodeNumber).padStart(2, '0')}`;
+      router.push(`/${seriesSlug}/${episodeSlug}/edit`);
+    } else {
+      // Redirect to series page if no episode info
+      const seriesSlug = generateShowSlug(showName);
+      router.push(`/${seriesSlug}`);
+    }
   };
 
   return (
@@ -90,47 +108,26 @@ export default function UploadPage() {
             </div>
             <PhraseExtractor
               subtitleContent={subtitleContent}
-              onPhrasesExtracted={setPhrases}
+              onExtractionSuccess={handleExtractionSuccess}
               fileName={fileName}
               metadata={metadata}
             />
           </div>
         </div>
 
-        {/* Phrases Preview */}
-        {phrases.length > 0 && (
-          <div className="mt-12 bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-gray-600" />
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  Extracted Phrases
-                </h2>
+        {/* Redirect Loading State */}
+        {isRedirecting && (
+          <div className="mt-12 bg-white rounded-xl shadow-lg p-8">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  Extraction Complete!
+                </h3>
+                <p className="text-gray-600">
+                  Redirecting to the editing interface...
+                </p>
               </div>
-              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                {phrases.length} phrases
-              </span>
-            </div>
-
-            {/* Phrases Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto">
-              {phrases.map((item, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-green-50"
-                >
-                  <div className="font-semibold text-gray-800 mb-1">
-                    {item.phrase}
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2">
-                    {item.translation}
-                  </div>
-
-                  <div className="text-xs text-green-600 mt-2">
-                    Frequency: {item.frequency}
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
