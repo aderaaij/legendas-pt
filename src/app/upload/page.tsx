@@ -31,6 +31,14 @@ export default function UploadPage() {
     setMetadata(subtitleMetadata || null);
   };
 
+  const handleCancel = () => {
+    // Clear all upload page state
+    setSubtitleContent("");
+    setFileName("");
+    setMetadata(null);
+    setPhrases([]);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
       <div className="container mx-auto px-4 py-8">
@@ -67,7 +75,7 @@ export default function UploadPage() {
                 1. Upload Subtitles
               </h2>
             </div>
-            <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} />
+            <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
           </div>
 
           {/* Step 2: Extract Phrases */}

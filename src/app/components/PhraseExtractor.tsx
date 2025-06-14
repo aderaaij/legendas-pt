@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Play, Settings, BookOpen } from "lucide-react";
 import { usePhraseExtraction } from "../../hooks/usePhraseExtraction";
 import { SubtitleMetadata } from "../upload/page";
@@ -19,11 +19,6 @@ export interface ExtractionSettings {
   saveToDatabase: boolean;
 }
 
-const DEFAULT_SETTINGS: ExtractionSettings = {
-  minPhraseLength: 3,
-  maxPhraseLength: 6,
-  saveToDatabase: true,
-};
 
 export default function PhraseExtractor({
   subtitleContent,
@@ -63,11 +58,6 @@ export default function PhraseExtractor({
     }
   };
 
-  useEffect(() => {
-    if (subtitleContent) {
-      handleExtract();
-    }
-  }, [subtitleContent, minPhraseLength, maxPhraseLength]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 mb-6">

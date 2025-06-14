@@ -76,7 +76,7 @@ export const useSubtitleUploader = ({
 
     setMetadata(metadata);
     onSubtitleLoad(subtitleContent, fileName, metadata);
-    setShowMetadataForm(false);
+    // Keep the metadata form open so user can change selection
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -105,6 +105,22 @@ export const useSubtitleUploader = ({
     }
   };
 
+  const handleCancel = () => {
+    // Reset all state
+    setShowMetadataForm(false);
+    setFileName("");
+    setError("");
+    setSubtitleContent("");
+    setSelectedShow(null);
+    setSelectedEpisode(null);
+    setMetadata({
+      source: "RTP",
+      showName: "",
+      season: undefined,
+      episodeNumber: undefined,
+    });
+  };
+
   return {
     isLoading,
     handleFileUpload,
@@ -118,9 +134,9 @@ export const useSubtitleUploader = ({
     setIsDragging,
     setMetadata,
     metadata,
-    setShowMetadataForm,
     handleDrop,
     selectedShow,
     selectedEpisode,
+    handleCancel,
   };
 };
