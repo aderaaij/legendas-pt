@@ -17,6 +17,7 @@ export interface ExtractionSettings {
   minPhraseLength: number;
   maxPhraseLength: number;
   saveToDatabase: boolean;
+  forceReExtraction: boolean;
 }
 
 
@@ -30,11 +31,13 @@ export default function PhraseExtractor({
   const [minPhraseLength, setMinPhraseLength] = useState(3);
   const [maxPhraseLength, setMaxPhraseLength] = useState(6);
   const [saveToDatabase, setSaveToDatabase] = useState(true);
+  const [forceReExtraction, setForceReExtraction] = useState(false);
 
   const settings: ExtractionSettings = {
     minPhraseLength,
     maxPhraseLength,
     saveToDatabase,
+    forceReExtraction,
   };
 
   const { isExtracting, handleExtraction } = usePhraseExtraction({
@@ -125,7 +128,7 @@ export default function PhraseExtractor({
             </div>
           </div>
 
-          <div>
+          <div className="space-y-3">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -134,6 +137,16 @@ export default function PhraseExtractor({
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700">Save to database</span>
+            </label>
+            
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={forceReExtraction}
+                onChange={(e) => setForceReExtraction(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Force re-extraction (add to existing phrases)</span>
             </label>
           </div>
 

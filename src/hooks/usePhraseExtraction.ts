@@ -29,7 +29,7 @@ export const usePhraseExtraction = ({
 
   const checkExistingExtraction = useCallback(
     async (contentHash: string) => {
-      if (!settings.saveToDatabase) return null;
+      if (!settings.saveToDatabase) return { phrases: null, extraction: null };
 
       console.log("Checking for existing extraction with hash:", contentHash);
 
@@ -40,7 +40,7 @@ export const usePhraseExtraction = ({
           console.log(
             "No existing extraction found, proceeding with new extraction"
           );
-          return null;
+          return { phrases: null, extraction: null };
         }
 
         console.log("Found existing extraction, loading phrases...");
@@ -50,23 +50,25 @@ export const usePhraseExtraction = ({
           );
         if (!existingPhrases?.length) {
           console.log("Existing extraction has no phrases");
-          return null;
+          return { phrases: null, extraction: existingExtraction };
         }
 
         console.log(`Found ${existingPhrases.length} existing phrases`);
-        return existingPhrases.map(
+        const phraseItems = existingPhrases.map(
           (item): PhraseItem => ({
             phrase: item.phrase,
             translation: item.translation,
             frequency: 1,
           })
         );
+        
+        return { phrases: phraseItems, extraction: existingExtraction };
       } catch (error) {
         console.warn(
           "Database check failed, proceeding with extraction:",
           error
         );
-        return null;
+        return { phrases: null, extraction: null };
       }
     },
     [settings.saveToDatabase]
@@ -77,7 +79,8 @@ export const usePhraseExtraction = ({
       phrases: PhraseItem[],
       contentHash: string,
       cleanContent: string,
-      processingTime: number
+      processingTime: number,
+      existingExtraction?: any
     ) => {
       if (!settings.saveToDatabase || !phrases.length) return;
 
@@ -102,6 +105,42 @@ export const usePhraseExtraction = ({
           );
         }
 
+        // If we have an existing extraction and force re-extraction is enabled,
+        // update the existing extraction
+        if (settings.forceReExtraction && existingExtraction) {
+          console.log("Updating existing extraction with new phrases");
+          
+          // Get existing phrases to filter out duplicates
+          const existingPhrases = await PhraseExtractionService.getExtractedPhrases(existingExtraction.id);
+          const existingPhraseTexts = new Set(existingPhrases.map(p => p.phrase.toLowerCase().trim()));
+          
+          // Add only new phrases that don't already exist
+          let newPhrasesAdded = 0;
+          for (const phrase of phrases) {
+            if (!existingPhraseTexts.has(phrase.phrase.toLowerCase().trim())) {
+              await PhraseExtractionService.addPhrase(
+                existingExtraction.id,
+                phrase.phrase,
+                phrase.translation
+              );
+              newPhrasesAdded++;
+            }
+          }
+          
+          console.log(`Added ${newPhrasesAdded} new phrases to existing extraction`);
+          
+          // Update extraction metadata with the total count after adding new phrases
+          const totalPhrasesAfterUpdate = existingPhrases.length + newPhrasesAdded;
+          await PhraseExtractionService.updateExtraction(existingExtraction.id, {
+            total_phrases_found: totalPhrasesAfterUpdate,
+            processing_time_ms: processingTime,
+            updated_at: new Date().toISOString(),
+          });
+          
+          return;
+        }
+
+        // Create new extraction (original behavior)
         const extractionData = {
           content_hash: contentHash,
           content_preview: cleanContent.slice(0, 200),
@@ -153,25 +192,45 @@ export const usePhraseExtraction = ({
         console.log("Clean content length:", cleanContent.length);
 
         // Check for existing extraction
-        const existingPhrases = await checkExistingExtraction(contentHash);
-        if (existingPhrases) {
+        const { phrases: existingPhrases, extraction: existingExtraction } = await checkExistingExtraction(contentHash);
+        if (existingPhrases && !settings.forceReExtraction) {
           console.log("Using existing phrases");
           return existingPhrases;
         }
 
         // Call API for new extraction
-        const phrases = await callPhraseExtractionAPI(cleanContent);
+        const newPhrases = await callPhraseExtractionAPI(cleanContent);
         const processingTime = Date.now() - startTime;
+
+        // If force re-extraction and we have existing phrases, combine them
+        let finalPhrases = newPhrases;
+        if (settings.forceReExtraction && existingPhrases) {
+          console.log("Combining existing and new phrases");
+          
+          // Create a set of existing phrase texts for deduplication
+          const existingPhraseTexts = new Set(existingPhrases.map(p => p.phrase.toLowerCase().trim()));
+          
+          // Filter out new phrases that already exist
+          const uniqueNewPhrases = newPhrases.filter(p => 
+            !existingPhraseTexts.has(p.phrase.toLowerCase().trim())
+          );
+          
+          // Combine existing and unique new phrases
+          finalPhrases = [...existingPhrases, ...uniqueNewPhrases];
+          
+          console.log(`Combined ${existingPhrases.length} existing + ${uniqueNewPhrases.length} new = ${finalPhrases.length} total phrases`);
+        }
 
         // Save to database
         await saveToDatabase(
-          phrases,
+          settings.forceReExtraction ? newPhrases : finalPhrases,
           contentHash,
           cleanContent,
-          processingTime
+          processingTime,
+          existingExtraction
         );
 
-        return phrases;
+        return finalPhrases;
       } catch (error) {
         console.error("Error extracting phrases:", error);
         return createFallbackPhrases(subtitleContent);
