@@ -133,8 +133,10 @@ export default function PhraseEditor({
     try {
       setSaving(true);
 
-      // Note: You'll need to add an update method to PhraseExtractionService
-      // For now, this is a placeholder
+      await PhraseExtractionService.updatePhrase(phraseId, {
+        phrase: phrase.phrase,
+        translation: phrase.translation,
+      });
 
       setPhrases((prev) =>
         prev.map((p) =>
@@ -155,7 +157,7 @@ export default function PhraseEditor({
     try {
       setSaving(true);
 
-      // Note: You'll need to add a delete method to PhraseExtractionService
+      await PhraseExtractionService.deletePhrase(phraseId);
 
       setPhrases((prev) => prev.filter((p) => p.id !== phraseId));
     } catch (err) {
@@ -175,13 +177,11 @@ export default function PhraseEditor({
     try {
       setSaving(true);
 
-      // Note: You'll need to add an insert method to PhraseExtractionService
-      const newPhraseData = {
-        extraction_id: extractionId,
-        phrase: newPhrase.phrase,
-        translation: newPhrase.translation,
-        position_in_content: phrases.length,
-      };
+      await PhraseExtractionService.addPhrase(
+        extractionId,
+        newPhrase.phrase.trim(),
+        newPhrase.translation.trim()
+      );
 
       // Reset form
       setNewPhrase({ phrase: "", translation: "" });

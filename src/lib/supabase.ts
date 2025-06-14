@@ -979,4 +979,72 @@ export class PhraseExtractionService {
     // Flatten the array of arrays
     return allPhrases.flat();
   }
+
+  // Delete a specific phrase
+  static async deletePhrase(phraseId: string): Promise<void> {
+    const { error } = await supabase
+      .from("extracted_phrases")
+      .delete()
+      .eq("id", phraseId);
+
+    if (error) {
+      throw new Error(`Failed to delete phrase: ${error.message}`);
+    }
+  }
+
+  // Update a specific phrase
+  static async updatePhrase(
+    phraseId: string,
+    updates: Partial<Omit<ExtractedPhrase, "id" | "extraction_id" | "created_at">>
+  ): Promise<ExtractedPhrase> {
+    const { data, error } = await supabase
+      .from("extracted_phrases")
+      .update(updates)
+      .eq("id", phraseId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update phrase: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  // Add a new phrase to an extraction
+  static async addPhrase(
+    extractionId: string,
+    phrase: string,
+    translation: string,
+    position?: number
+  ): Promise<ExtractedPhrase> {
+    // Get the current max position if position not provided
+    if (position === undefined) {
+      const { data: phrases } = await supabase
+        .from("extracted_phrases")
+        .select("position_in_content")
+        .eq("extraction_id", extractionId)
+        .order("position_in_content", { ascending: false })
+        .limit(1);
+
+      position = (phrases?.[0]?.position_in_content || 0) + 1;
+    }
+
+    const { data, error } = await supabase
+      .from("extracted_phrases")
+      .insert({
+        extraction_id: extractionId,
+        phrase,
+        translation,
+        position_in_content: position,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to add phrase: ${error.message}`);
+    }
+
+    return data;
+  }
 }

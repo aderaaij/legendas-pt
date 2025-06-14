@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Save,
   Trash2,
   Edit3,
   AlertTriangle,
@@ -401,7 +400,7 @@ export default function ShowEditPage() {
                 No Extractions Found
               </h3>
               <p className="text-gray-600">
-                This show doesn't have any phrase extractions yet.
+                This show doesn&apos;t have any phrase extractions yet.
               </p>
             </div>
           )}
