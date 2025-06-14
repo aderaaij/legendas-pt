@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Upload, Languages, Settings } from "lucide-react";
+import { FileText, Upload, Languages } from "lucide-react";
 import Link from "next/link";
 
 import { useHomePage } from "@/hooks/useHomePage";
@@ -33,7 +33,7 @@ export default function HomePage() {
             download them for language learning
           </p>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center">
             <Link
               href="/upload"
               className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
@@ -41,16 +41,6 @@ export default function HomePage() {
               <Upload className="w-5 h-5" />
               <span>Upload New Subtitles</span>
             </Link>
-
-            {shows.length > 0 && (
-              <Link
-                href="/manage"
-                className="inline-flex items-center space-x-2 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors shadow-lg"
-              >
-                <Settings className="w-5 h-5" />
-                <span>Manage & Edit</span>
-              </Link>
-            )}
           </div>
         </header>
 

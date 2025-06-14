@@ -7,6 +7,7 @@ import {
   FileText,
   Calendar,
   Play,
+  Edit3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -109,13 +110,22 @@ export default function SeriesPage() {
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Shows</span>
             </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {show?.name}
-              </h1>
-              <p className="text-gray-600">
-                {episodes.length} episode{episodes.length !== 1 ? 's' : ''} with subtitles
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {show?.name}
+                </h1>
+                <p className="text-gray-600">
+                  {episodes.length} episode{episodes.length !== 1 ? 's' : ''} with subtitles
+                </p>
+              </div>
+              <Link
+                href={`/${generateShowSlug(show!.name)}/edit`}
+                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Edit Show</span>
+              </Link>
             </div>
           </div>
         </div>

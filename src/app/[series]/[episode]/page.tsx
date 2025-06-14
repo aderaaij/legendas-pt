@@ -176,11 +176,11 @@ export default function EpisodePage() {
 
           <div className="flex items-center space-x-3 justify-end mt-4">
             <Link
-              href="/manage"
+              href={`/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}/edit`}
               className="inline-flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
             >
               <Settings className="w-4 h-4" />
-              <span>Edit Phrases</span>
+              <span>Edit Episode</span>
             </Link>
             <AnkiExporter phrases={ankiPhrases} />
           </div>
