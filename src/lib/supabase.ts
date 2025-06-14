@@ -811,12 +811,12 @@ export class PhraseExtractionService {
       return [];
     }
 
-    // Get extraction counts and total phrases for each show
+    // Get extraction counts and current phrase counts for each show
     const showsWithStats = await Promise.all(
       shows.map(async (show) => {
         const { data: extractions, error: extractionsError } = await supabase
           .from("phrase_extractions")
-          .select("id, total_phrases_found, created_at")
+          .select("id, created_at")
           .eq("show_id", show.id)
           .order("created_at", { ascending: false });
 
@@ -826,7 +826,19 @@ export class PhraseExtractionService {
         }
 
         const extractionCount = extractions?.length || 0;
-        const totalPhrases = extractions?.reduce((sum, ext) => sum + (ext.total_phrases_found || 0), 0) || 0;
+        
+        // Get current phrase count by counting actual phrases
+        let totalPhrases = 0;
+        if (extractions && extractions.length > 0) {
+          for (const extraction of extractions) {
+            const { data: phrases } = await supabase
+              .from("extracted_phrases")
+              .select("id")
+              .eq("extraction_id", extraction.id);
+            totalPhrases += phrases?.length || 0;
+          }
+        }
+        
         const lastExtraction = extractions?.[0]?.created_at || show.created_at;
 
         // Only return shows that have extractions
@@ -883,12 +895,12 @@ export class PhraseExtractionService {
       return [];
     }
 
-    // Get extraction counts and total phrases for each episode
+    // Get extraction counts and current phrase counts for each episode
     const episodesWithStats = await Promise.all(
       episodes.map(async (episode) => {
         const { data: extractions, error: extractionsError } = await supabase
           .from("phrase_extractions")
-          .select("id, total_phrases_found, created_at")
+          .select("id, created_at")
           .eq("episode_id", episode.id)
           .order("created_at", { ascending: false });
 
@@ -903,7 +915,19 @@ export class PhraseExtractionService {
         }
 
         const extractionCount = extractions?.length || 0;
-        const totalPhrases = extractions?.reduce((sum, ext) => sum + (ext.total_phrases_found || 0), 0) || 0;
+        
+        // Get current phrase count by counting actual phrases
+        let totalPhrases = 0;
+        if (extractions && extractions.length > 0) {
+          for (const extraction of extractions) {
+            const { data: phrases } = await supabase
+              .from("extracted_phrases")
+              .select("id")
+              .eq("extraction_id", extraction.id);
+            totalPhrases += phrases?.length || 0;
+          }
+        }
+        
         const lastExtraction = extractions?.[0]?.created_at || null;
 
         return {
