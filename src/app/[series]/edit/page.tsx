@@ -32,7 +32,7 @@ export default function ShowEditPage() {
 
   const [show, setShow] = useState<Show | null>(null);
   const [episodes, setEpisodes] = useState<(Episode & { extractionCount: number; totalPhrases: number; lastExtraction: string | null })[]>([]);
-  const [extractions, setExtractions] = useState<any[]>([]);
+  const [extractions, setExtractions] = useState<(any & { current_phrase_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function ShowEditPage() {
       const showEpisodes = await PhraseExtractionService.getEpisodesWithExtractionStats(matchingShow.id);
       setEpisodes(showEpisodes);
 
-      // Load extractions for this show
+      // Load extractions for this show with current phrase counts
       const { data: showExtractions, error: extractionsError } = await supabase
         .from("phrase_extractions")
         .select(`
@@ -88,7 +88,21 @@ export default function ShowEditPage() {
         console.error("Error loading extractions:", extractionsError);
         setExtractions([]);
       } else {
-        setExtractions(showExtractions || []);
+        // Enhance extractions with current phrase counts
+        const extractionsWithCounts = await Promise.all(
+          (showExtractions || []).map(async (extraction) => {
+            const { data: currentPhrases } = await supabase
+              .from("extracted_phrases")
+              .select("id")
+              .eq("extraction_id", extraction.id);
+            
+            return {
+              ...extraction,
+              current_phrase_count: currentPhrases?.length || 0
+            };
+          })
+        );
+        setExtractions(extractionsWithCounts);
       }
     } catch (err) {
       setError(
@@ -313,9 +327,9 @@ export default function ShowEditPage() {
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="text-lg font-bold text-purple-600">
-                {extractions.reduce((acc, ext) => acc + (ext.total_phrases_found || 0), 0)}
+                {extractions.reduce((acc, ext) => acc + (ext.current_phrase_count || 0), 0)}
               </div>
-              <div className="text-sm text-gray-600">Total Phrases</div>
+              <div className="text-sm text-gray-600">Current Phrases</div>
             </div>
           </div>
         </div>
@@ -343,7 +357,13 @@ export default function ShowEditPage() {
                         {extraction.source}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {extraction.total_phrases_found} phrases • {formatDate(extraction.created_at)}
+                        {extraction.current_phrase_count} phrases
+                        {extraction.current_phrase_count !== extraction.total_phrases_found && (
+                          <span className="text-gray-400">
+                            {" "}(originally {extraction.total_phrases_found})
+                          </span>
+                        )}
+                        {" "}• {formatDate(extraction.created_at)}
                         {extraction.was_truncated && (
                           <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
                             Truncated
@@ -354,7 +374,7 @@ export default function ShowEditPage() {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {extraction.total_phrases_found > 0 ? (
+                    {extraction.current_phrase_count > 0 ? (
                       <button
                         onClick={() =>
                           handleEditExtraction(
@@ -372,7 +392,7 @@ export default function ShowEditPage() {
                       <div className="flex items-center space-x-2">
                         <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded flex items-center space-x-1">
                           <AlertTriangle className="w-3 h-3" />
-                          <span>No phrases saved</span>
+                          <span>No phrases remaining</span>
                         </div>
                       </div>
                     )}

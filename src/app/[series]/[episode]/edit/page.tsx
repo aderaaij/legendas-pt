@@ -36,7 +36,7 @@ export default function EpisodeEditPage() {
   const [show, setShow] = useState<Show | null>(null);
   const [episodeData, setEpisodeData] = useState<Episode | null>(null);
   const [phrases, setPhrases] = useState<ExtractedPhrase[]>([]);
-  const [extractions, setExtractions] = useState<any[]>([]);
+  const [extractions, setExtractions] = useState<(any & { current_phrase_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function EpisodeEditPage() {
       const episodePhrases = await PhraseExtractionService.getPhrasesForEpisode(targetEpisode.id);
       setPhrases(episodePhrases);
 
-      // Load extractions for this episode
+      // Load extractions for this episode with current phrase counts
       const { data: episodeExtractions, error: extractionsError } = await supabase
         .from("phrase_extractions")
         .select(`
@@ -115,7 +115,21 @@ export default function EpisodeEditPage() {
         console.error("Error loading extractions:", extractionsError);
         setExtractions([]);
       } else {
-        setExtractions(episodeExtractions || []);
+        // Enhance extractions with current phrase counts
+        const extractionsWithCounts = await Promise.all(
+          (episodeExtractions || []).map(async (extraction) => {
+            const { data: currentPhrases } = await supabase
+              .from("extracted_phrases")
+              .select("id")
+              .eq("extraction_id", extraction.id);
+            
+            return {
+              ...extraction,
+              current_phrase_count: currentPhrases?.length || 0
+            };
+          })
+        );
+        setExtractions(extractionsWithCounts);
       }
     } catch (err) {
       setError(
@@ -413,7 +427,13 @@ export default function EpisodeEditPage() {
                         {extraction.source}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {extraction.total_phrases_found} phrases • {formatDate(extraction.created_at)}
+                        {extraction.current_phrase_count} phrases
+                        {extraction.current_phrase_count !== extraction.total_phrases_found && (
+                          <span className="text-gray-400">
+                            {" "}(originally {extraction.total_phrases_found})
+                          </span>
+                        )}
+                        {" "}• {formatDate(extraction.created_at)}
                         {extraction.was_truncated && (
                           <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
                             Truncated
@@ -424,7 +444,7 @@ export default function EpisodeEditPage() {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {extraction.total_phrases_found > 0 ? (
+                    {extraction.current_phrase_count > 0 ? (
                       <button
                         onClick={() =>
                           handleEditExtraction(
@@ -442,7 +462,7 @@ export default function EpisodeEditPage() {
                       <div className="flex items-center space-x-2">
                         <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded flex items-center space-x-1">
                           <AlertTriangle className="w-3 h-3" />
-                          <span>No phrases saved</span>
+                          <span>No phrases remaining</span>
                         </div>
                       </div>
                     )}
