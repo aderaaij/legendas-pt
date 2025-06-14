@@ -82,36 +82,42 @@ export default function UploadPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Step 1: Upload Subtitles */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <Upload className="w-5 h-5 text-blue-600" />
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="space-y-8">
+              {/* Upload Section */}
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <Upload className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Upload Subtitles
+                  </h2>
+                </div>
+                <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                1. Upload Subtitles
-              </h2>
-            </div>
-            <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
-          </div>
 
-          {/* Step 2: Extract Phrases */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-green-100 p-2 rounded-full">
-                <BookOpen className="w-5 h-5 text-green-600" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                2. Extract Phrases
-              </h2>
+              {/* Extraction Section - only show when subtitle is loaded */}
+              {subtitleContent && (
+                <div className="border-t pt-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-green-100 p-2 rounded-full">
+                      <BookOpen className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Extract Phrases
+                    </h2>
+                  </div>
+                  <PhraseExtractor
+                    subtitleContent={subtitleContent}
+                    onExtractionSuccess={handleExtractionSuccess}
+                    fileName={fileName}
+                    metadata={metadata}
+                  />
+                </div>
+              )}
             </div>
-            <PhraseExtractor
-              subtitleContent={subtitleContent}
-              onExtractionSuccess={handleExtractionSuccess}
-              fileName={fileName}
-              metadata={metadata}
-            />
           </div>
         </div>
 

@@ -153,10 +153,7 @@ export const usePhraseExtraction = ({
           max_phrases: phrases.length, // Use actual number extracted
           total_phrases_found: phrases.length,
           was_truncated: false,
-          extraction_params: {
-            minPhraseLength: settings.minPhraseLength,
-            maxPhraseLength: settings.maxPhraseLength,
-          },
+          extraction_params: {},
           processing_time_ms: processingTime,
         };
 

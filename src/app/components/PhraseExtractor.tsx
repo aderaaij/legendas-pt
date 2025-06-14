@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Settings, BookOpen } from "lucide-react";
+import { Play, Settings } from "lucide-react";
 import { usePhraseExtraction } from "../../hooks/usePhraseExtraction";
 import { SubtitleMetadata } from "../upload/page";
 import { parseShowInfo } from "@/utils/extractPhrasesUitls";
@@ -14,8 +14,6 @@ interface PhraseExtractorProps {
 }
 
 export interface ExtractionSettings {
-  minPhraseLength: number;
-  maxPhraseLength: number;
   saveToDatabase: boolean;
   forceReExtraction: boolean;
 }
@@ -28,14 +26,10 @@ export default function PhraseExtractor({
   metadata,
 }: PhraseExtractorProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const [minPhraseLength, setMinPhraseLength] = useState(3);
-  const [maxPhraseLength, setMaxPhraseLength] = useState(6);
   const [saveToDatabase, setSaveToDatabase] = useState(true);
   const [forceReExtraction, setForceReExtraction] = useState(false);
 
   const settings: ExtractionSettings = {
-    minPhraseLength,
-    maxPhraseLength,
     saveToDatabase,
     forceReExtraction,
   };
@@ -67,13 +61,10 @@ export default function PhraseExtractor({
 
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <BookOpen className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">
-            Phrase Extraction
-          </h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Ready to extract phrases from your subtitle content
         </div>
 
         <div className="flex items-center space-x-3">
@@ -97,62 +88,26 @@ export default function PhraseExtractor({
       </div>
 
       {showSettings && (
-        <div className="border-t pt-4 mt-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Phrase Length
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={minPhraseLength}
-                onChange={(e) => setMinPhraseLength(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Phrase Length
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="20"
-                value={maxPhraseLength}
-                onChange={(e) => setMaxPhraseLength(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={saveToDatabase}
-                onChange={(e) => setSaveToDatabase(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Save to database</span>
-            </label>
-            
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={forceReExtraction}
-                onChange={(e) => setForceReExtraction(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Force re-extraction (add to existing phrases)</span>
-            </label>
-          </div>
-
-          <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
-            <strong>Note:</strong> The system will now extract ALL useful phrases from the content without any artificial limits. This provides maximum exposure to Portuguese language patterns.
-          </div>
+        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={saveToDatabase}
+              onChange={(e) => setSaveToDatabase(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Save to database</span>
+          </label>
+          
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={forceReExtraction}
+              onChange={(e) => setForceReExtraction(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Force re-extraction (add to existing phrases)</span>
+          </label>
         </div>
       )}
 
