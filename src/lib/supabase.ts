@@ -50,7 +50,7 @@ export interface Episode {
   updated_at: string;
 }
 
-export interface PhraseExtraction {
+interface PhraseExtraction {
   id: string;
   content_hash: string;
   content_preview?: string;

@@ -357,4 +357,4 @@ class TVDBService {
 }
 
 export default TVDBService;
-export type { TVDBShow, TVDBEpisode, TVDBSearchResult };
+export type { TVDBSearchResult };

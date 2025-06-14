@@ -70,8 +70,6 @@ export function parseShowSlug(slug: string): {
   return { showName, season, episodeNumber };
 }
 
-// Export the normalize function for use in other parts of the app
-export { normalizePortugueseText };
 
 // Normalize show name for comparison and searching
 export function normalizeShowName(showName: string): string {
