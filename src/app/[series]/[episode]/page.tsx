@@ -8,43 +8,45 @@ import {
   Calendar,
   TrendingUp,
   Settings,
-  Play,
 } from "lucide-react";
 import Link from "next/link";
 
 import { PhraseExtractionService, ExtractedPhrase, Show, Episode } from "@/lib/supabase";
 import { parseShowSlug, normalizeShowName, generateShowSlug } from "@/utils/slugify";
 import AnkiExporter from "@/app/components/AnkiExporter";
-import { formatDate } from "@/utils/formatDate";
 
-export default function ShowPage() {
+export default function EpisodePage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const series = params.series as string;
+  const episode = params.episode as string;
 
-  const [view, setView] = useState<'show' | 'episode'>('show');
   const [show, setShow] = useState<Show | null>(null);
-  const [episodes, setEpisodes] = useState<(Episode & { extractionCount: number; totalPhrases: number; lastExtraction: string | null })[]>([]);
+  const [episodeData, setEpisodeData] = useState<Episode | null>(null);
   const [phrases, setPhrases] = useState<ExtractedPhrase[]>([]);
-  const [showInfo, setShowInfo] = useState<{
-    showName: string;
-    season?: number;
-    episodeNumber?: number;
-  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  const loadShowData = useCallback(async () => {
+  const loadEpisodeData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      // Parse the slug to get show information
-      const parsedSlug = parseShowSlug(slug);
-      setShowInfo(parsedSlug);
+      // Parse the series slug to get show information
+      const parsedSeriesSlug = parseShowSlug(series);
+      
+      // Parse the episode slug (e.g., "s01e01")
+      const episodeMatch = episode.match(/^s(\d+)e(\d+)$/i);
+      if (!episodeMatch) {
+        setError("Invalid episode format");
+        return;
+      }
+      
+      const season = parseInt(episodeMatch[1]);
+      const episodeNumber = parseInt(episodeMatch[2]);
 
       // Find the actual show in the database
       const shows = await PhraseExtractionService.getAllShows();
-      const normalizedSlugName = normalizeShowName(parsedSlug.showName);
+      const normalizedSlugName = normalizeShowName(parsedSeriesSlug.showName);
       
       const matchingShow = shows.find(s => 
         normalizeShowName(s.name) === normalizedSlugName ||
@@ -59,44 +61,37 @@ export default function ShowPage() {
 
       setShow(matchingShow);
 
-      // Check if this is a show-only or episode-specific view
-      if (parsedSlug.season && parsedSlug.episodeNumber) {
-        // Episode-specific view - load phrases for that episode
-        setView('episode');
-        
-        // Find the specific episode
-        const allEpisodes = await PhraseExtractionService.getEpisodesForShow(matchingShow.id);
-        const targetEpisode = allEpisodes.find(ep => 
-          ep.season === parsedSlug.season && ep.episode_number === parsedSlug.episodeNumber
-        );
+      // Find the specific episode
+      const allEpisodes = await PhraseExtractionService.getEpisodesForShow(matchingShow.id);
+      const targetEpisode = allEpisodes.find(ep => 
+        ep.season === season && ep.episode_number === episodeNumber
+      );
 
-        if (targetEpisode) {
-          const episodePhrases = await PhraseExtractionService.getPhrasesForEpisode(targetEpisode.id);
-          setPhrases(episodePhrases);
-        } else {
-          setError(`Episode S${parsedSlug.season}E${parsedSlug.episodeNumber} not found`);
-        }
-      } else {
-        // Show-only view - load episodes for this show
-        setView('show');
-        const showEpisodes = await PhraseExtractionService.getEpisodesWithExtractionStats(matchingShow.id);
-        setEpisodes(showEpisodes);
+      if (!targetEpisode) {
+        setError(`Episode S${season.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')} not found`);
+        return;
       }
+
+      setEpisodeData(targetEpisode);
+
+      // Load phrases for this episode
+      const episodePhrases = await PhraseExtractionService.getPhrasesForEpisode(targetEpisode.id);
+      setPhrases(episodePhrases);
     } catch (err) {
       setError(
-        `Failed to load show data: ${
+        `Failed to load episode data: ${
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
-      console.error("Error loading show data:", err);
+      console.error("Error loading episode data:", err);
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [series, episode]);
 
   useEffect(() => {
-    loadShowData();
-  }, [loadShowData]);
+    loadEpisodeData();
+  }, [loadEpisodeData]);
 
   // Convert to format expected by AnkiExporter
   const ankiPhrases = phrases.map((phrase) => ({
@@ -110,7 +105,7 @@ export default function ShowPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading {view === 'show' ? 'show' : 'episode'}...</p>
+          <p className="text-gray-600">Loading episode...</p>
         </div>
       </div>
     );
@@ -134,106 +129,6 @@ export default function ShowPage() {
     );
   }
 
-  // Show episodes view
-  if (view === 'show') {
-    return (
-      <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="flex flex-col justify-between mb-8">
-            <div className="flex flex-col gap-2 space-x-3">
-              <Link
-                href="/"
-                className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Shows</span>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {show?.name}
-                </h1>
-                <p className="text-gray-600">
-                  {episodes.length} episode{episodes.length !== 1 ? 's' : ''} with subtitles
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Episodes Grid */}
-          {episodes.length > 0 ? (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">Episodes</h2>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {episodes.length} episodes
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {episodes.map((episode) => (
-                  <Link
-                    key={episode.id}
-                    href={`/${generateShowSlug(show!.name, episode.season, episode.episode_number)}`}
-                    className="bg-gray-50 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer border border-gray-200 hover:border-blue-300 block"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          S{episode.season?.toString().padStart(2, '0')}E{episode.episode_number?.toString().padStart(2, '0')}
-                          {episode.title && `: ${episode.title}`}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          {episode.lastExtraction && (
-                            <span className="flex items-center space-x-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{formatDate(episode.lastExtraction)}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Play className="w-5 h-5 text-gray-400 hover:text-blue-600 transition-colors" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-blue-600">
-                          {episode.extractionCount}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {episode.extractionCount === 1 ? "Extraction" : "Extractions"}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-green-600">
-                          {episode.totalPhrases}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {episode.totalPhrases === 1 ? "Phrase" : "Phrases"}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No Episodes Found
-              </h3>
-              <p className="text-gray-600">
-                This show doesn&apos;t have any episodes with extracted phrases yet.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Episode view - show phrases for specific episode
   return (
     <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
       <div className="container mx-auto px-4 py-8">
@@ -254,7 +149,7 @@ export default function ShowPage() {
               </Link>
               <span>/</span>
               <span className="text-gray-900">
-                S{showInfo?.season?.toString().padStart(2, '0')}E{showInfo?.episodeNumber?.toString().padStart(2, '0')}
+                S{episodeData?.season?.toString().padStart(2, '0')}E{episodeData?.episode_number?.toString().padStart(2, '0')}
               </span>
             </div>
             
@@ -270,9 +165,10 @@ export default function ShowPage() {
               <h1 className="text-3xl font-bold text-gray-900">
                 {show?.name}
               </h1>
-              {showInfo?.season && showInfo?.episodeNumber && (
+              {episodeData && (
                 <p className="text-gray-600">
-                  Season {showInfo.season}, Episode {showInfo.episodeNumber}
+                  Season {episodeData.season}, Episode {episodeData.episode_number}
+                  {episodeData.title && ` - ${episodeData.title}`}
                 </p>
               )}
             </div>
@@ -314,7 +210,7 @@ export default function ShowPage() {
                 <div>
                   <p className="text-sm text-gray-600">Episode</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    S{showInfo?.season?.toString().padStart(2, '0')}E{showInfo?.episodeNumber?.toString().padStart(2, '0')}
+                    S{episodeData?.season?.toString().padStart(2, '0')}E{episodeData?.episode_number?.toString().padStart(2, '0')}
                   </p>
                 </div>
               </div>
