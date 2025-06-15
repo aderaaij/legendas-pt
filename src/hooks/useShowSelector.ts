@@ -101,7 +101,6 @@ export function useShowSelector() {
     try {
       if (show.tvdb_id) {
         // Always fetch fresh episode data from TVDB for shows with TVDB ID
-        console.log(`Fetching all episodes for ${show.name} from TVDB...`);
         const episodeList =
           await PhraseExtractionService.fetchAndSaveEpisodesFromTVDB(show);
         setEpisodes(episodeList);
@@ -115,7 +114,6 @@ export function useShowSelector() {
     } catch (err) {
       // If TVDB fetch fails, try to get episodes from database as fallback
       try {
-        console.log("TVDB fetch failed, falling back to database episodes...");
         const episodeList = await PhraseExtractionService.getEpisodesForShow(
           show.id
         );
@@ -229,7 +227,6 @@ export function useShowSelector() {
             setEpisodes([]);
           }
 
-          console.log(result.message);
         } else {
           setError(result.message);
         }

@@ -1,11 +1,6 @@
 import { PhraseItem } from "@/app/components/AnkiExporter";
 
 export const cleanSubtitleContent = (content: string): string => {
-  console.log("Input content length:", content?.length || 0);
-  console.log(
-    "Input content preview:",
-    content?.substring(0, 200) || "NO CONTENT"
-  );
 
   if (!content || content.length === 0) {
     console.warn("No content provided to cleanSubtitleContent");
@@ -18,8 +13,6 @@ export const cleanSubtitleContent = (content: string): string => {
     .map((line) => line.replace(/^#+\s*|#+\s*$/g, "").trim()) // Remove leading/trailing #
     .filter((line) => line.length > 0);
 
-  console.log("Total lines after split:", lines.length);
-  console.log("First few lines:", lines.slice(0, 5));
 
   const filteredLines = lines.filter((line) => {
     const trimmed = line.trim();
@@ -34,18 +27,13 @@ export const cleanSubtitleContent = (content: string): string => {
     return isValid;
   });
 
-  console.log("Lines after filtering:", filteredLines.length);
-  console.log("Sample filtered lines:", filteredLines.slice(0, 3));
 
   const processedLines = filteredLines
     .map((line) => line.replace(/^[A-Z]+\s*:\s*/, "").trim()) // Remove speaker names
     .filter((line) => line.length > 3);
 
-  console.log("Lines after final processing:", processedLines.length);
 
   const result = processedLines.join("\n");
-  console.log("Final cleaned content length:", result.length);
-  console.log("Final cleaned content preview:", result.substring(0, 200));
 
   return result;
 };

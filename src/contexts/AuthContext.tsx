@@ -27,7 +27,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Get initial session with timeout
     const getInitialSession = async () => {
       try {
-        console.log('Getting initial session...')
         
         // Add timeout to prevent hanging
         const sessionPromise = supabase.auth.getSession()
@@ -36,7 +35,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         )
         
         const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any
-        console.log('Session result:', { session, error })
         
         if (error) {
           console.error('Error getting session:', error)
@@ -45,11 +43,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         if (session?.user) {
-          console.log('User found, fetching profile...')
           const authUser = session.user as AuthUser
           await fetchUserProfile(authUser)
         } else {
-          console.log('No session found')
         }
         
         setLoading(false)
@@ -65,7 +61,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session)
         try {
           if (session?.user) {
             const authUser = session.user as AuthUser
@@ -87,7 +82,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const fetchUserProfile = async (authUser: AuthUser) => {
     try {
-      console.log('Fetching user profile for:', authUser.id)
       
       // Add timeout to profile fetch
       const profilePromise = supabase
@@ -101,7 +95,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       )
       
       const { data: profileData, error } = await Promise.race([profilePromise, timeoutPromise]) as any
-      console.log('Profile fetch result:', { profileData, error })
 
       if (error) {
         console.error('Error fetching user profile:', error)
@@ -112,7 +105,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const userProfile: UserProfile = profileData
-      console.log('Setting user profile:', userProfile)
       setUser({ ...authUser, profile: userProfile })
       setProfile(userProfile)
     } catch (error) {

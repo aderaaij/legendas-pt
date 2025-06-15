@@ -6,8 +6,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-console.log("Supabase client initialized with URL:", supabaseUrl);
-console.log({ supabase });
 // Types for your database schema
 export interface Show {
   id: string;
@@ -367,7 +365,6 @@ export class PhraseExtractionService {
   static async findExistingExtraction(
     contentHash: string
   ): Promise<PhraseExtraction | null> {
-    console.log("Searching for existing extraction with hash:", contentHash);
 
     const { data, error } = await supabase
       .from("phrase_extractions")
@@ -384,7 +381,6 @@ export class PhraseExtractionService {
     if (error) {
       if (error.code === "PGRST116") {
         // No rows found - this is expected for new content
-        console.log("No existing extraction found for hash:", contentHash);
         return null;
       } else {
         // Actual database error
@@ -393,7 +389,6 @@ export class PhraseExtractionService {
       }
     }
 
-    console.log("Found existing extraction:", data?.id);
     return data;
   }
 
@@ -804,7 +799,6 @@ export class PhraseExtractionService {
   static async getShowsWithExtractionStats() {
     // First get all shows
 
-    console.log("Fetching all shows with extraction stats...", { supabase });
     const { data: shows, error: showsError } = await supabase
       .from("shows")
       .select("*")

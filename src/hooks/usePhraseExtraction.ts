@@ -31,29 +31,22 @@ export const usePhraseExtraction = ({
     async (contentHash: string) => {
       if (!settings.saveToDatabase) return { phrases: null, extraction: null };
 
-      console.log("Checking for existing extraction with hash:", contentHash);
 
       try {
         const existingExtraction =
           await PhraseExtractionService.findExistingExtraction(contentHash);
         if (!existingExtraction) {
-          console.log(
-            "No existing extraction found, proceeding with new extraction"
-          );
           return { phrases: null, extraction: null };
         }
 
-        console.log("Found existing extraction, loading phrases...");
         const existingPhrases =
           await PhraseExtractionService.getExtractedPhrases(
             existingExtraction.id
           );
         if (!existingPhrases?.length) {
-          console.log("Existing extraction has no phrases");
           return { phrases: null, extraction: existingExtraction };
         }
 
-        console.log(`Found ${existingPhrases.length} existing phrases`);
         const phraseItems = existingPhrases.map(
           (item): PhraseItem => ({
             phrase: item.phrase,
@@ -85,7 +78,6 @@ export const usePhraseExtraction = ({
       if (!settings.saveToDatabase || !phrases.length) return;
 
       try {
-        console.log("Attempting to save to database...");
 
         const { showName, season, episodeNumber } =
           metadata || parseShowInfo(fileName);
@@ -108,7 +100,6 @@ export const usePhraseExtraction = ({
         // If we have an existing extraction and force re-extraction is enabled,
         // update the existing extraction
         if (settings.forceReExtraction && existingExtraction) {
-          console.log("Updating existing extraction with new phrases");
           
           // Get existing phrases to filter out duplicates
           const existingPhrases = await PhraseExtractionService.getExtractedPhrases(existingExtraction.id);
@@ -127,7 +118,6 @@ export const usePhraseExtraction = ({
             }
           }
           
-          console.log(`Added ${newPhrasesAdded} new phrases to existing extraction`);
           
           // Update extraction metadata with the total count after adding new phrases
           const totalPhrasesAfterUpdate = existingPhrases.length + newPhrasesAdded;
@@ -184,13 +174,10 @@ export const usePhraseExtraction = ({
         const cleanContent = cleanSubtitleContent(subtitleContent);
         const contentHash = generateContentHash(cleanContent);
 
-        console.log("Generated content hash:", contentHash);
-        console.log("Clean content length:", cleanContent.length);
 
         // Check for existing extraction
         const { phrases: existingPhrases, extraction: existingExtraction } = await checkExistingExtraction(contentHash);
         if (existingPhrases && !settings.forceReExtraction) {
-          console.log("Using existing phrases");
           return existingPhrases;
         }
 
@@ -201,7 +188,6 @@ export const usePhraseExtraction = ({
         // If force re-extraction and we have existing phrases, combine them
         let finalPhrases = newPhrases;
         if (settings.forceReExtraction && existingPhrases) {
-          console.log("Combining existing and new phrases");
           
           // Create a set of existing phrase texts for deduplication
           const existingPhraseTexts = new Set(existingPhrases.map(p => p.phrase.toLowerCase().trim()));
@@ -214,7 +200,6 @@ export const usePhraseExtraction = ({
           // Combine existing and unique new phrases
           finalPhrases = [...existingPhrases, ...uniqueNewPhrases];
           
-          console.log(`Combined ${existingPhrases.length} existing + ${uniqueNewPhrases.length} new = ${finalPhrases.length} total phrases`);
         }
 
         // Save to database
