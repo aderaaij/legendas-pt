@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, FileText, Settings } from "lucide-react";
+import { ArrowLeft, FileText, Settings, Brain } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -22,6 +22,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { PhraseCard } from "@/app/components/PhraseCard";
 import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
 import { PhraseSortAndFilter, SortOption, FilterOption } from "@/app/components/PhraseSortAndFilter";
+import { SpacedRepetitionGame } from "@/app/components/SpacedRepetitionGame";
 
 export default function EpisodePage() {
   const params = useParams();
@@ -37,6 +38,7 @@ export default function EpisodePage() {
   const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const [selectedPhrases, setSelectedPhrases] = useState<Set<string>>(new Set());
   const [isExportMode, setIsExportMode] = useState(false);
+  const [showStudyGame, setShowStudyGame] = useState(false);
   const { isAdmin } = useAuth();
   const { isFavorite } = useFavorites();
 
@@ -253,6 +255,15 @@ export default function EpisodePage() {
           </div>
 
           <div className="flex items-center space-x-3 justify-end mt-4">
+            {phrases.length > 0 && (
+              <button
+                onClick={() => setShowStudyGame(true)}
+                className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Brain className="w-4 h-4" />
+                <span>Start Study</span>
+              </button>
+            )}
             {isAdmin && (
               <Link
                 href={`/${generateShowSlug(show!.name)}/s${episodeData?.season
@@ -340,6 +351,15 @@ export default function EpisodePage() {
               This episode doesn&apos;t have any extracted phrases yet.
             </p>
           </div>
+        )}
+
+        {/* Spaced Repetition Game */}
+        {showStudyGame && episodeData && (
+          <SpacedRepetitionGame
+            episodeId={episodeData.id}
+            episodeTitle={`S${episodeData.season?.toString().padStart(2, "0")}E${episodeData.episode_number?.toString().padStart(2, "0")}${episodeData.title ? ` - ${episodeData.title}` : ""}`}
+            onClose={() => setShowStudyGame(false)}
+          />
         )}
       </div>
     </div>
