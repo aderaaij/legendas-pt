@@ -35,6 +35,8 @@ export default function EpisodePage() {
   const [error, setError] = useState<string>("");
   const [sortOption, setSortOption] = useState<SortOption>('none');
   const [filterOption, setFilterOption] = useState<FilterOption>('all');
+  const [selectedPhrases, setSelectedPhrases] = useState<Set<string>>(new Set());
+  const [isExportMode, setIsExportMode] = useState(false);
   const { isAdmin } = useAuth();
   const { isFavorite } = useFavorites();
 
@@ -98,6 +100,9 @@ export default function EpisodePage() {
         targetEpisode.id
       );
       setPhrases(episodePhrases);
+      
+      // Select all phrases by default
+      setSelectedPhrases(new Set(episodePhrases.map(p => p.id)));
     } catch (err) {
       setError(
         `Failed to load episode data: ${
@@ -133,8 +138,41 @@ export default function EpisodePage() {
     return filtered;
   }, [phrases, sortOption, filterOption, isFavorite]);
 
-  // Convert to format expected by AnkiExporter
-  const ankiPhrases = phrases.map((phrase) => ({
+  // Selection handlers
+  const handlePhraseToggle = (phraseId: string) => {
+    setSelectedPhrases(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(phraseId)) {
+        newSet.delete(phraseId);
+      } else {
+        newSet.add(phraseId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedPhrases(new Set(filteredAndSortedPhrases.map(p => p.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedPhrases(new Set());
+  };
+
+  const handleEnterExportMode = () => {
+    setIsExportMode(true);
+    // Select all filtered phrases when entering export mode
+    setSelectedPhrases(new Set(filteredAndSortedPhrases.map(p => p.id)));
+  };
+
+  const handleExitExportMode = () => {
+    setIsExportMode(false);
+    setSelectedPhrases(new Set());
+  };
+
+  // Convert selected phrases to format expected by AnkiExporter
+  const selectedPhrasesData = phrases.filter(p => selectedPhrases.has(p.id));
+  const ankiPhrases = selectedPhrasesData.map((phrase) => ({
     phrase: phrase.phrase,
     translation: phrase.translation,
     frequency: 1,
@@ -228,7 +266,16 @@ export default function EpisodePage() {
                 <span>Edit Episode</span>
               </Link>
             )}
-            <AnkiExporter phrases={ankiPhrases} />
+            <AnkiExporter 
+              phrases={ankiPhrases}
+              isExportMode={isExportMode}
+              onEnterExportMode={handleEnterExportMode}
+              onExitExportMode={handleExitExportMode}
+              selectedCount={selectedPhrases.size}
+              totalCount={filteredAndSortedPhrases.length}
+              onSelectAll={handleSelectAll}
+              onDeselectAll={handleDeselectAll}
+            />
           </div>
         </div>
 
@@ -259,10 +306,17 @@ export default function EpisodePage() {
               filteredPhrases={filteredAndSortedPhrases.length}
             />
 
+
             {filteredAndSortedPhrases.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredAndSortedPhrases.map((phrase, index) => (
-                  <PhraseCard key={phrase.id || index} phrase={phrase} />
+                  <PhraseCard 
+                    key={phrase.id || index} 
+                    phrase={phrase} 
+                    isSelected={selectedPhrases.has(phrase.id)}
+                    onToggleSelection={handlePhraseToggle}
+                    showSelection={isExportMode}
+                  />
                 ))}
               </div>
             ) : (

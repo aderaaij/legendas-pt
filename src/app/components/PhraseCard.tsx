@@ -3,11 +3,31 @@ import { FavoriteButton } from "./FavoriteButton";
 
 interface PhraseCardProps {
   phrase: ExtractedPhrase;
+  isSelected?: boolean;
+  onToggleSelection?: (phraseId: string) => void;
+  showSelection?: boolean;
 }
 
-export const PhraseCard = ({ phrase }: PhraseCardProps) => {
+export const PhraseCard = ({ 
+  phrase, 
+  isSelected = false, 
+  onToggleSelection, 
+  showSelection = false 
+}: PhraseCardProps) => {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-gray-50 flex">
+    <div className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all bg-gray-50 flex ${
+      isSelected && showSelection ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+    }`}>
+      {showSelection && (
+        <div className="flex items-start mr-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelection?.(phrase.id)}
+            className="mt-1 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+          />
+        </div>
+      )}
       <div className="flex flex-col w-full">
         <div className="font-semibold text-gray-800 mb-2">{phrase.phrase}</div>
         <div className="text-sm text-gray-600 mb-3">{phrase.translation}</div>
