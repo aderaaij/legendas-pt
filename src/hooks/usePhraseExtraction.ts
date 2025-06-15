@@ -134,7 +134,6 @@ export const usePhraseExtraction = ({
           await PhraseExtractionService.updateExtraction(existingExtraction.id, {
             total_phrases_found: totalPhrasesAfterUpdate,
             processing_time_ms: processingTime,
-            updated_at: new Date().toISOString(),
           });
           
           return;

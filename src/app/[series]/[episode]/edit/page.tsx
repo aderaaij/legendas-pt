@@ -18,6 +18,7 @@ import { parseShowSlug, normalizeShowName, generateShowSlug } from "@/utils/slug
 import { formatDate } from "@/utils/formatDate";
 import MetadataEditor from "@/app/components/MetadataEditor";
 import PhraseEditor from "@/app/components/PhraseEditor";
+import { AdminRoute } from "@/app/components/ProtectedRoute";
 
 type ViewMode = "edit" | "phrase-edit";
 
@@ -276,7 +277,8 @@ export default function EpisodeEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
+    <AdminRoute redirectTo="/">
+      <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
       <div className="container mx-auto px-4 py-8">
         {/* Header with Breadcrumbs */}
         <div className="flex flex-col justify-between mb-8">
@@ -508,5 +510,6 @@ export default function EpisodeEditPage() {
         )}
       </div>
     </div>
+    </AdminRoute>
   );
 }

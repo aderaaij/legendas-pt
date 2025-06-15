@@ -1,4 +1,3 @@
-// lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 import TVDBService from "./tvdb";
 import { normalizeShowName } from "../utils/slugify";
@@ -7,7 +6,8 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
+console.log("Supabase client initialized with URL:", supabaseUrl);
+console.log({ supabase });
 // Types for your database schema
 export interface Show {
   id: string;
@@ -88,6 +88,7 @@ export class PhraseExtractionService {
     source: string = "rtp"
   ): Promise<Show> {
     // First try exact match
+
     const { data: exactMatch, error: exactError } = await supabase
       .from("shows")
       .select("*")
@@ -728,7 +729,7 @@ export class PhraseExtractionService {
     try {
       // Fetch episodes from TVDB
       const tvdbEpisodes = await TVDBService.getAllEpisodes(show.tvdb_id);
-      
+
       if (!tvdbEpisodes || tvdbEpisodes.length === 0) {
         return [];
       }
@@ -768,15 +769,18 @@ export class PhraseExtractionService {
     }
   }
 
-  static async safeDeleteShow(showId: string): Promise<{ success: boolean; message: string }> {
+  static async safeDeleteShow(
+    showId: string
+  ): Promise<{ success: boolean; message: string }> {
     try {
       // Check if show has phrase extractions
       const hasExtractions = await this.showHasPhraseExtractions(showId);
-      
+
       if (hasExtractions) {
         return {
           success: false,
-          message: "Cannot delete show with existing phrase extractions. Delete extractions first.",
+          message:
+            "Cannot delete show with existing phrase extractions. Delete extractions first.",
         };
       }
 
@@ -790,7 +794,8 @@ export class PhraseExtractionService {
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Failed to delete show",
+        message:
+          error instanceof Error ? error.message : "Failed to delete show",
       };
     }
   }
@@ -798,6 +803,8 @@ export class PhraseExtractionService {
   // Get shows with their extraction statistics for homepage
   static async getShowsWithExtractionStats() {
     // First get all shows
+
+    console.log("Fetching all shows with extraction stats...", { supabase });
     const { data: shows, error: showsError } = await supabase
       .from("shows")
       .select("*")
@@ -821,12 +828,15 @@ export class PhraseExtractionService {
           .order("created_at", { ascending: false });
 
         if (extractionsError) {
-          console.error(`Error getting extractions for show ${show.id}:`, extractionsError);
+          console.error(
+            `Error getting extractions for show ${show.id}:`,
+            extractionsError
+          );
           return null;
         }
 
         const extractionCount = extractions?.length || 0;
-        
+
         // Get current phrase count by counting actual phrases
         let totalPhrases = 0;
         if (extractions && extractions.length > 0) {
@@ -838,7 +848,7 @@ export class PhraseExtractionService {
             totalPhrases += phrases?.length || 0;
           }
         }
-        
+
         const lastExtraction = extractions?.[0]?.created_at || show.created_at;
 
         // Only return shows that have extractions
@@ -856,7 +866,7 @@ export class PhraseExtractionService {
             tvdb_confidence: show.tvdb_confidence,
           };
         }
-        
+
         return null;
       })
     );
@@ -864,18 +874,22 @@ export class PhraseExtractionService {
     // Filter out null results and sort by last extraction date
     return showsWithStats
       .filter(Boolean)
-      .sort((a, b) => new Date(b!.lastExtraction).getTime() - new Date(a!.lastExtraction).getTime()) as Array<{
-        id: string;
-        name: string;
-        source: string;
-        extractionCount: number;
-        totalPhrases: number;
-        lastExtraction: string;
-        network?: string;
-        rating?: number;
-        poster_url?: string;
-        tvdb_confidence?: number;
-      }>;
+      .sort(
+        (a, b) =>
+          new Date(b!.lastExtraction).getTime() -
+          new Date(a!.lastExtraction).getTime()
+      ) as Array<{
+      id: string;
+      name: string;
+      source: string;
+      extractionCount: number;
+      totalPhrases: number;
+      lastExtraction: string;
+      network?: string;
+      rating?: number;
+      poster_url?: string;
+      tvdb_confidence?: number;
+    }>;
   }
 
   // Get episodes for a show with their extraction statistics
@@ -905,7 +919,10 @@ export class PhraseExtractionService {
           .order("created_at", { ascending: false });
 
         if (extractionsError) {
-          console.error(`Error getting extractions for episode ${episode.id}:`, extractionsError);
+          console.error(
+            `Error getting extractions for episode ${episode.id}:`,
+            extractionsError
+          );
           return {
             ...episode,
             extractionCount: 0,
@@ -915,7 +932,7 @@ export class PhraseExtractionService {
         }
 
         const extractionCount = extractions?.length || 0;
-        
+
         // Get current phrase count by counting actual phrases
         let totalPhrases = 0;
         if (extractions && extractions.length > 0) {
@@ -927,7 +944,7 @@ export class PhraseExtractionService {
             totalPhrases += phrases?.length || 0;
           }
         }
-        
+
         const lastExtraction = extractions?.[0]?.created_at || null;
 
         return {
@@ -940,7 +957,7 @@ export class PhraseExtractionService {
     );
 
     // Only return episodes that have extractions
-    return episodesWithStats.filter(ep => ep.extractionCount > 0);
+    return episodesWithStats.filter((ep) => ep.extractionCount > 0);
   }
 
   // Get phrases for a specific episode
@@ -962,7 +979,7 @@ export class PhraseExtractionService {
     const allPhrases = await Promise.all(
       extractions.map(async (extraction) => {
         const phrases = await this.getExtractedPhrases(extraction.id);
-        return phrases.map(phrase => ({
+        return phrases.map((phrase) => ({
           ...phrase,
           extractionId: extraction.id,
         }));
@@ -992,7 +1009,7 @@ export class PhraseExtractionService {
     const allPhrases = await Promise.all(
       extractions.map(async (extraction) => {
         const phrases = await this.getExtractedPhrases(extraction.id);
-        return phrases.map(phrase => ({
+        return phrases.map((phrase) => ({
           ...phrase,
           extractionId: extraction.id,
           episodeId: extraction.episode_id,
@@ -1019,7 +1036,9 @@ export class PhraseExtractionService {
   // Update a specific phrase
   static async updatePhrase(
     phraseId: string,
-    updates: Partial<Omit<ExtractedPhrase, "id" | "extraction_id" | "created_at">>
+    updates: Partial<
+      Omit<ExtractedPhrase, "id" | "extraction_id" | "created_at">
+    >
   ): Promise<ExtractedPhrase> {
     const { data, error } = await supabase
       .from("extracted_phrases")
@@ -1081,10 +1100,10 @@ export class PhraseExtractionService {
     totalDuplicates: number;
   }> {
     const phrases = await this.getExtractedPhrases(extractionId);
-    
+
     // Group phrases by normalized version (lowercase, trimmed, punctuation removed)
     const phraseGroups = new Map<string, ExtractedPhrase[]>();
-    
+
     for (const phrase of phrases) {
       const normalized = this.normalizePhrase(phrase.phrase);
       if (!phraseGroups.has(normalized)) {
@@ -1092,17 +1111,20 @@ export class PhraseExtractionService {
       }
       phraseGroups.get(normalized)!.push(phrase);
     }
-    
+
     // Filter to only groups with duplicates
     const duplicateGroups = Array.from(phraseGroups.entries())
       .filter(([_, phrases]) => phrases.length > 1)
       .map(([normalizedPhrase, phrases]) => ({
         normalizedPhrase,
-        phrases: phrases.sort((a, b) => a.phrase.localeCompare(b.phrase))
+        phrases: phrases.sort((a, b) => a.phrase.localeCompare(b.phrase)),
       }));
-    
-    const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.phrases.length - 1, 0);
-    
+
+    const totalDuplicates = duplicateGroups.reduce(
+      (sum, group) => sum + group.phrases.length - 1,
+      0
+    );
+
     return { duplicateGroups, totalDuplicates };
   }
 
@@ -1110,8 +1132,8 @@ export class PhraseExtractionService {
   private static normalizePhrase(phrase: string): string {
     return phrase
       .toLowerCase()
-      .replace(/[^\w\s]/g, '') // Remove punctuation
-      .replace(/\s+/g, ' ')     // Normalize spaces
+      .replace(/[^\w\s]/g, "") // Remove punctuation
+      .replace(/\s+/g, " ") // Normalize spaces
       .trim();
   }
 
@@ -1126,8 +1148,10 @@ export class PhraseExtractionService {
     }
 
     // Keep the phrase with the earliest position_in_content as the "primary" one
-    const primaryPhrase = phrasesToMerge.reduce((earliest, current) => 
-      (current.position_in_content || 0) < (earliest.position_in_content || 0) ? current : earliest
+    const primaryPhrase = phrasesToMerge.reduce((earliest, current) =>
+      (current.position_in_content || 0) < (earliest.position_in_content || 0)
+        ? current
+        : earliest
     );
 
     // Update the primary phrase with the selected text and translation
@@ -1135,19 +1159,23 @@ export class PhraseExtractionService {
       phrase: selectedPhrase,
       translation: selectedTranslation,
       // Keep the earliest position
-      position_in_content: primaryPhrase.position_in_content
+      position_in_content: primaryPhrase.position_in_content,
     });
 
     // Delete all other phrases
-    const phrasesToDelete = phrasesToMerge.filter(p => p.id !== primaryPhrase.id);
-    await Promise.all(phrasesToDelete.map(phrase => this.deletePhrase(phrase.id)));
+    const phrasesToDelete = phrasesToMerge.filter(
+      (p) => p.id !== primaryPhrase.id
+    );
+    await Promise.all(
+      phrasesToDelete.map((phrase) => this.deletePhrase(phrase.id))
+    );
 
     return updatedPhrase;
   }
 
   // Get phrases with duplicate analysis for an extraction
   static async getPhrasesWithDuplicateAnalysis(extractionId: string): Promise<{
-    phrases: (ExtractedPhrase & { 
+    phrases: (ExtractedPhrase & {
       isDuplicate: boolean;
       duplicateGroup?: string;
       duplicateCount?: number;
@@ -1158,31 +1186,33 @@ export class PhraseExtractionService {
     }>;
   }> {
     const phrases = await this.getExtractedPhrases(extractionId);
-    const { duplicateGroups } = await this.findDuplicatePhrasesInExtraction(extractionId);
-    
+    const { duplicateGroups } = await this.findDuplicatePhrasesInExtraction(
+      extractionId
+    );
+
     // Create a map of phrase ID to duplicate info
     const duplicateMap = new Map<string, { group: string; count: number }>();
-    
+
     for (const group of duplicateGroups) {
       for (const phrase of group.phrases) {
         duplicateMap.set(phrase.id, {
           group: group.normalizedPhrase,
-          count: group.phrases.length
+          count: group.phrases.length,
         });
       }
     }
-    
+
     // Enhance phrases with duplicate information
-    const enhancedPhrases = phrases.map(phrase => {
+    const enhancedPhrases = phrases.map((phrase) => {
       const duplicateInfo = duplicateMap.get(phrase.id);
       return {
         ...phrase,
         isDuplicate: !!duplicateInfo,
         duplicateGroup: duplicateInfo?.group,
-        duplicateCount: duplicateInfo?.count
+        duplicateCount: duplicateInfo?.count,
       };
     });
-    
+
     return { phrases: enhancedPhrases, duplicateGroups };
   }
 }
