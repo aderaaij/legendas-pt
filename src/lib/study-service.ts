@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { FSRS, Card, createEmptyCard, Rating, State } from 'ts-fsrs';
+import { FSRS, Card, createEmptyCard, Rating, State, generatorParameters } from 'ts-fsrs';
 import {
   StudySession,
   CardStudy,
@@ -12,7 +12,8 @@ export class StudyService {
 
   constructor() {
     // Initialize FSRS with default parameters
-    this.fsrs = new FSRS();
+    const params = generatorParameters();
+    this.fsrs = new FSRS(params);
   }
 
   /**
@@ -131,6 +132,7 @@ export class StudyService {
         lapses: existingStudy.lapses,
         state: this.mapStateToFSRS(existingStudy.state),
         last_review: existingStudy.last_review ? new Date(existingStudy.last_review) : undefined,
+        learning_steps: 0,
       };
     } else {
       fsrsCard = createEmptyCard();
@@ -138,9 +140,11 @@ export class StudyService {
 
     // Process the rating with FSRS
     const now = new Date();
-    const fsrsRating = this.mapRatingToFSRS(rating);
     const schedulingCards = this.fsrs.repeat(fsrsCard, now);
-    const updatedCard = schedulingCards[fsrsRating].card;
+    
+    // Get the appropriate card based on rating (using numeric keys 1-4)
+    const ratingKey = rating.toString() as '1' | '2' | '3' | '4';
+    const updatedCard = schedulingCards[ratingKey].card;
 
     // Prepare the updated study data
     const updatedStudy: Partial<CardStudy> = {
@@ -153,7 +157,7 @@ export class StudyService {
       scheduled_days: updatedCard.scheduled_days,
       reps: updatedCard.reps,
       lapses: updatedCard.lapses,
-      state: this.mapStateFromFSRS(updatedCard.state),
+      state: this.mapStateFromFSRS(updatedCard.state) as 'New' | 'Learning' | 'Review' | 'Relearning',
       last_review: now.toISOString(),
       last_rating: rating,
     };
