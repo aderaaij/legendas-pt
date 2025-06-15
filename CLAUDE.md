@@ -58,6 +58,9 @@ See `AUTHENTICATION_SETUP.md` for detailed authentication setup instructions.
 - `Navigation` - App navigation with authentication status and admin controls
 - `ProtectedRoute` - Route protection wrapper with `AdminRoute` and `AuthenticatedRoute` variants
 - `FavoriteButton` - User favorite functionality for phrases
+- `SpacedRepetitionGame` - Interactive study interface with FSRS algorithm for optimal learning
+- `StudyCard` - Individual flashcard component for spaced repetition
+- `StudyProgressBar` - Progress tracking during study sessions
 
 ### Database Schema (Supabase)
 ```sql
@@ -67,6 +70,8 @@ phrase_extractions - Extraction sessions with processing metadata
 extracted_phrases - Individual phrases with Portuguese/English translations
 user_profiles - User profile management with role assignment (user/admin)
 user_favorites - User phrase favorites
+user_study_sessions - Spaced repetition study session tracking
+user_card_studies - Individual card progress with FSRS algorithm data
 ```
 
 ### Authentication System
@@ -85,6 +90,7 @@ The application implements a **role-based authentication system** with two user 
 The application uses a service layer pattern:
 - `PhraseExtractionService` - Central data access layer for database operations
 - `TVDBService` - External API integration for show metadata
+- `StudyService` - Spaced repetition management with FSRS algorithm integration
 - OpenAI API calls are made directly from components/hooks
 
 ### Core Workflow
@@ -98,6 +104,28 @@ The application uses a service layer pattern:
 - Automatic filename parsing (e.g., "Show.Name.S01E01.vtt")
 - Content deduplication using SHA-256 hashing
 - Show name normalization for matching across extractions
+
+### Spaced Repetition Learning System
+The application includes an advanced spaced repetition system for optimal language learning:
+
+**Core Features:**
+- **FSRS Algorithm** - Uses `ts-fsrs` library for scientifically-optimized scheduling
+- **Anki-style Interface** - Portuguese → English flashcard system with 4-button rating
+- **Progress Tracking** - Persistent learning progress for authenticated users
+- **Guest Mode** - Temporary study sessions for non-authenticated users
+- **Keyboard Shortcuts** - Space to flip, 1-4 for ratings, Escape to close
+
+**Learning States:**
+- **New**: Cards being learned for the first time
+- **Learning**: Cards in initial learning phase
+- **Review**: Cards scheduled for periodic review
+- **Relearning**: Previously learned cards that were forgotten
+
+**User Experience:**
+- Study sessions accessible via "Start Study" button on episode pages
+- Real-time progress tracking with accuracy and timing statistics
+- Intelligent scheduling based on individual memory patterns
+- Seamless integration with existing authentication and favorites systems
 
 ## Environment Variables Required
 
