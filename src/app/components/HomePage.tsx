@@ -1,11 +1,12 @@
 "use client";
 
-import { FileText, Upload, Languages } from "lucide-react";
+import { FileText, Languages } from "lucide-react";
 import Link from "next/link";
 
 import { useHomePage } from "@/hooks/useHomePage";
 import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
+import { LibraryStatistics } from "./LibraryStatistics";
 
 export default function HomePage() {
   const { shows, loading, error, refetch, stats } = useHomePage();
@@ -35,7 +36,7 @@ export default function HomePage() {
             download them for language learning
           </p>
 
-          {isAdmin && (
+          {/* {isAdmin && (
             <div className="flex items-center justify-center">
               <Link
                 href="/upload"
@@ -45,7 +46,7 @@ export default function HomePage() {
                 <span>Upload New Subtitles</span>
               </Link>
             </div>
-          )}
+          )} */}
         </header>
 
         {error && (
@@ -68,7 +69,9 @@ export default function HomePage() {
                 No Shows Yet
               </h3>
               <p className="text-gray-600 mb-6">
-                {isAdmin ? "Upload your first subtitle file to get started!" : "Contact an admin to upload subtitle files."}
+                {isAdmin
+                  ? "Upload your first subtitle file to get started!"
+                  : "Contact an admin to upload subtitle files."}
               </p>
               {isAdmin && (
                 <Link
@@ -83,31 +86,9 @@ export default function HomePage() {
         ) : (
           <>
             {/* Statistics */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                Library Statistics
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-1">
-                    {stats.totalShows}
-                  </div>
-                  <div className="text-gray-600">Shows</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-1">
-                    {stats.totalExtractions}
-                  </div>
-                  <div className="text-gray-600">Extractions</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600 mb-1">
-                    {stats.totalPhrases}
-                  </div>
-                  <div className="text-gray-600">Total Phrases</div>
-                </div>
-              </div>
-            </div>
+            <LibraryStatistics stats={stats} />
+
+            {/* Shows Header */}
 
             {/* Shows Grid */}
             <div className="bg-white rounded-xl shadow-lg p-6">

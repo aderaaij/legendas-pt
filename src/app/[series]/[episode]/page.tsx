@@ -42,6 +42,14 @@ export default function EpisodePage() {
   const { isAdmin } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
 
+  // Wrapper for toggleFavorite to match FavoriteButton's expected signature
+  const handleToggleFavorite = async (phraseId: string): Promise<void> => {
+    const result = await toggleFavorite(phraseId);
+    if (result?.error) {
+      console.error('Error toggling favorite:', result.error);
+    }
+  };
+
   const loadEpisodeData = useCallback(async () => {
     try {
       setLoading(true);
@@ -328,7 +336,7 @@ export default function EpisodePage() {
                     onToggleSelection={handlePhraseToggle}
                     showSelection={isExportMode}
                     isFavorite={isFavorite(phrase.id)}
-                    onToggleFavorite={toggleFavorite}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
               </div>
