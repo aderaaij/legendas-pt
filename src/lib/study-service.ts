@@ -5,6 +5,7 @@ import {
   CardStudy,
   StudyCard,
   StudyRating,
+  DueCard,
 } from '@/types/spaced-repetition';
 
 export class StudyService {
@@ -33,32 +34,42 @@ export class StudyService {
         p_user_id: user.id,
         p_episode_id: episodeId,
         p_limit: limit
-      });
+      }) as { data: DueCard[] | null, error: any };
 
     if (error) {
       console.error('Error fetching due cards:', error);
       throw error;
     }
 
-    // Convert to StudyCard format
+    // Convert to StudyCard format with batched queries
     const studyCards: StudyCard[] = [];
-    for (const card of dueCards || []) {
-      // Get full phrase data
-      const { data: phrase } = await supabase
-        .from('extracted_phrases')
-        .select('*')
-        .eq('id', card.phrase_id)
-        .single();
-
+    
+    if (!dueCards?.length) return studyCards;
+    
+    const phraseIds = dueCards.map(card => card.phrase_id);
+    
+    // Batch fetch all phrases
+    const { data: phrases } = await supabase
+      .from('extracted_phrases')
+      .select('*')
+      .in('id', phraseIds);
+    
+    // Batch fetch all existing card studies (no .single() to avoid PGRST116 errors)
+    const { data: cardStudies } = await supabase
+      .from('user_card_studies')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('phrase_id', phraseIds);
+    
+    // Create lookup maps for efficient matching
+    const phraseMap = new Map((phrases || []).map(p => [p.id, p]));
+    const cardStudyMap = new Map((cardStudies || []).map(cs => [cs.phrase_id, cs]));
+    
+    // Build study cards
+    for (const card of dueCards) {
+      const phrase = phraseMap.get(card.phrase_id);
       if (phrase) {
-        // Get existing card study data if any
-        const { data: cardStudy } = await supabase
-          .from('user_card_studies')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('phrase_id', card.phrase_id)
-          .single();
-
+        const cardStudy = cardStudyMap.get(card.phrase_id);
         studyCards.push({
           phrase,
           cardStudy: cardStudy || undefined,
@@ -111,13 +122,15 @@ export class StudyService {
       return null;
     }
 
-    // Get existing card study or create new one
-    const { data: existingStudy } = await supabase
+    // Get existing card study or create new one (avoiding .single() to prevent PGRST116 errors)
+    const { data: existingStudies } = await supabase
       .from('user_card_studies')
       .select('*')
       .eq('user_id', user.id)
       .eq('phrase_id', phraseId)
-      .single();
+      .limit(1);
+    
+    const existingStudy = existingStudies?.[0] || null;
 
     // Convert existing study to FSRS Card format
     let fsrsCard: Card;
