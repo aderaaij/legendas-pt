@@ -1,14 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
-import {
-  ArrowLeft,
-  FileText,
-  Calendar,
-  TrendingUp,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft, FileText, Settings } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -24,8 +18,10 @@ import {
 } from "@/utils/slugify";
 import AnkiExporter from "@/app/components/AnkiExporter";
 import { useAuth } from "@/hooks/useAuth";
+import { useFavorites } from "@/hooks/useFavorites";
 import { PhraseCard } from "@/app/components/PhraseCard";
 import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
+import { PhraseSortAndFilter, SortOption, FilterOption } from "@/app/components/PhraseSortAndFilter";
 
 export default function EpisodePage() {
   const params = useParams();
@@ -37,7 +33,10 @@ export default function EpisodePage() {
   const [phrases, setPhrases] = useState<ExtractedPhrase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [sortOption, setSortOption] = useState<SortOption>('none');
+  const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const { isAdmin } = useAuth();
+  const { isFavorite } = useFavorites();
 
   const loadEpisodeData = useCallback(async () => {
     try {
@@ -114,6 +113,25 @@ export default function EpisodePage() {
   useEffect(() => {
     loadEpisodeData();
   }, [loadEpisodeData]);
+
+  // Filter and sort phrases
+  const filteredAndSortedPhrases = useMemo(() => {
+    let filtered = phrases;
+
+    // Apply filter
+    if (filterOption === 'favorites') {
+      filtered = phrases.filter(phrase => isFavorite(phrase.id));
+    }
+
+    // Apply sort
+    if (sortOption === 'alphabetical') {
+      filtered = [...filtered].sort((a, b) => a.phrase.localeCompare(b.phrase));
+    } else if (sortOption === 'reverse-alphabetical') {
+      filtered = [...filtered].sort((a, b) => b.phrase.localeCompare(a.phrase));
+    }
+
+    return filtered;
+  }, [phrases, sortOption, filterOption, isFavorite]);
 
   // Convert to format expected by AnkiExporter
   const ankiPhrases = phrases.map((phrase) => ({
@@ -232,11 +250,31 @@ export default function EpisodePage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {phrases.map((phrase, index) => (
-                <PhraseCard key={phrase.id || index} phrase={phrase} />
-              ))}
-            </div>
+            <PhraseSortAndFilter
+              onSortChange={setSortOption}
+              onFilterChange={setFilterOption}
+              currentSort={sortOption}
+              currentFilter={filterOption}
+              totalPhrases={phrases.length}
+              filteredPhrases={filteredAndSortedPhrases.length}
+            />
+
+            {filteredAndSortedPhrases.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredAndSortedPhrases.map((phrase, index) => (
+                  <PhraseCard key={phrase.id || index} phrase={phrase} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">
+                  {filterOption === 'favorites' 
+                    ? "No favorite phrases found. Try favoriting some phrases first!"
+                    : "No phrases match your current filters."
+                  }
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
