@@ -88,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .from('user_profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single()
+        .maybeSingle()
         
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timed out')), 3000)
@@ -99,6 +99,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         console.error('Error fetching user profile:', error)
         // Still set the user even without profile
+        setUser(authUser)
+        setProfile(null)
+        return
+      }
+
+      // If no profile exists, create a default user profile
+      if (!profileData) {
+        console.log('No user profile found, user will have default permissions')
         setUser(authUser)
         setProfile(null)
         return

@@ -4,10 +4,12 @@ import { FileText, Upload, Languages } from "lucide-react";
 import Link from "next/link";
 
 import { useHomePage } from "@/hooks/useHomePage";
+import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
 
 export default function HomePage() {
   const { shows, loading, error, refetch, stats } = useHomePage();
+  const { isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -33,15 +35,17 @@ export default function HomePage() {
             download them for language learning
           </p>
 
-          <div className="flex items-center justify-center">
-            <Link
-              href="/upload"
-              className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
-            >
-              <Upload className="w-5 h-5" />
-              <span>Upload New Subtitles</span>
-            </Link>
-          </div>
+          {isAdmin && (
+            <div className="flex items-center justify-center">
+              <Link
+                href="/upload"
+                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+              >
+                <Upload className="w-5 h-5" />
+                <span>Upload New Subtitles</span>
+              </Link>
+            </div>
+          )}
         </header>
 
         {error && (
@@ -64,14 +68,16 @@ export default function HomePage() {
                 No Shows Yet
               </h3>
               <p className="text-gray-600 mb-6">
-                Upload your first subtitle file to get started!
+                {isAdmin ? "Upload your first subtitle file to get started!" : "Contact an admin to upload subtitle files."}
               </p>
-              <Link
-                href="/upload"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Upload Subtitles
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/upload"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Upload Subtitles
+                </Link>
+              )}
             </div>
           </div>
         ) : (

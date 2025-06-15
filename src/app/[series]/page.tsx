@@ -14,6 +14,7 @@ import Link from "next/link";
 import { PhraseExtractionService, Show, Episode } from "@/lib/supabase";
 import { parseShowSlug, normalizeShowName, generateShowSlug } from "@/utils/slugify";
 import { formatDate } from "@/utils/formatDate";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SeriesPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function SeriesPage() {
   const [episodes, setEpisodes] = useState<(Episode & { extractionCount: number; totalPhrases: number; lastExtraction: string | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const { isAdmin } = useAuth();
 
   const loadShowData = useCallback(async () => {
     try {
@@ -119,13 +121,15 @@ export default function SeriesPage() {
                   {episodes.length} episode{episodes.length !== 1 ? 's' : ''} with subtitles
                 </p>
               </div>
-              <Link
-                href={`/${generateShowSlug(show!.name)}/edit`}
-                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Edit Show</span>
-              </Link>
+{isAdmin && (
+                <Link
+                  href={`/${generateShowSlug(show!.name)}/edit`}
+                  className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit Show</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { PhraseExtractionService, ExtractedPhrase, Show, Episode } from "@/lib/supabase";
 import { parseShowSlug, normalizeShowName, generateShowSlug } from "@/utils/slugify";
 import AnkiExporter from "@/app/components/AnkiExporter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function EpisodePage() {
   const params = useParams();
@@ -25,6 +26,7 @@ export default function EpisodePage() {
   const [phrases, setPhrases] = useState<ExtractedPhrase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const { isAdmin } = useAuth();
 
   const loadEpisodeData = useCallback(async () => {
     try {
@@ -175,13 +177,15 @@ export default function EpisodePage() {
           </div>
 
           <div className="flex items-center space-x-3 justify-end mt-4">
-            <Link
-              href={`/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}/edit`}
-              className="inline-flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Edit Episode</span>
-            </Link>
+            {isAdmin && (
+              <Link
+                href={`/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}/edit`}
+                className="inline-flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Edit Episode</span>
+              </Link>
+            )}
             <AnkiExporter phrases={ankiPhrases} />
           </div>
         </div>
