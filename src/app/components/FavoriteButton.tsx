@@ -3,17 +3,17 @@
 import { useState } from 'react'
 import { Heart } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useFavorites } from '@/hooks/useFavorites'
 
 interface FavoriteButtonProps {
   phraseId: string
   size?: number
   className?: string
+  isFavorite: boolean
+  onToggleFavorite: (phraseId: string) => Promise<void>
 }
 
-export function FavoriteButton({ phraseId, size = 16, className = '' }: FavoriteButtonProps) {
+export function FavoriteButton({ phraseId, size = 16, className = '', isFavorite, onToggleFavorite }: FavoriteButtonProps) {
   const { isAuthenticated } = useAuth()
-  const { isFavorite, toggleFavorite } = useFavorites()
   const [isToggling, setIsToggling] = useState(false)
 
   if (!isAuthenticated) {
@@ -28,7 +28,7 @@ export function FavoriteButton({ phraseId, size = 16, className = '' }: Favorite
 
     setIsToggling(true)
     try {
-      await toggleFavorite(phraseId)
+      await onToggleFavorite(phraseId)
     } catch (error) {
       console.error('Error toggling favorite:', error)
     } finally {
@@ -36,19 +36,17 @@ export function FavoriteButton({ phraseId, size = 16, className = '' }: Favorite
     }
   }
 
-  const isFaved = isFavorite(phraseId)
-
   return (
     <button
       onClick={handleToggle}
       disabled={isToggling}
       className={`transition-colors disabled:opacity-50 ${className}`}
-      title={isFaved ? 'Remove from favorites' : 'Add to favorites'}
+      title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
     >
       <Heart
         size={size}
         className={`transition-colors ${
-          isFaved
+          isFavorite
             ? 'fill-red-500 text-red-500'
             : 'text-gray-400 hover:text-red-400'
         }`}

@@ -40,7 +40,7 @@ export default function EpisodePage() {
   const [isExportMode, setIsExportMode] = useState(false);
   const [showStudyGame, setShowStudyGame] = useState(false);
   const { isAdmin } = useAuth();
-  const { isFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const loadEpisodeData = useCallback(async () => {
     try {
@@ -327,6 +327,8 @@ export default function EpisodePage() {
                     isSelected={selectedPhrases.has(phrase.id)}
                     onToggleSelection={handlePhraseToggle}
                     showSelection={isExportMode}
+                    isFavorite={isFavorite(phrase.id)}
+                    onToggleFavorite={toggleFavorite}
                   />
                 ))}
               </div>
