@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LegendasPT is a Portuguese language learning application that extracts useful phrases from subtitle files (.vtt/.srt) and translates them to English using OpenAI's API. Users can upload subtitles, extract meaningful phrases, and export them to Anki for spaced repetition learning.
+LegendasPT is a Portuguese language learning application that extracts useful phrases from subtitle files (.vtt/.srt) and translates them to English using OpenAI's API. The application features role-based authentication where users can browse and favorite phrases, while admins can upload subtitles, extract phrases, and manage content. All phrases can be exported to Anki for spaced repetition learning.
 
 ## Development Commands
 
@@ -24,12 +24,26 @@ npm run lint
 
 Development server runs on http://localhost:3000
 
+## Admin Setup
+
+For first-time deployment, you'll need to manually promote a user to admin status:
+
+1. Create a user account through the application
+2. Run the following SQL query in your Supabase SQL editor:
+```sql
+UPDATE user_profiles 
+SET role = 'admin' 
+WHERE user_id = 'your-user-id-here';
+```
+
+See `AUTHENTICATION_SETUP.md` for detailed authentication setup instructions.
+
 ## Architecture Overview
 
 ### Tech Stack
 - **Next.js 15.3.3** with App Router and React 19
 - **TypeScript** for type safety
-- **Supabase** for PostgreSQL database and authentication
+- **Supabase** for PostgreSQL database, authentication, and Row Level Security
 - **OpenAI API** (GPT-4o-mini) for phrase extraction and translation
 - **The TVDB API** for TV show metadata enrichment
 - **Tailwind CSS 4** for styling
@@ -40,6 +54,10 @@ Development server runs on http://localhost:3000
 - `PhraseEditor` - Manages editing and display of extracted phrases
 - `AnkiExporter` - Exports phrases to Anki flashcard format
 - `MetadataEditor` - Handles show/episode metadata management
+- `AuthModal` - Authentication modal for login/signup
+- `Navigation` - App navigation with authentication status and admin controls
+- `ProtectedRoute` - Route protection wrapper with `AdminRoute` and `AuthenticatedRoute` variants
+- `FavoriteButton` - User favorite functionality for phrases
 
 ### Database Schema (Supabase)
 ```sql
@@ -47,7 +65,21 @@ shows - TV show metadata with TVDB enrichment
 episodes - Episode information  
 phrase_extractions - Extraction sessions with processing metadata
 extracted_phrases - Individual phrases with Portuguese/English translations
+user_profiles - User profile management with role assignment (user/admin)
+user_favorites - User phrase favorites
 ```
+
+### Authentication System
+The application implements a **role-based authentication system** with two user roles:
+- **Users**: Can browse content, view phrases, and favorite phrases
+- **Admins**: Can upload subtitles, extract phrases, edit content, and manage all data
+
+**Authentication Features:**
+- Email-based authentication with email confirmation
+- Automatic user profile creation
+- Database-level security with Row Level Security (RLS)
+- Route protection for admin-only features
+- User-specific favorites functionality
 
 ### API Integration Pattern
 The application uses a service layer pattern:
@@ -79,19 +111,21 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 ## File Structure Notes
 
 ### Routes
-- `/` - Homepage showing library of all shows and episodes
-- `/upload/` - Subtitle upload and phrase extraction interface
-- `/[series]/` - Show detail page (e.g., `/breaking-bad`)
-- `/[series]/edit/` - Show management and bulk operations
-- `/[series]/[episode]/` - Episode detail page (e.g., `/breaking-bad/s01e01`)
-- `/[series]/[episode]/edit/` - Episode management interface
+- `/` - Homepage showing library of all shows and episodes (public)
+- `/upload/` - Subtitle upload and phrase extraction interface (**admin only**)
+- `/[series]/` - Show detail page (e.g., `/breaking-bad`) (public)
+- `/[series]/edit/` - Show management and bulk operations (**admin only**)
+- `/[series]/[episode]/` - Episode detail page (e.g., `/breaking-bad/s01e01`) (public)
+- `/[series]/[episode]/edit/` - Episode management interface (**admin only**)
 - `/api/extract-phrases/` - API endpoint for phrase extraction processing
 
 ### Directories
 - `/src/app/` - Next.js App Router pages and layouts
 - `/src/app/components/` - Reusable UI components
-- `/src/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction)
+- `/src/contexts/` - React contexts (AuthContext for authentication state)
+- `/src/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction, useAuth, useFavorites)
 - `/src/lib/` - Service layer (supabase.ts, tvdb.ts)
+- `/src/types/` - TypeScript type definitions (auth.ts)
 - `/src/utils/` - Utility functions for content processing and API interactions
 
 ## Code instructions
@@ -99,3 +133,10 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 - Create util files and functions for utility functions
 - Separate components logically, i.e. when we map over a list to create a card, this card should be its own component
 - Don't forget to clean up. use knip (`npx knip`) to find and evaluate unused imports/exports
+
+## Authentication Development Notes
+- Use `ProtectedRoute` components to wrap admin-only pages and functionality
+- Check user authentication state with the `useAuth` hook
+- Database queries automatically respect RLS policies - no additional permission checks needed in application code
+- Always handle loading states during authentication checks
+- Admin functionality should be conditionally rendered based on user role
