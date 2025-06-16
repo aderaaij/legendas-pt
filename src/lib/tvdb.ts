@@ -232,7 +232,9 @@ class TVDBService {
       let hasMore = true;
 
       while (hasMore) {
-        const data = await this.makeRequest(`/series/${showId}/episodes/default?page=${page}`);
+        const data = await this.makeRequest(
+          `/series/${showId}/episodes/default?page=${page}`
+        );
 
         if (data.data && data.data.episodes) {
           const pageEpisodes = data.data.episodes
@@ -301,7 +303,7 @@ class TVDBService {
       if (bestScore > 0.6) {
         // Only if we have a good confidence match
         const showDetails = await this.getShowDetails(
-          parseInt(bestMatch.objectID)
+          parseInt(bestMatch.tvdb_id)
         );
         return {
           show: showDetails,

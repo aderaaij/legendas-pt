@@ -3,8 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ShowWithExtractions } from "@/hooks/useHomePage";
-import { formatDate } from "@/utils/formatDate";
 import { generateShowSlug } from "@/utils/slugify";
+import { ClientDate } from "./ClientDate";
 
 interface ShowCardProps {
   show: ShowWithExtractions;
@@ -39,7 +39,7 @@ export const ShowCard = ({ show }: ShowCardProps) => {
                 </span>
                 <span className="flex items-center space-x-1">
                   <Calendar className="w-3 h-3" />
-                  <span>{formatDate(show.lastExtraction)}</span>
+                  <ClientDate dateString={show.lastExtraction} />
                 </span>
               </div>
             </div>

@@ -28,10 +28,18 @@ interface UseShowsReturn {
   };
 }
 
-export function useHomePage(): UseShowsReturn {
-  const [shows, setShows] = useState<ShowWithExtractions[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+export function useHomePage(
+  initialShows: ShowWithExtractions[] = [],
+  initialStats?: {
+    totalShows: number;
+    totalExtractions: number;
+    totalPhrases: number;
+  },
+  initialError?: string | null
+): UseShowsReturn {
+  const [shows, setShows] = useState<ShowWithExtractions[]>(initialShows);
+  const [loading, setLoading] = useState(initialShows.length === 0);
+  const [error, setError] = useState<string>(initialError || "");
 
   const loadShows = async () => {
     try {
@@ -58,8 +66,8 @@ export function useHomePage(): UseShowsReturn {
     loadShows();
   }, []);
 
-  // Compute stats from shows data
-  const stats = {
+  // Compute stats from shows data (use initial stats if provided)
+  const stats = initialStats || {
     totalShows: shows.length,
     totalExtractions: shows.reduce(
       (acc, show) => acc + show.extractionCount,
