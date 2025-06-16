@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { CardStudy } from '@/types/spaced-repetition';
@@ -16,7 +16,10 @@ export function useCardProgress(phraseIds: string[]) {
   const [loading, setLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
-  const calculateProgressPercentage = (cardStudy: CardStudy | null): number => {
+  // Create a stable string representation for dependency checking
+  const phraseIdsString = phraseIds.join(',');
+
+  const calculateProgressPercentage = useCallback((cardStudy: CardStudy | null): number => {
     if (!cardStudy) return 0;
     
     // Calculate progress based on FSRS stability and review count
@@ -41,16 +44,16 @@ export function useCardProgress(phraseIds: string[]) {
     
     const totalProgress = Math.max(0, stabilityProgress + reviewProgress + stateBonus - lapsePenalty);
     return Math.min(100, totalProgress);
-  };
+  }, []);
 
-  const isCardLearned = (cardStudy: CardStudy | null): boolean => {
+  const isCardLearned = useCallback((cardStudy: CardStudy | null): boolean => {
     if (!cardStudy) return false;
     
     // Consider a card "learned" if it's in Review state with good stability
     return cardStudy.state === 'Review' && 
            (cardStudy.stability || 0) >= 2 && 
            (cardStudy.reps || 0) >= 3;
-  };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !user || phraseIds.length === 0) {
@@ -99,7 +102,8 @@ export function useCardProgress(phraseIds: string[]) {
     };
 
     fetchProgressData();
-  }, [isAuthenticated, user, phraseIds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user, phraseIdsString]);
 
   const getProgressForPhrase = (phraseId: string): CardProgressData | null => {
     return progressData.get(phraseId) || null;
