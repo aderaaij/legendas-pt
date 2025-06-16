@@ -3,13 +3,23 @@
 import { FileText, Languages } from "lucide-react";
 import Link from "next/link";
 
-import { useHomePage } from "@/hooks/useHomePage";
+import { useHomePage, ShowWithExtractions } from "@/hooks/useHomePage";
 import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
 import { LibraryStatistics } from "./LibraryStatistics";
 
-export default function HomePage() {
-  const { shows, loading, error, refetch, stats } = useHomePage();
+interface HomePageProps {
+  initialShows: ShowWithExtractions[];
+  initialStats: {
+    totalShows: number;
+    totalExtractions: number;
+    totalPhrases: number;
+  };
+  initialError?: string | null;
+}
+
+export default function HomePage({ initialShows, initialStats, initialError }: HomePageProps) {
+  const { shows, loading, error, refetch, stats } = useHomePage(initialShows, initialStats, initialError);
   const { isAdmin } = useAuth();
 
   if (loading) {

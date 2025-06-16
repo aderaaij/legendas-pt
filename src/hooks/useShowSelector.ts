@@ -141,7 +141,7 @@ export function useShowSelector() {
       try {
         // Get full show details
         const showDetails = await TVDBService.getShowDetails(
-          parseInt(tvdbShow.objectID)
+          parseInt(tvdbShow.tvdb_id)
         );
 
         if (!showDetails) {
@@ -226,7 +226,6 @@ export function useShowSelector() {
             setSelectedShow(null);
             setEpisodes([]);
           }
-
         } else {
           setError(result.message);
         }
