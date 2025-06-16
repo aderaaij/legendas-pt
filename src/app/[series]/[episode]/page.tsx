@@ -19,6 +19,7 @@ import {
 import AnkiExporter from "@/app/components/AnkiExporter";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useCardProgress } from "@/hooks/useCardProgress";
 import { PhraseCard } from "@/app/components/PhraseCard";
 import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
 import { PhraseSortAndFilter, SortOption, FilterOption } from "@/app/components/PhraseSortAndFilter";
@@ -39,8 +40,9 @@ export default function EpisodePage() {
   const [selectedPhrases, setSelectedPhrases] = useState<Set<string>>(new Set());
   const [isExportMode, setIsExportMode] = useState(false);
   const [showStudyGame, setShowStudyGame] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { getProgressForPhrase } = useCardProgress(phrases.map(p => p.id));
 
   // Wrapper for toggleFavorite to match FavoriteButton's expected signature
   const handleToggleFavorite = async (phraseId: string): Promise<void> => {
@@ -328,17 +330,24 @@ export default function EpisodePage() {
 
             {filteredAndSortedPhrases.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAndSortedPhrases.map((phrase, index) => (
-                  <PhraseCard 
-                    key={phrase.id || index} 
-                    phrase={phrase} 
-                    isSelected={selectedPhrases.has(phrase.id)}
-                    onToggleSelection={handlePhraseToggle}
-                    showSelection={isExportMode}
-                    isFavorite={isFavorite(phrase.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                ))}
+                {filteredAndSortedPhrases.map((phrase, index) => {
+                  const progressData = getProgressForPhrase(phrase.id);
+                  return (
+                    <PhraseCard 
+                      key={phrase.id || index} 
+                      phrase={phrase} 
+                      isSelected={selectedPhrases.has(phrase.id)}
+                      onToggleSelection={handlePhraseToggle}
+                      showSelection={isExportMode}
+                      isFavorite={isFavorite(phrase.id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      showProgress={isAuthenticated}
+                      progressPercentage={progressData?.progressPercentage || 0}
+                      learningState={progressData?.state || 'New'}
+                      isLearned={progressData?.isLearned || false}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
