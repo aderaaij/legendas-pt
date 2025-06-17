@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Save, X, Calendar, Tv, Hash, Clock } from "lucide-react";
+import { Search, Save, X, Calendar, Tv, Hash, Clock, ExternalLink } from "lucide-react";
 import { Show, Episode, PhraseExtractionService } from "../../lib/supabase";
 import TVDBService, { TVDBSearchResult } from "../../lib/tvdb";
 
@@ -33,6 +33,8 @@ export default function MetadataEditor({
     overview: currentShow?.overview || "",
     network: currentShow?.network || "",
     genres: currentShow?.genres?.join(", ") || "",
+    watch_url: currentShow?.watch_url || "",
+    poster_url: currentShow?.poster_url || "",
   });
 
   // Episode metadata
@@ -68,19 +70,28 @@ export default function MetadataEditor({
     setSelectedTVDBShow(tvdbShow);
 
     try {
+      // First, update with search result data (including image_url)
+      setShowData(prev => ({
+        ...prev,
+        name: tvdbShow.name,
+        poster_url: tvdbShow.image_url || prev.poster_url,
+      }));
+
       // Get full show details from TVDB
       const fullShow = await TVDBService.getShowDetails(
         parseInt(tvdbShow.tvdb_id)
       );
 
       if (fullShow) {
-        setShowData({
+        setShowData(prev => ({
           name: fullShow.name,
-          source: showData.source,
+          source: prev.source,
           overview: fullShow.overview || "",
           network: fullShow.network || "",
           genres: fullShow.genres?.join(", ") || "",
-        });
+          watch_url: prev.watch_url, // Keep existing watch_url when updating from TVDB
+          poster_url: fullShow.image || tvdbShow.image_url || prev.poster_url, // Prefer full show image, fallback to search result
+        }));
 
         // If we have episode info and TVDB show, try to get episode details
         if (episodeData.season && episodeData.episode_number) {
@@ -116,19 +127,25 @@ export default function MetadataEditor({
 
       if (currentShow) {
         // Update existing show
-        updatedShow = await PhraseExtractionService.updateShow(currentShow.id, {
+        const updateData: any = {
           name: showData.name,
           source: showData.source,
-          overview: showData.overview,
-          network: showData.network,
+          overview: showData.overview || null,
+          network: showData.network || null,
           genres: showData.genres
-            ? showData.genres.split(",").map((g) => g.trim())
+            ? showData.genres.split(",").map((g) => g.trim()).filter(g => g.length > 0)
             : [],
-          ...(selectedTVDBShow && {
-            tvdb_id: parseInt(selectedTVDBShow.objectID),
-            tvdb_slug: selectedTVDBShow.slug,
-          }),
-        });
+          watch_url: showData.watch_url || null,
+          poster_url: showData.poster_url || null,
+        };
+
+        // Only add TVDB fields if we have a valid selected show
+        if (selectedTVDBShow && selectedTVDBShow.objectID && selectedTVDBShow.slug) {
+          updateData.tvdb_id = parseInt(selectedTVDBShow.objectID);
+          updateData.tvdb_slug = selectedTVDBShow.slug;
+        }
+
+        updatedShow = await PhraseExtractionService.updateShow(currentShow.id, updateData);
       } else {
         // Create new show
         updatedShow = await PhraseExtractionService.findOrCreateShow(
@@ -161,16 +178,20 @@ export default function MetadataEditor({
           );
         }
 
-        // Update extraction to link to show and episode
-        await PhraseExtractionService.updateExtraction(extractionId, {
-          show_id: updatedShow.id,
-          episode_id: updatedEpisode.id,
-        });
+        // Update extraction to link to show and episode (only if we have a valid extraction ID)
+        if (extractionId) {
+          await PhraseExtractionService.updateExtraction(extractionId, {
+            show_id: updatedShow.id,
+            episode_id: updatedEpisode.id,
+          });
+        }
       } else {
-        // Update extraction to link to show only
-        await PhraseExtractionService.updateExtraction(extractionId, {
-          show_id: updatedShow.id,
-        });
+        // Update extraction to link to show only (only if we have a valid extraction ID)
+        if (extractionId) {
+          await PhraseExtractionService.updateExtraction(extractionId, {
+            show_id: updatedShow.id,
+          });
+        }
       }
 
       onUpdate(updatedShow, updatedEpisode);
@@ -362,6 +383,28 @@ export default function MetadataEditor({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Brief description of the show..."
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <ExternalLink className="w-4 h-4" />
+                    Watch URL
+                  </label>
+                  <input
+                    type="url"
+                    value={showData.watch_url}
+                    onChange={(e) =>
+                      setShowData((prev) => ({
+                        ...prev,
+                        watch_url: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/show-name"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Link where users can watch this show
+                  </p>
                 </div>
               </div>
             </div>

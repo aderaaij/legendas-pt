@@ -14,6 +14,7 @@ export interface Show {
   description?: string;
   genre?: string;
   language?: string;
+  watch_url?: string;
   // TVDB fields
   tvdb_id?: number;
   tvdb_slug?: string;
