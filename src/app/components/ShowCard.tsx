@@ -35,7 +35,7 @@ export const ShowCard = ({ show }: ShowCardProps) => {
               </h3>
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 <span className="bg-gray-200 px-2 py-1 rounded text-xs">
-                  {show.source}
+                  {show.network || show.source}
                 </span>
                 <span className="flex items-center space-x-1">
                   <Calendar className="w-3 h-3" />
