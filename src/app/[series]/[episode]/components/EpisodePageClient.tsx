@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { FileText, Settings, Brain } from "lucide-react";
+import { FileText, Settings, Brain, Grid3X3, List } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
 
 import {
   ExtractedPhrase,
@@ -38,6 +39,7 @@ export default function EpisodePageClient({
   const [selectedPhrases, setSelectedPhrases] = useState<Set<string>>(new Set(phrases.map(p => p.id)));
   const [isExportMode, setIsExportMode] = useState(false);
   const [showStudyGame, setShowStudyGame] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { isAdmin, isAuthenticated } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getProgressForPhrase } = useCardProgress(phrases.map(p => p.id));
@@ -64,10 +66,22 @@ export default function EpisodePageClient({
       filtered = [...filtered].sort((a, b) => a.phrase.localeCompare(b.phrase));
     } else if (sortOption === 'reverse-alphabetical') {
       filtered = [...filtered].sort((a, b) => b.phrase.localeCompare(a.phrase));
+    } else if (sortOption === 'progress-high') {
+      filtered = [...filtered].sort((a, b) => {
+        const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
+        const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
+        return progressB - progressA; // Highest progress first
+      });
+    } else if (sortOption === 'progress-low') {
+      filtered = [...filtered].sort((a, b) => {
+        const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
+        const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
+        return progressA - progressB; // Lowest progress first
+      });
     }
 
     return filtered;
-  }, [phrases, sortOption, filterOption, isFavorite]);
+  }, [phrases, sortOption, filterOption, isFavorite, getProgressForPhrase]);
 
   // Selection handlers
   const handlePhraseToggle = (phraseId: string) => {
@@ -190,36 +204,79 @@ export default function EpisodePageClient({
               </span>
             </div>
 
-            <PhraseSortAndFilter
-              onSortChange={setSortOption}
-              onFilterChange={setFilterOption}
-              currentSort={sortOption}
-              currentFilter={filterOption}
-              totalPhrases={phrases.length}
-              filteredPhrases={filteredAndSortedPhrases.length}
-            />
+            <div className="flex items-center justify-between mb-4">
+              <PhraseSortAndFilter
+                onSortChange={setSortOption}
+                onFilterChange={setFilterOption}
+                currentSort={sortOption}
+                currentFilter={filterOption}
+                totalPhrases={phrases.length}
+                filteredPhrases={filteredAndSortedPhrases.length}
+              />
+              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'grid' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="Grid view"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="List view"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
             {filteredAndSortedPhrases.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAndSortedPhrases.map((phrase, index) => {
-                  const progressData = getProgressForPhrase(phrase.id);
-                  return (
-                    <PhraseCard 
-                      key={phrase.id || index} 
-                      phrase={phrase} 
-                      isSelected={selectedPhrases.has(phrase.id)}
-                      onToggleSelection={handlePhraseToggle}
-                      showSelection={isExportMode}
-                      isFavorite={isFavorite(phrase.id)}
-                      onToggleFavorite={handleToggleFavorite}
-                      showProgress={isAuthenticated}
-                      progressPercentage={progressData?.progressPercentage || 0}
-                      learningState={progressData?.state || 'New'}
-                      isLearned={progressData?.isLearned || false}
-                    />
-                  );
-                })}
-              </div>
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={viewMode}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start' : 'space-y-2'}
+                >
+                  {filteredAndSortedPhrases.map((phrase, index) => {
+                    const progressData = getProgressForPhrase(phrase.id);
+                    return (
+                      <motion.div
+                        key={phrase.id || index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          duration: 0.2, 
+                          delay: index * 0.02,
+                          ease: "easeOut" 
+                        }}
+                        className={viewMode === 'grid' ? 'h-full' : ''}
+                      >
+                        <PhraseCard 
+                          phrase={phrase} 
+                          isSelected={selectedPhrases.has(phrase.id)}
+                          onToggleSelection={handlePhraseToggle}
+                          showSelection={isExportMode}
+                          isFavorite={isFavorite(phrase.id)}
+                          onToggleFavorite={handleToggleFavorite}
+                          showProgress={isAuthenticated}
+                          progressPercentage={progressData?.progressPercentage || 0}
+                          learningState={progressData?.state || 'New'}
+                          isLearned={progressData?.isLearned || false}
+                          viewMode={viewMode}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-600">
