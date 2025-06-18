@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Trash2,
   Edit3,
   AlertTriangle,
@@ -19,6 +18,7 @@ import { formatDate } from "@/utils/formatDate";
 import MetadataEditor from "@/app/components/MetadataEditor";
 import PhraseEditor from "@/app/components/PhraseEditor";
 import { AdminRoute } from "@/app/components/ProtectedRoute";
+import Breadcrumb from "@/app/components/Breadcrumb";
 
 type ViewMode = "edit" | "phrase-edit";
 
@@ -283,36 +283,18 @@ export default function EpisodeEditPage() {
         {/* Header with Breadcrumbs */}
         <div className="flex flex-col justify-between mb-8">
           <div className="flex flex-col gap-2">
-            {/* Breadcrumb navigation */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Link href="/" className="hover:text-gray-800 transition-colors">
-                Shows
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/${generateShowSlug(show!.name)}`}
-                className="hover:text-gray-800 transition-colors"
-              >
-                {show?.name}
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}`}
-                className="hover:text-gray-800 transition-colors"
-              >
-                S{episodeData?.season?.toString().padStart(2, '0')}E{episodeData?.episode_number?.toString().padStart(2, '0')}
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900">Edit</span>
-            </div>
-            
-            <Link
-              href={`/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}`}
-              className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Episode</span>
-            </Link>
+            <Breadcrumb 
+              items={[
+                { label: "Shows", href: "/" },
+                { label: show?.name || "", href: `/${generateShowSlug(show!.name)}` },
+                { 
+                  label: `S${episodeData?.season?.toString().padStart(2, '0')}E${episodeData?.episode_number?.toString().padStart(2, '0')}`, 
+                  href: `/${generateShowSlug(show!.name)}/s${episodeData?.season?.toString().padStart(2, '0')}e${episodeData?.episode_number?.toString().padStart(2, '0')}` 
+                },
+                { label: "Edit", isCurrentPage: true }
+              ]} 
+              className="mb-2"
+            />
             
             <div>
               <h1 className="text-3xl font-bold text-gray-900">

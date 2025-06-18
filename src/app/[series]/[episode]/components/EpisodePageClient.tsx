@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ArrowLeft, FileText, Settings, Brain } from "lucide-react";
+import { FileText, Settings, Brain } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -18,6 +18,7 @@ import { PhraseCard } from "@/app/components/PhraseCard";
 import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
 import { PhraseSortAndFilter, SortOption, FilterOption } from "@/app/components/PhraseSortAndFilter";
 import { SpacedRepetitionGame } from "@/app/components/SpacedRepetitionGame";
+import Breadcrumb from "@/app/components/Breadcrumb";
 
 interface EpisodePageClientProps {
   show: Show;
@@ -114,32 +115,16 @@ export default function EpisodePageClient({
         {/* Header with Breadcrumbs */}
         <div className="flex flex-col justify-between mb-8">
           <div className="flex flex-col gap-2">
-            {/* Breadcrumb navigation */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Link href="/" className="hover:text-gray-800 transition-colors">
-                Shows
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/${generateShowSlug(show.name)}`}
-                className="hover:text-gray-800 transition-colors"
-              >
-                {show.name}
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900">
-                S{episode.season?.toString().padStart(2, "0")}E
-                {episode.episode_number?.toString().padStart(2, "0")}
-              </span>
-            </div>
-
-            <Link
-              href={`/${generateShowSlug(show.name)}`}
-              className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Episodes</span>
-            </Link>
+            <Breadcrumb 
+              items={[
+                { label: "Shows", href: "/" },
+                { label: show.name, href: `/${generateShowSlug(show.name)}` },
+                { 
+                  label: `S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}`, 
+                  isCurrentPage: true 
+                }
+              ]} 
+            />
 
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{show.name}</h1>
@@ -259,13 +244,12 @@ export default function EpisodePageClient({
         )}
 
         {/* Spaced Repetition Game */}
-        {showStudyGame && (
-          <SpacedRepetitionGame
-            episodeId={episode.id}
-            episodeTitle={`S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}${episode.title ? ` - ${episode.title}` : ""}`}
-            onClose={() => setShowStudyGame(false)}
-          />
-        )}
+        <SpacedRepetitionGame
+          episodeId={episode.id}
+          episodeTitle={`S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}${episode.title ? ` - ${episode.title}` : ""}`}
+          open={showStudyGame}
+          onClose={() => setShowStudyGame(false)}
+        />
       </div>
     </div>
   );

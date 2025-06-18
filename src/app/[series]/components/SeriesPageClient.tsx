@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   FileText,
   Calendar,
   Play,
@@ -14,6 +13,7 @@ import { Show, Episode } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientDate } from "@/app/components/ClientDate";
+import Breadcrumb from "@/app/components/Breadcrumb";
 
 type EpisodeWithStats = Episode & { extractionCount: number; totalPhrases: number; lastExtraction: string | null };
 
@@ -31,13 +31,13 @@ export default function SeriesPageClient({ show, episodes }: SeriesPageClientPro
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/"
-            className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Shows</span>
-          </Link>
+          <Breadcrumb 
+            items={[
+              { label: "Shows", href: "/" },
+              { label: show.name, isCurrentPage: true }
+            ]} 
+            className="mb-6"
+          />
           
           {/* Show info section */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">

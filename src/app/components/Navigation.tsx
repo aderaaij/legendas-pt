@@ -1,40 +1,48 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { AuthModal } from './AuthModal'
-import { User, LogOut, Upload } from 'lucide-react'
-import Link from 'next/link'
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "./AuthModal";
+import { User, LogOut, Upload, Captions } from "lucide-react";
+import Link from "next/link";
 
 export function Navigation() {
-  const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth()
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login')
+  const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "signup">(
+    "login"
+  );
 
   const handleSignOut = async () => {
-    await signOut()
-  }
+    await signOut();
+  };
 
-  const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthModalMode(mode)
-    setAuthModalOpen(true)
-  }
+  const openAuthModal = (mode: "login" | "signup") => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+  };
 
   return (
     <>
       <nav className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div className="container px-8 mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-6">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              LegendasPT
+            <Link
+              href="/"
+              className="text-xl font-bold text-gray-900 flex items-center gap-2"
+            >
+              <Captions size="48" /> LegendasPT
             </Link>
-            
+
             <div className="hidden md:flex space-x-4">
               <Link href="/" className="text-gray-600 hover:text-gray-900">
                 Home
               </Link>
               {isAdmin && (
-                <Link href="/upload" className="text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                <Link
+                  href="/upload"
+                  className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                >
                   <Upload size={16} />
                   Upload
                 </Link>
@@ -67,13 +75,13 @@ export function Navigation() {
             ) : (
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => openAuthModal('login')}
+                  onClick={() => openAuthModal("login")}
                   className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => openAuthModal('signup')}
+                  onClick={() => openAuthModal("signup")}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Sign Up
@@ -90,7 +98,10 @@ export function Navigation() {
               Home
             </Link>
             {isAdmin && (
-              <Link href="/upload" className="text-gray-600 hover:text-gray-900 flex items-center gap-1">
+              <Link
+                href="/upload"
+                className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              >
                 <Upload size={16} />
                 Upload
               </Link>
@@ -105,5 +116,5 @@ export function Navigation() {
         defaultMode={authModalMode}
       />
     </>
-  )
+  );
 }
