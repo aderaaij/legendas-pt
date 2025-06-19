@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ArrowLeft, FileText, Settings, Brain } from "lucide-react";
+import { FileText, Settings, Brain, Grid3X3, List } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
 
 import {
   ExtractedPhrase,
@@ -18,6 +19,7 @@ import { PhraseCard } from "@/app/components/PhraseCard";
 import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
 import { PhraseSortAndFilter, SortOption, FilterOption } from "@/app/components/PhraseSortAndFilter";
 import { SpacedRepetitionGame } from "@/app/components/SpacedRepetitionGame";
+import Breadcrumb from "@/app/components/Breadcrumb";
 
 interface EpisodePageClientProps {
   show: Show;
@@ -37,6 +39,7 @@ export default function EpisodePageClient({
   const [selectedPhrases, setSelectedPhrases] = useState<Set<string>>(new Set(phrases.map(p => p.id)));
   const [isExportMode, setIsExportMode] = useState(false);
   const [showStudyGame, setShowStudyGame] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { isAdmin, isAuthenticated } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getProgressForPhrase } = useCardProgress(phrases.map(p => p.id));
@@ -63,10 +66,22 @@ export default function EpisodePageClient({
       filtered = [...filtered].sort((a, b) => a.phrase.localeCompare(b.phrase));
     } else if (sortOption === 'reverse-alphabetical') {
       filtered = [...filtered].sort((a, b) => b.phrase.localeCompare(a.phrase));
+    } else if (sortOption === 'progress-high') {
+      filtered = [...filtered].sort((a, b) => {
+        const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
+        const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
+        return progressB - progressA; // Highest progress first
+      });
+    } else if (sortOption === 'progress-low') {
+      filtered = [...filtered].sort((a, b) => {
+        const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
+        const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
+        return progressA - progressB; // Lowest progress first
+      });
     }
 
     return filtered;
-  }, [phrases, sortOption, filterOption, isFavorite]);
+  }, [phrases, sortOption, filterOption, isFavorite, getProgressForPhrase]);
 
   // Selection handlers
   const handlePhraseToggle = (phraseId: string) => {
@@ -114,32 +129,16 @@ export default function EpisodePageClient({
         {/* Header with Breadcrumbs */}
         <div className="flex flex-col justify-between mb-8">
           <div className="flex flex-col gap-2">
-            {/* Breadcrumb navigation */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Link href="/" className="hover:text-gray-800 transition-colors">
-                Shows
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/${generateShowSlug(show.name)}`}
-                className="hover:text-gray-800 transition-colors"
-              >
-                {show.name}
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900">
-                S{episode.season?.toString().padStart(2, "0")}E
-                {episode.episode_number?.toString().padStart(2, "0")}
-              </span>
-            </div>
-
-            <Link
-              href={`/${generateShowSlug(show.name)}`}
-              className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Episodes</span>
-            </Link>
+            <Breadcrumb 
+              items={[
+                { label: "Shows", href: "/" },
+                { label: show.name, href: `/${generateShowSlug(show.name)}` },
+                { 
+                  label: `S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}`, 
+                  isCurrentPage: true 
+                }
+              ]} 
+            />
 
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{show.name}</h1>
@@ -205,36 +204,79 @@ export default function EpisodePageClient({
               </span>
             </div>
 
-            <PhraseSortAndFilter
-              onSortChange={setSortOption}
-              onFilterChange={setFilterOption}
-              currentSort={sortOption}
-              currentFilter={filterOption}
-              totalPhrases={phrases.length}
-              filteredPhrases={filteredAndSortedPhrases.length}
-            />
+            <div className="flex items-center justify-between mb-4">
+              <PhraseSortAndFilter
+                onSortChange={setSortOption}
+                onFilterChange={setFilterOption}
+                currentSort={sortOption}
+                currentFilter={filterOption}
+                totalPhrases={phrases.length}
+                filteredPhrases={filteredAndSortedPhrases.length}
+              />
+              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'grid' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="Grid view"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="List view"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
             {filteredAndSortedPhrases.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAndSortedPhrases.map((phrase, index) => {
-                  const progressData = getProgressForPhrase(phrase.id);
-                  return (
-                    <PhraseCard 
-                      key={phrase.id || index} 
-                      phrase={phrase} 
-                      isSelected={selectedPhrases.has(phrase.id)}
-                      onToggleSelection={handlePhraseToggle}
-                      showSelection={isExportMode}
-                      isFavorite={isFavorite(phrase.id)}
-                      onToggleFavorite={handleToggleFavorite}
-                      showProgress={isAuthenticated}
-                      progressPercentage={progressData?.progressPercentage || 0}
-                      learningState={progressData?.state || 'New'}
-                      isLearned={progressData?.isLearned || false}
-                    />
-                  );
-                })}
-              </div>
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={viewMode}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start' : 'space-y-2'}
+                >
+                  {filteredAndSortedPhrases.map((phrase, index) => {
+                    const progressData = getProgressForPhrase(phrase.id);
+                    return (
+                      <motion.div
+                        key={phrase.id || index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          duration: 0.2, 
+                          delay: index * 0.02,
+                          ease: "easeOut" 
+                        }}
+                        className={viewMode === 'grid' ? 'h-full' : ''}
+                      >
+                        <PhraseCard 
+                          phrase={phrase} 
+                          isSelected={selectedPhrases.has(phrase.id)}
+                          onToggleSelection={handlePhraseToggle}
+                          showSelection={isExportMode}
+                          isFavorite={isFavorite(phrase.id)}
+                          onToggleFavorite={handleToggleFavorite}
+                          showProgress={isAuthenticated}
+                          progressPercentage={progressData?.progressPercentage || 0}
+                          learningState={progressData?.state || 'New'}
+                          isLearned={progressData?.isLearned || false}
+                          viewMode={viewMode}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-600">
@@ -259,13 +301,12 @@ export default function EpisodePageClient({
         )}
 
         {/* Spaced Repetition Game */}
-        {showStudyGame && (
-          <SpacedRepetitionGame
-            episodeId={episode.id}
-            episodeTitle={`S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}${episode.title ? ` - ${episode.title}` : ""}`}
-            onClose={() => setShowStudyGame(false)}
-          />
-        )}
+        <SpacedRepetitionGame
+          episodeId={episode.id}
+          episodeTitle={`S${episode.season?.toString().padStart(2, "0")}E${episode.episode_number?.toString().padStart(2, "0")}${episode.title ? ` - ${episode.title}` : ""}`}
+          open={showStudyGame}
+          onClose={() => setShowStudyGame(false)}
+        />
       </div>
     </div>
   );

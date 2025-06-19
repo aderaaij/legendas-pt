@@ -217,7 +217,7 @@ export const usePhraseExtraction = ({
         return createFallbackPhrases(subtitleContent);
       }
     },
-    [checkExistingExtraction, saveToDatabase]
+    [checkExistingExtraction, saveToDatabase, settings.forceReExtraction]
   );
 
   const handleExtraction = useCallback(

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Upload, BookOpen, Languages } from "lucide-react";
+import { ArrowLeft, Upload, BookOpen, Languages, Globe } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
+import RTPImporter from "@/app/components/RTPImporter";
 import { AdminRoute } from "@/app/components/ProtectedRoute";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ export interface SubtitleMetadata {
 }
 
 export default function UploadPage() {
+  const [activeTab, setActiveTab] = useState<'upload' | 'rtp'>('upload');
   const [subtitleContent, setSubtitleContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
@@ -84,39 +86,89 @@ export default function UploadPage() {
             </p>
           </header>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="space-y-8">
-                {/* Upload Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-blue-100 p-2 rounded-full">
-                      <Upload className="w-5 h-5 text-blue-600" />
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200">
+                <nav className="flex space-x-8" aria-label="Tabs">
+                  <button
+                    onClick={() => setActiveTab('upload')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'upload'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 px-4">
+                      <Upload className="w-4 h-4" />
+                      Manual Upload
                     </div>
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      Upload Subtitles
-                    </h2>
-                  </div>
-                  <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
-                </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('rtp')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'rtp'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 px-4">
+                      <Globe className="w-4 h-4" />
+                      RTP Series Import
+                    </div>
+                  </button>
+                </nav>
+              </div>
 
-                {/* Extraction Section - only show when subtitle is loaded */}
-                {subtitleContent && (
-                  <div className="border-t pt-8">
+              <div className="p-8">
+                {activeTab === 'upload' && (
+                  <div className="space-y-8">
+                    {/* Upload Section */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <Upload className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <h2 className="text-xl font-semibold text-gray-800">
+                          Upload Subtitles
+                        </h2>
+                      </div>
+                      <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
+                    </div>
+
+                    {/* Extraction Section - only show when subtitle is loaded */}
+                    {subtitleContent && (
+                      <div className="border-t pt-8">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="bg-green-100 p-2 rounded-full">
+                            <BookOpen className="w-5 h-5 text-green-600" />
+                          </div>
+                          <h2 className="text-xl font-semibold text-gray-800">
+                            Extract Phrases
+                          </h2>
+                        </div>
+                        <PhraseExtractor
+                          subtitleContent={subtitleContent}
+                          onExtractionSuccess={handleExtractionSuccess}
+                          fileName={fileName}
+                          metadata={metadata}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'rtp' && (
+                  <div>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="bg-green-100 p-2 rounded-full">
-                        <BookOpen className="w-5 h-5 text-green-600" />
+                        <Globe className="w-5 h-5 text-green-600" />
                       </div>
                       <h2 className="text-xl font-semibold text-gray-800">
-                        Extract Phrases
+                        Import from RTP Series
                       </h2>
                     </div>
-                    <PhraseExtractor
-                      subtitleContent={subtitleContent}
-                      onExtractionSuccess={handleExtractionSuccess}
-                      fileName={fileName}
-                      metadata={metadata}
-                    />
+                    <RTPImporter />
                   </div>
                 )}
               </div>

@@ -10,6 +10,7 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
+import Image from "next/image";
 import { Show, Episode } from "@/lib/supabase";
 import { useShowSelector } from "@/hooks/useShowSelector";
 
@@ -214,9 +215,11 @@ export default function ShowSelector({ onShowSelected }: ShowSelectorProps) {
                   >
                     <div className="flex items-start gap-3">
                       {result.image_url && (
-                        <img
+                        <Image
                           src={result.image_url}
                           alt={result.name}
+                          width={48}
+                          height={64}
                           className="w-12 h-16 object-cover rounded"
                         />
                       )}

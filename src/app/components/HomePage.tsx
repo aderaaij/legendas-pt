@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useHomePage, ShowWithExtractions } from "@/hooks/useHomePage";
 import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
-import { LibraryStatistics } from "./LibraryStatistics";
+import JobStatusBanner from "./JobStatusBanner";
 
 interface HomePageProps {
   initialShows: ShowWithExtractions[];
@@ -18,8 +18,16 @@ interface HomePageProps {
   initialError?: string | null;
 }
 
-export default function HomePage({ initialShows, initialStats, initialError }: HomePageProps) {
-  const { shows, loading, error, refetch, stats } = useHomePage(initialShows, initialStats, initialError);
+export default function HomePage({
+  initialShows,
+  initialStats,
+  initialError,
+}: HomePageProps) {
+  const { shows, loading, error, refetch } = useHomePage(
+    initialShows,
+    initialStats,
+    initialError
+  );
   const { isAdmin } = useAuth();
 
   if (loading) {
@@ -37,14 +45,15 @@ export default function HomePage({ initialShows, initialStats, initialError }: H
     <div className="min-h-screen bg-gradient-to-br from-blue-300 to-pink-100">
       <div className="container mx-auto px-4 py-8">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-3">
+          <h1 className="text-5xl font-black text-gray-900 mb-4 flex items-center justify-center gap-3 tracking-wider" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif', letterSpacing: '0.05em' }}>
             <Languages className="text-blue-600" />
-            Portuguese Subtitle Library
+            PORTUGUESE SUBTITLE LIBRARY
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            Explore extracted Portuguese phrases from your favorite shows and
-            download them for language learning
-          </p>
+          <div className="border-t-4 border-b-4 border-black py-3 mx-auto max-w-4xl mb-6">
+            <p className="text-xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+              Explore extracted Portuguese phrases from your favorite shows
+            </p>
+          </div>
 
           {/* {isAdmin && (
             <div className="flex items-center justify-center">
@@ -58,6 +67,8 @@ export default function HomePage({ initialShows, initialStats, initialError }: H
             </div>
           )} */}
         </header>
+
+        <JobStatusBanner />
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
@@ -96,7 +107,7 @@ export default function HomePage({ initialShows, initialStats, initialError }: H
         ) : (
           <>
             {/* Statistics */}
-            <LibraryStatistics stats={stats} />
+            {/* <LibraryStatistics stats={stats} /> */}
 
             {/* Shows Header */}
 

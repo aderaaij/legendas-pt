@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, Save, X, Calendar, Tv, Hash, Clock, ExternalLink } from "lucide-react";
+import Image from "next/image";
 import { Show, Episode, PhraseExtractionService } from "../../lib/supabase";
 import TVDBService, { TVDBSearchResult } from "../../lib/tvdb";
 
@@ -261,9 +262,11 @@ export default function MetadataEditor({
                         : ""
                     }`}
                   >
-                    <img
+                    <Image
                       src={result.image_url ?? ""}
                       alt={result.name}
+                      width={120}
+                      height={160}
                       className="w-30"
                     />
                     <div className="flex flex-col">

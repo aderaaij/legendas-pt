@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowUpDown, Heart, HeartOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-export type SortOption = 'none' | 'alphabetical' | 'reverse-alphabetical';
+export type SortOption = 'none' | 'alphabetical' | 'reverse-alphabetical' | 'progress-high' | 'progress-low';
 export type FilterOption = 'all' | 'favorites';
 
 interface PhraseSortAndFilterProps {
@@ -29,6 +29,10 @@ export const PhraseSortAndFilter = ({
     { value: 'none' as const, label: 'Original Order' },
     { value: 'alphabetical' as const, label: 'A-Z' },
     { value: 'reverse-alphabetical' as const, label: 'Z-A' },
+    ...(isAuthenticated ? [
+      { value: 'progress-high' as const, label: 'Most Progress' },
+      { value: 'progress-low' as const, label: 'Least Progress' },
+    ] : []),
   ];
 
   const getSortLabel = (sort: SortOption) => {
