@@ -7,7 +7,7 @@ import { User, LogOut, Upload, Captions } from "lucide-react";
 import Link from "next/link";
 
 export function Navigation() {
-  const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
+  const { user, isAdmin, isAuthenticated, signOut } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "signup">(
     "login"

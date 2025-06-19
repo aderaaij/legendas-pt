@@ -6,6 +6,8 @@ import { generateContentHash } from "@/utils/extractPhrasesUitls";
 import { PhraseExtractionService } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
+  let extractionJob: any = null;
+  let supabase: any = null;
   try {
     const {
       rtpUrl,
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7);
 
     // Create authenticated Supabase client
-    const supabase = createClient(
+    supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
       : series.episodes;
 
     // Create extraction job for tracking
-    const extractionJob = await PhraseExtractionService.createExtractionJob(
+    extractionJob = await PhraseExtractionService.createExtractionJob(
       user.id,
       'rtp_series',
       series.title,

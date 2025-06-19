@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { PhraseExtractionService } from "@/lib/supabase";
 import { generateContentHash } from "@/utils/extractPhrasesUitls";
 
 interface PhraseExtractionRequest {
@@ -419,7 +418,7 @@ ${content}`;
           position_in_content: index,
         }));
 
-        const { data: savedPhrases, error: phrasesError } = await authenticatedSupabase
+        const { error: phrasesError } = await authenticatedSupabase
           .from("extracted_phrases")
           .insert(phrasesWithExtractionId)
           .select();

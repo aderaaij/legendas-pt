@@ -206,7 +206,7 @@ export function useExtractionJob(jobId: string | null) {
 
     const interval = setInterval(refreshJob, 3000);
     return () => clearInterval(interval);
-  }, [job?.status, refreshJob]);
+  }, [job, refreshJob]);
 
   // Initial load
   useEffect(() => {

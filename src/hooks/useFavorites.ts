@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserFavorite } from '@/types/auth'
@@ -8,15 +8,7 @@ export function useFavorites() {
   const [favorites, setFavorites] = useState<UserFavorite[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchFavorites()
-    } else {
-      setFavorites([])
-    }
-  }, [isAuthenticated, user])
-
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     if (!user) return
 
     setLoading(true)
@@ -38,7 +30,15 @@ export function useFavorites() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchFavorites()
+    } else {
+      setFavorites([])
+    }
+  }, [isAuthenticated, user, fetchFavorites])
 
   const addToFavorites = async (phraseId: string) => {
     if (!user) return { error: 'User not authenticated' }

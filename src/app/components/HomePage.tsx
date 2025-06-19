@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useHomePage, ShowWithExtractions } from "@/hooks/useHomePage";
 import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
-import { LibraryStatistics } from "./LibraryStatistics";
 import JobStatusBanner from "./JobStatusBanner";
 
 interface HomePageProps {
@@ -24,7 +23,7 @@ export default function HomePage({
   initialStats,
   initialError,
 }: HomePageProps) {
-  const { shows, loading, error, refetch, stats } = useHomePage(
+  const { shows, loading, error, refetch } = useHomePage(
     initialShows,
     initialStats,
     initialError

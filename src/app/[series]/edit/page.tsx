@@ -193,7 +193,7 @@ export default function ShowEditPage() {
     }
   };
 
-  const handleMetadataUpdate = (updatedShow?: Show, updatedEpisode?: Episode) => {
+  const handleMetadataUpdate = (updatedShow?: Show, _updatedEpisode?: Episode) => {
     if (updatedShow) {
       setShow(updatedShow);
     }

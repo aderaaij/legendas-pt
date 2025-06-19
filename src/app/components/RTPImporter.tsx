@@ -38,7 +38,7 @@ export default function RTPImporter() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [selectedEpisodes, setSelectedEpisodes] = useState<Set<number>>(new Set());
   
-  const { job: currentJob } = useExtractionJob(currentJobId);
+  useExtractionJob(currentJobId);
 
   const toggleEpisodeSelection = (episodeNumber: number) => {
     const newSelected = new Set(selectedEpisodes);
@@ -52,7 +52,7 @@ export default function RTPImporter() {
 
   const selectAllEpisodes = () => {
     if (seriesPreview?.episodes) {
-      const allEpisodes = new Set(seriesPreview.episodes.map((ep: any) => ep.episodeNumber));
+      const allEpisodes = new Set<number>(seriesPreview.episodes.map((ep: any) => ep.episodeNumber));
       setSelectedEpisodes(allEpisodes);
     }
   };
@@ -109,7 +109,7 @@ export default function RTPImporter() {
       
       // Auto-select all episodes by default
       if (data.series?.episodes) {
-        const allEpisodes = new Set(data.series.episodes.map((ep: any) => ep.episodeNumber));
+        const allEpisodes = new Set<number>(data.series.episodes.map((ep: any) => ep.episodeNumber));
         setSelectedEpisodes(allEpisodes);
       }
     } catch (err) {

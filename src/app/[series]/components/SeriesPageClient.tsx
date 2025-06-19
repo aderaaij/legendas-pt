@@ -8,6 +8,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { Show, Episode } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
@@ -45,9 +46,11 @@ export default function SeriesPageClient({ show, episodes }: SeriesPageClientPro
               {/* Thumbnail */}
               {show.poster_url && (
                 <div className="flex-shrink-0">
-                  <img
+                  <Image
                     src={show.poster_url}
                     alt={`${show.name} poster`}
+                    width={160}
+                    height={240}
                     className="w-32 h-48 md:w-40 md:h-60 object-cover rounded-lg shadow-md"
                   />
                 </div>
