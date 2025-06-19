@@ -7,6 +7,7 @@ import { useHomePage, ShowWithExtractions } from "@/hooks/useHomePage";
 import { useAuth } from "@/hooks/useAuth";
 import { ShowCard } from "./ShowCard";
 import { LibraryStatistics } from "./LibraryStatistics";
+import JobStatusBanner from "./JobStatusBanner";
 
 interface HomePageProps {
   initialShows: ShowWithExtractions[];
@@ -67,6 +68,8 @@ export default function HomePage({
             </div>
           )} */}
         </header>
+
+        <JobStatusBanner />
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">

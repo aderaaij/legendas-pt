@@ -146,6 +146,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const getAccessToken = async (): Promise<string | null> => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Error getting session for token:', error)
+        return null
+      }
+      return session?.access_token || null
+    } catch (error) {
+      console.error('Error in getAccessToken:', error)
+      return null
+    }
+  }
+
   const isAdmin = profile?.role === 'admin'
   const isAuthenticated = !!user
 
@@ -156,6 +170,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signUp,
     signOut,
+    getAccessToken,
     isAdmin,
     isAuthenticated,
   }

@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { PhraseExtractionService } from "@/lib/supabase";
+import { generateContentHash } from "@/utils/extractPhrasesUitls";
 
 interface PhraseExtractionRequest {
   content: string;
-  language: string;
+  language?: string;
+  filename?: string;
+  showTitle?: string;
+  episodeTitle?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  saveToDatabase?: boolean;
+  forceReExtraction?: boolean;
+  showId?: string;
+  episodeId?: string;
 }
 
 // Define the JSON schema for structured outputs
@@ -34,7 +46,54 @@ const phraseExtractionSchema = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, language }: PhraseExtractionRequest = await request.json();
+    const {
+      content,
+      language = "pt",
+      filename,
+      showTitle,
+      episodeTitle,
+      seasonNumber,
+      episodeNumber,
+      saveToDatabase = false,
+      forceReExtraction = false,
+      showId,
+      episodeId,
+    }: PhraseExtractionRequest = await request.json();
+
+    // If saveToDatabase is true, we need authentication
+    if (saveToDatabase) {
+      const authHeader = request.headers.get("authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return NextResponse.json(
+          { error: "Authentication required for database operations" },
+          { status: 401 }
+        );
+      }
+
+      const token = authHeader.substring(7);
+      
+      // Create authenticated Supabase client for database operations
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      );
+
+      // Verify authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: "Invalid authentication" },
+          { status: 401 }
+        );
+      }
+    }
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -225,10 +284,170 @@ ${content}`;
         phrase.phrase.trim().length > 5
     );
 
+    // Save to database if requested
+    let extractionId: string | undefined;
+    if (saveToDatabase) {
+      try {
+        // Get the authentication token and create authenticated client
+        const authHeader = request.headers.get("authorization");
+        const token = authHeader?.substring(7);
+        
+        const authenticatedSupabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          }
+        );
+
+        // Generate content hash - if we have episodeId, make it episode-specific to avoid collisions
+        const baseContentHash = generateContentHash(content);
+        const contentHash = episodeId ? `${baseContentHash}_episode_${episodeId}` : baseContentHash;
+        let existingExtraction = null;
+        
+        if (episodeId) {
+          // Check for existing extraction for this specific episode
+          const { data, error: findError } = await authenticatedSupabase
+            .from("phrase_extractions")
+            .select("id")
+            .eq("episode_id", episodeId)
+            .single();
+            
+          if (findError && findError.code !== 'PGRST116') {
+            console.error("Error finding existing episode extraction:", findError);
+          }
+          
+          existingExtraction = data;
+        } else {
+          // Check by content hash (original behavior for non-episode specific extractions)
+          const { data, error: findError } = await authenticatedSupabase
+            .from("phrase_extractions")
+            .select("id")
+            .eq("content_hash", contentHash)
+            .single();
+
+          if (findError && findError.code !== 'PGRST116') {
+            console.error("Error finding existing extraction:", findError);
+          }
+          
+          existingExtraction = data;
+        }
+
+        if (existingExtraction && !forceReExtraction) {
+          return NextResponse.json({
+            phrases: validPhrases,
+            total: validPhrases.length,
+            truncated: finishReason === "length",
+            extractionId: existingExtraction.id,
+            alreadyExists: true,
+            message: episodeId 
+              ? "Episode already processed. Use forceReExtraction to override."
+              : "Content already exists in database. Use forceReExtraction to override.",
+          });
+        }
+
+        // If forcing re-extraction, delete the existing extraction and its phrases
+        if (existingExtraction && forceReExtraction) {
+          // Delete existing phrases first
+          const { error: deletePhraseError } = await authenticatedSupabase
+            .from("extracted_phrases")
+            .delete()
+            .eq("extraction_id", existingExtraction.id);
+
+          if (deletePhraseError) {
+            console.error("Failed to delete existing phrases:", deletePhraseError);
+            throw new Error(`Failed to delete existing phrases: ${deletePhraseError.message}`);
+          }
+
+          // Delete existing extraction
+          const { error: deleteExtractionError } = await authenticatedSupabase
+            .from("phrase_extractions")
+            .delete()
+            .eq("id", existingExtraction.id);
+
+          if (deleteExtractionError) {
+            console.error("Failed to delete existing extraction:", deleteExtractionError);
+            throw new Error(`Failed to delete existing extraction: ${deleteExtractionError.message}`);
+          }
+        }
+
+        // Create new extraction record using authenticated client
+        const extractionData = {
+          content_hash: contentHash,
+          content_preview: content.substring(0, 500),
+          content_length: content.length,
+          show_id: showId || null,
+          episode_id: episodeId || null,
+          source: filename ? "file_upload" : "rtp",
+          capture_timestamp: new Date().toISOString(),
+          language,
+          max_phrases: 1000, // Based on our extensive extraction
+          total_phrases_found: validPhrases.length,
+          was_truncated: finishReason === "length",
+          extraction_params: {
+            filename,
+            showTitle,
+            episodeTitle,
+            seasonNumber,
+            episodeNumber,
+          },
+        };
+
+        // Insert extraction record directly with authenticated client
+        const { data: extraction, error: extractionError } = await authenticatedSupabase
+          .from("phrase_extractions")
+          .insert(extractionData)
+          .select()
+          .single();
+
+        if (extractionError) {
+          console.error("Failed to save extraction:", extractionError);
+          throw new Error(`Failed to save extraction: ${extractionError.message}`);
+        }
+
+        // Insert phrases directly with authenticated client
+        const phrasesWithExtractionId = validPhrases.map((phrase: any, index: number) => ({
+          phrase: phrase.phrase,
+          translation: phrase.translation,
+          context: phrase.context || null,
+          confidence_score: 0.9,
+          extraction_id: extraction.id,
+          position_in_content: index,
+        }));
+
+        const { data: savedPhrases, error: phrasesError } = await authenticatedSupabase
+          .from("extracted_phrases")
+          .insert(phrasesWithExtractionId)
+          .select();
+
+        if (phrasesError) {
+          console.error("Failed to save phrases:", phrasesError);
+          throw new Error(`Failed to save phrases: ${phrasesError.message}`);
+        }
+
+        extractionId = extraction.id;
+      } catch (dbError) {
+        console.error("Database save error:", dbError);
+        return NextResponse.json(
+          {
+            error: "Failed to save to database",
+            details: dbError instanceof Error ? dbError.message : "Unknown database error",
+            phrases: validPhrases, // Still return the phrases even if save failed
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({
       phrases: validPhrases,
       total: validPhrases.length,
       truncated: finishReason === "length",
+      extractionId,
       message:
         finishReason === "length"
           ? "Response was truncated. Consider reducing maxPhrases or content size for complete results."
