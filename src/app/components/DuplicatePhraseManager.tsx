@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X, Copy, Merge, AlertCircle, Check, Zap, CheckSquare, Square } from "lucide-react";
 import { PhraseExtractionService, ExtractedPhrase } from "@/lib/supabase";
+import * as Dialog from "@radix-ui/react-dialog";
+import { motion, AnimatePresence } from "motion/react";
 
 interface DuplicateGroup {
   normalizedPhrase: string;
@@ -14,6 +16,7 @@ interface DuplicatePhraseManagerProps {
   duplicateGroups: DuplicateGroup[];
   onClose: () => void;
   onMergeComplete: () => void;
+  isOpen: boolean;
 }
 
 export default function DuplicatePhraseManager({
@@ -21,6 +24,7 @@ export default function DuplicatePhraseManager({
   duplicateGroups,
   onClose,
   onMergeComplete,
+  isOpen,
 }: DuplicatePhraseManagerProps) {
   const [merging, setMerging] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -172,46 +176,82 @@ export default function DuplicatePhraseManager({
 
   if (duplicateGroups.length === 0) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">No Duplicates Found</h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="text-center py-8">
-            <Check className="w-16 h-16 mx-auto mb-4 text-green-500" />
-            <p className="text-gray-600">
-              Great! No duplicate phrases were found in this extraction.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <Dialog.Root open={isOpen} onOpenChange={onClose}>
+            <Dialog.Portal>
+              <Dialog.Overlay asChild>
+                <motion.div
+                  className="fixed inset-0 bg-black z-50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.5 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </Dialog.Overlay>
+              <Dialog.Content asChild>
+                <motion.div
+                  className="fixed top-1/2 left-1/2 bg-white rounded-xl shadow-xl max-w-md w-full p-6 z-50"
+                  initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                  animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                  exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                  transition={{ duration: 0.2 }}
+                >
+            <div className="flex items-center justify-between mb-4">
+              <Dialog.Title className="text-xl font-bold text-gray-900">No Duplicates Found</Dialog.Title>
+              <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </Dialog.Close>
+            </div>
+            <div className="text-center py-8">
+              <Check className="w-16 h-16 mx-auto mb-4 text-green-500" />
+              <p className="text-gray-600">
+                Great! No duplicate phrases were found in this extraction.
+              </p>
+            </div>
+                </motion.div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        )}
+      </AnimatePresence>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Manage Duplicate Phrases</h2>
-              <p className="text-gray-600 mt-1">
-                Found {duplicateGroups.length} groups with {totalDuplicates} duplicate phrases
-              </p>
+    <AnimatePresence>
+      {isOpen && (
+        <Dialog.Root open={isOpen} onOpenChange={onClose}>
+          <Dialog.Portal>
+            <Dialog.Overlay asChild>
+              <motion.div
+                className="fixed inset-0 bg-black z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              />
+            </Dialog.Overlay>
+            <Dialog.Content asChild>
+              <motion.div
+                className="fixed top-1/2 left-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden z-50 m-4"
+                initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                transition={{ duration: 0.2 }}
+              >
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <Dialog.Title className="text-2xl font-bold text-gray-900">Manage Duplicate Phrases</Dialog.Title>
+                <p className="text-gray-600 mt-1">
+                  Found {duplicateGroups.length} groups with {totalDuplicates} duplicate phrases
+                </p>
+              </div>
+              <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </Dialog.Close>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
 
           {/* Bulk Actions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -438,8 +478,11 @@ export default function DuplicatePhraseManager({
               Close
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+              </motion.div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+    </AnimatePresence>
   );
 }

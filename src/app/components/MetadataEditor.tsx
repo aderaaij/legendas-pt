@@ -5,6 +5,8 @@ import { Search, Save, X, Calendar, Tv, Hash, Clock, ExternalLink } from "lucide
 import Image from "next/image";
 import { Show, Episode, PhraseExtractionService } from "../../lib/supabase";
 import TVDBService, { TVDBSearchResult } from "../../lib/tvdb";
+import * as Dialog from "@radix-ui/react-dialog";
+import { motion, AnimatePresence } from "motion/react";
 
 interface MetadataEditorProps {
   extractionId: string;
@@ -12,6 +14,7 @@ interface MetadataEditorProps {
   currentEpisode?: Episode;
   onUpdate: (show?: Show, episode?: Episode) => void;
   onClose: () => void;
+  isOpen: boolean;
 }
 
 export default function MetadataEditor({
@@ -20,6 +23,7 @@ export default function MetadataEditor({
   currentEpisode,
   onUpdate,
   onClose,
+  isOpen,
 }: MetadataEditorProps) {
   const [searchQuery, setSearchQuery] = useState(currentShow?.name || "");
   const [searchResults, setSearchResults] = useState<TVDBSearchResult[]>([]);
@@ -206,19 +210,35 @@ export default function MetadataEditor({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Edit Metadata</h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <AnimatePresence>
+      {isOpen && (
+        <Dialog.Root open={isOpen} onOpenChange={onClose}>
+          <Dialog.Portal>
+            <Dialog.Overlay asChild>
+              <motion.div
+                className="fixed inset-0 bg-black z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              />
+            </Dialog.Overlay>
+            <Dialog.Content asChild>
+              <motion.div
+                className="fixed top-1/2 left-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-50 p-4"
+                initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
+                transition={{ duration: 0.2 }}
+              >
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-2xl font-bold text-gray-900">Edit Metadata</Dialog.Title>
+              <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </Dialog.Close>
+            </div>
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
@@ -550,8 +570,11 @@ export default function MetadataEditor({
               <span>{saving ? "Saving..." : "Save Metadata"}</span>
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+              </motion.div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+    </AnimatePresence>
   );
 }

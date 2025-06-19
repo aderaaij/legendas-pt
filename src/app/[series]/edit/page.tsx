@@ -414,12 +414,13 @@ export default function ShowEditPage() {
         </div>
 
         {/* Metadata Editor Modal */}
-        {showMetadataEditor && show && (
+        {show && (
           <MetadataEditor
             extractionId="" // Not needed for show-level editing
             currentShow={show}
             onUpdate={handleMetadataUpdate}
             onClose={() => setShowMetadataEditor(false)}
+            isOpen={showMetadataEditor}
           />
         )}
       </div>

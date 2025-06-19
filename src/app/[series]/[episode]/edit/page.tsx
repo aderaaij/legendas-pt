@@ -481,13 +481,14 @@ export default function EpisodeEditPage() {
         </div>
 
         {/* Metadata Editor Modal */}
-        {showMetadataEditor && show && episodeData && (
+        {show && episodeData && (
           <MetadataEditor
             extractionId="" // Not needed for episode-level editing
             currentShow={show}
             currentEpisode={episodeData}
             onUpdate={handleMetadataUpdate}
             onClose={() => setShowMetadataEditor(false)}
+            isOpen={showMetadataEditor}
           />
         )}
       </div>

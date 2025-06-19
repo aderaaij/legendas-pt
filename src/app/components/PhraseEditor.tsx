@@ -510,25 +510,23 @@ export default function PhraseEditor({
       )}
 
       {/* Metadata Editor Modal */}
-      {showMetadataEditor && (
-        <MetadataEditor
-          extractionId={extractionId}
-          currentShow={currentShow}
-          currentEpisode={currentEpisode}
-          onUpdate={handleMetadataUpdate}
-          onClose={() => setShowMetadataEditor(false)}
-        />
-      )}
+      <MetadataEditor
+        extractionId={extractionId}
+        currentShow={currentShow}
+        currentEpisode={currentEpisode}
+        onUpdate={handleMetadataUpdate}
+        onClose={() => setShowMetadataEditor(false)}
+        isOpen={showMetadataEditor}
+      />
 
       {/* Duplicate Phrase Manager Modal */}
-      {showDuplicateManager && (
-        <DuplicatePhraseManager
-          extractionId={extractionId}
-          duplicateGroups={duplicateGroups}
-          onClose={() => setShowDuplicateManager(false)}
-          onMergeComplete={handleDuplicateManageComplete}
-        />
-      )}
+      <DuplicatePhraseManager
+        extractionId={extractionId}
+        duplicateGroups={duplicateGroups}
+        onClose={() => setShowDuplicateManager(false)}
+        onMergeComplete={handleDuplicateManageComplete}
+        isOpen={showDuplicateManager}
+      />
     </div>
   );
 }
