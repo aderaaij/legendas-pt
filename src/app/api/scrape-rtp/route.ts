@@ -242,25 +242,44 @@ export async function POST(request: NextRequest) {
         // Create episode in database if needed
         let episodeId: string | null = null;
         if (saveToDatabase && showId) {
-          // First try to find existing episode
-          const { data: existingEpisode } = await supabase
+          // Parse season from episode title if available, otherwise default to 1
+          const seasonMatch = episode.title.match(/[Ss](?:eason|érie)?\s*(\d+)/);
+          const season = seasonMatch ? parseInt(seasonMatch[1]) : 1;
+          
+          console.log(`Creating/finding episode: Show=${showId}, Season=${season}, Episode=${episode.episodeNumber}, Title="${episode.title}", RTP_ID=${episode.id}`);
+          
+          // First try to find existing episode by RTP episode ID (more precise)
+          const { data: existingEpisodeByRtpId } = await supabase
             .from("episodes")
             .select("id")
             .eq("show_id", showId)
-            .eq("season", 1)
-            .eq("episode_number", episode.episodeNumber)
+            .eq("description", `RTP Episode ID: ${episode.id}`)
             .single();
+
+          // Fallback to season/episode number matching for backward compatibility
+          const { data: existingEpisodeBySeason } = !existingEpisodeByRtpId ? await supabase
+            .from("episodes")
+            .select("id")
+            .eq("show_id", showId)
+            .eq("season", season)
+            .eq("episode_number", episode.episodeNumber)
+            .single() : { data: null };
+
+          const existingEpisode = existingEpisodeByRtpId || existingEpisodeBySeason;
 
           if (existingEpisode) {
             episodeId = existingEpisode.id; // Keep as string UUID
+            console.log(`Found existing episode with ID: ${episodeId}`);
           } else {
-            // Create new episode
+            // Create new episode - include RTP episode ID for uniqueness
             const episodeData = {
               show_id: showId,
-              season: 1,
+              season: season,
               episode_number: episode.episodeNumber,
               title: episode.title,
               air_date: episode.airDate || null,
+              // Store RTP episode ID for reference and uniqueness
+              description: `RTP Episode ID: ${episode.id}`,
             };
 
             const { data: newEpisode, error: episodeError } = await supabase
@@ -282,6 +301,7 @@ export async function POST(request: NextRequest) {
             }
 
             episodeId = newEpisode.id; // Keep as string UUID
+            console.log(`Created new episode with ID: ${episodeId}`);
           }
         }
 

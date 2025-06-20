@@ -303,13 +303,17 @@ ${content}`;
           }
         );
 
-        // Generate content hash - if we have episodeId, make it episode-specific to avoid collisions
+        // Generate content hash
         const baseContentHash = generateContentHash(content);
-        const contentHash = episodeId ? `${baseContentHash}_episode_${episodeId}` : baseContentHash;
+        // For episode-specific extractions, make hash unique per episode to avoid constraint violations
+        // This allows the same subtitle content to exist for different episodes
+        const contentHash = episodeId ? `${baseContentHash}_ep_${episodeId}` : baseContentHash;
         let existingExtraction = null;
         
+        // Check for existing extraction using the appropriate method
         if (episodeId) {
-          // Check for existing extraction for this specific episode
+          // For episode-specific extractions, check ONLY by episode_id first
+          // This ensures we don't reuse extractions from deleted shows
           const { data, error: findError } = await authenticatedSupabase
             .from("phrase_extractions")
             .select("id")
@@ -321,6 +325,7 @@ ${content}`;
           }
           
           existingExtraction = data;
+          console.log(`Episode ${episodeId}: ${existingExtraction ? 'Found existing extraction' : 'No existing extraction found'}`);
         } else {
           // Check by content hash (original behavior for non-episode specific extractions)
           const { data, error: findError } = await authenticatedSupabase
