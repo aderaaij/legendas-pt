@@ -249,27 +249,32 @@ export async function POST(request: NextRequest) {
           console.log(`Creating/finding episode: Show=${showId}, Season=${season}, Episode=${episode.episodeNumber}, Title="${episode.title}", RTP_ID=${episode.id}`);
           
           // First try to find existing episode by RTP episode ID (more precise)
-          const { data: existingEpisodeByRtpId } = await supabase
+          const { data: existingEpisodeByRtpId, error: rtpIdError } = await supabase
             .from("episodes")
-            .select("id")
+            .select("id, description")
             .eq("show_id", showId)
             .eq("description", `RTP Episode ID: ${episode.id}`)
             .single();
 
+          console.log(`Looking for episode with RTP ID ${episode.id} in show ${showId}`);
+          console.log(`RTP ID search result:`, existingEpisodeByRtpId, rtpIdError?.code);
+
           // Fallback to season/episode number matching for backward compatibility
-          const { data: existingEpisodeBySeason } = !existingEpisodeByRtpId ? await supabase
+          const { data: existingEpisodeBySeason, error: seasonError } = !existingEpisodeByRtpId ? await supabase
             .from("episodes")
-            .select("id")
+            .select("id, description, season, episode_number")
             .eq("show_id", showId)
             .eq("season", season)
             .eq("episode_number", episode.episodeNumber)
-            .single() : { data: null };
+            .single() : { data: null, error: null };
+
+          console.log(`Season/episode search result:`, existingEpisodeBySeason, seasonError?.code);
 
           const existingEpisode = existingEpisodeByRtpId || existingEpisodeBySeason;
 
           if (existingEpisode) {
             episodeId = existingEpisode.id; // Keep as string UUID
-            console.log(`Found existing episode with ID: ${episodeId}`);
+            console.log(`Found existing episode with ID: ${episodeId}, Description: ${existingEpisode.description}`);
           } else {
             // Create new episode - include RTP episode ID for uniqueness
             const episodeData = {

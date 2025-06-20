@@ -121,7 +121,8 @@ class RTPScraperService {
     
     const sortedEpisodes = episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
     console.log('Final episodes found:', sortedEpisodes.length);
-    console.log('Episodes:', sortedEpisodes.map(e => `${e.episodeNumber}: ${e.title}`));
+    console.log('Episodes:', sortedEpisodes.map(e => `Ep.${e.episodeNumber}: "${e.title}" (RTP ID: ${e.id})`));
+    console.log('Full episode data:', JSON.stringify(sortedEpisodes, null, 2));
     
     return sortedEpisodes;
   }
@@ -196,23 +197,63 @@ class RTPScraperService {
       
       // Pattern 4: Try to construct subtitle URL from episode information
       if (!subtitleUrl) {
-        // Look for any image or video reference that might give us the file naming pattern
-        const imageRegex = /p14147_2_(\d{8}\d{6}e\d{3}t\d{4}d)/;
-        const imageMatch = html.match(imageRegex);
-        if (imageMatch) {
-          const filePattern = imageMatch[1];
-          const constructedUrl = `https://cdn-ondemand.rtp.pt/nas2.share/legendas/video/web/p14147/p14147_2_${filePattern}.vtt`;
-          console.log(`Attempting constructed subtitle URL: ${constructedUrl}`);
+        console.log(`Trying to construct subtitle URL for episode ${episode.id}...`);
+        
+        // Extract series ID from episode URL
+        const seriesIdMatch = episode.url.match(/\/play\/(p\d+)\//);
+        const seriesId = seriesIdMatch ? seriesIdMatch[1] : 'p14147'; // fallback for backward compatibility
+        console.log(`Using series ID: ${seriesId}`);
+        
+        // First, try to find patterns that include the specific episode ID
+        const episodeSpecificRegex = new RegExp(`${seriesId}_2_(\\d{8}\\d{6}${episode.id}t\\d{4}d)`);
+        const episodeSpecificMatch = html.match(episodeSpecificRegex);
+        
+        if (episodeSpecificMatch) {
+          const filePattern = episodeSpecificMatch[1];
+          const constructedUrl = `https://cdn-ondemand.rtp.pt/nas2.share/legendas/video/web/${seriesId}/${seriesId}_2_${filePattern}.vtt`;
+          console.log(`Attempting episode-specific constructed subtitle URL: ${constructedUrl}`);
           
-          // Test if the constructed URL exists
           try {
             const testResponse = await fetch(constructedUrl, { method: 'HEAD' });
             if (testResponse.ok) {
               subtitleUrl = constructedUrl;
-              console.log(`Found subtitle (pattern 4 - constructed): ${subtitleUrl}`);
+              console.log(`Found subtitle (pattern 4 - episode-specific): ${subtitleUrl}`);
             }
           } catch (e) {
-            console.log('Constructed URL test failed:', e);
+            console.log('Episode-specific constructed URL test failed:', e);
+          }
+        }
+        
+        // Fallback: Look for any pattern but verify it's for the right episode
+        if (!subtitleUrl) {
+          console.log('Episode-specific pattern not found, trying all patterns...');
+          const allPatternRegex = new RegExp(`${seriesId}_2_(\\d{8}\\d{6}e\\d{3}t\\d{4}d)`, 'g');
+          let patternMatch;
+          
+          while ((patternMatch = allPatternRegex.exec(html)) !== null) {
+            const filePattern = patternMatch[1];
+            const constructedUrl = `https://cdn-ondemand.rtp.pt/nas2.share/legendas/video/web/${seriesId}/${seriesId}_2_${filePattern}.vtt`;
+            console.log(`Attempting pattern: ${filePattern} -> ${constructedUrl}`);
+            
+            try {
+              const testResponse = await fetch(constructedUrl, { method: 'HEAD' });
+              if (testResponse.ok) {
+                // Test if this subtitle content is actually for the current episode
+                const testContentResponse = await fetch(constructedUrl);
+                const testContent = await testContentResponse.text();
+                
+                // Simple heuristic: check if episode title appears in subtitle content
+                if (testContent.toLowerCase().includes(episode.title.toLowerCase().substring(0, 20))) {
+                  subtitleUrl = constructedUrl;
+                  console.log(`Found subtitle (pattern 4 - verified): ${subtitleUrl}`);
+                  break;
+                } else {
+                  console.log(`Pattern ${filePattern} found valid URL but content doesn't match episode`);
+                }
+              }
+            } catch (e) {
+              console.log(`Pattern ${filePattern} test failed:`, e);
+            }
           }
         }
       }
