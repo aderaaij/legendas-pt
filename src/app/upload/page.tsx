@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Upload, BookOpen, Languages, Globe } from "lucide-react";
+import { ArrowLeft, Upload, BookOpen, Languages, Globe, Merge } from "lucide-react";
 import SubtitleUploader from "@/app/components/SubtitleUploader";
 import PhraseExtractor from "@/app/components/PhraseExtractor";
 import RTPImporter from "@/app/components/RTPImporter";
+import ShowMerger from "@/app/components/ShowMerger";
 import { AdminRoute } from "@/app/components/ProtectedRoute";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,7 @@ export interface SubtitleMetadata {
 }
 
 export default function UploadPage() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'rtp'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'rtp' | 'merge'>('upload');
   const [subtitleContent, setSubtitleContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
@@ -117,6 +118,19 @@ export default function UploadPage() {
                       RTP Series Import
                     </div>
                   </button>
+                  <button
+                    onClick={() => setActiveTab('merge')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'merge'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 px-4">
+                      <Merge className="w-4 h-4" />
+                      Merge Shows
+                    </div>
+                  </button>
                 </nav>
               </div>
 
@@ -169,6 +183,20 @@ export default function UploadPage() {
                       </h2>
                     </div>
                     <RTPImporter />
+                  </div>
+                )}
+
+                {activeTab === 'merge' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="bg-purple-100 p-2 rounded-full">
+                        <Merge className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <h2 className="text-xl font-semibold text-gray-800">
+                        Merge Duplicate Shows
+                      </h2>
+                    </div>
+                    <ShowMerger />
                   </div>
                 )}
               </div>
