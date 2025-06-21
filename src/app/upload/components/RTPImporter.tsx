@@ -5,6 +5,9 @@ import RTPScraperService from '@/lib/rtp-scraper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useExtractionJob } from '@/hooks/useExtractionJobs';
 import JobStatusBanner from '@/app/components/JobStatusBanner';
+import ShowMapper from './ShowMapper';
+import ShowTVDBCreator from './ShowTVDBCreator';
+import { Show } from '@/lib/supabase';
 
 interface ScrapingResult {
   episode: number;
@@ -37,6 +40,10 @@ export default function RTPImporter() {
   const [error, setError] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [selectedEpisodes, setSelectedEpisodes] = useState<Set<number>>(new Set());
+  
+  // New state for show mapping flow
+  const [showMappingStep, setShowMappingStep] = useState<'none' | 'mapping' | 'creating'>('none');
+  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   
   useExtractionJob(currentJobId);
 
@@ -135,6 +142,13 @@ export default function RTPImporter() {
       return;
     }
 
+    // If no show is selected yet, start the mapping flow
+    if (!selectedShow) {
+      setShowMappingStep('mapping');
+      return;
+    }
+
+    // Proceed with processing
     setIsProcessing(true);
     setError(null);
     setResults([]);
@@ -157,6 +171,7 @@ export default function RTPImporter() {
           saveToDatabase,
           forceReExtraction,
           selectedEpisodes: Array.from(selectedEpisodes),
+          selectedShowId: selectedShow?.id,
         }),
       });
 
@@ -185,6 +200,24 @@ export default function RTPImporter() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleShowSelected = (show: Show) => {
+    setSelectedShow(show);
+    setShowMappingStep('none');
+  };
+
+  const handleShowCreated = (show: Show) => {
+    setSelectedShow(show);
+    setShowMappingStep('none');
+  };
+
+  const handleCancelMapping = () => {
+    setShowMappingStep('none');
+  };
+
+  const handleCreateNewShow = () => {
+    setShowMappingStep('creating');
   };
 
   const getStatusColor = (status: string) => {
@@ -342,6 +375,23 @@ export default function RTPImporter() {
           </div>
 
           <div className="space-y-4">
+            {/* Show Selection Status */}
+            {selectedShow && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-medium text-green-800 mb-2">Show Selected</h4>
+                <p className="text-green-700">
+                  Episodes will be mapped to: <span className="font-medium">{selectedShow.name}</span>
+                </p>
+                <button
+                  onClick={() => setSelectedShow(null)}
+                  className="mt-2 text-sm text-green-600 hover:text-green-700 underline"
+                  disabled={isProcessing}
+                >
+                  Change show selection
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center space-x-4">
               <label className="flex items-center">
                 <input
@@ -370,7 +420,12 @@ export default function RTPImporter() {
               disabled={isProcessing}
               className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? 'Processing Episodes...' : 'Process All Episodes'}
+              {isProcessing 
+                ? 'Processing Episodes...' 
+                : selectedShow 
+                  ? 'Process All Episodes' 
+                  : 'Select Show & Process Episodes'
+              }
             </button>
           </div>
         </div>
@@ -437,6 +492,25 @@ export default function RTPImporter() {
           </div>
         </div>
       )}
+
+      {/* Show Mapping Modal */}
+      <ShowMapper
+        isOpen={showMappingStep === 'mapping'}
+        seriesTitle={seriesPreview?.title || ''}
+        episodes={seriesPreview?.episodes || []}
+        onShowSelected={handleShowSelected}
+        onCreateNewShow={handleCreateNewShow}
+        onCancel={handleCancelMapping}
+      />
+
+      {/* Show TVDB Creator Modal */}
+      <ShowTVDBCreator
+        isOpen={showMappingStep === 'creating'}
+        seriesTitle={seriesPreview?.title || ''}
+        episodes={seriesPreview?.episodes || []}
+        onShowCreated={handleShowCreated}
+        onCancel={handleCancelMapping}
+      />
     </div>
   );
 }

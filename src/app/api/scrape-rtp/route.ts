@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
       saveToDatabase = true,
       forceReExtraction = false,
       selectedEpisodes = null,
+      selectedShowId = null,
     } = await request.json();
 
     // Get the authorization header
@@ -122,59 +123,66 @@ export async function POST(request: NextRequest) {
       status: 'running',
     }, supabase);
 
-    // Try to find matching show in TVDB
-    const normalizedTitle = RTPScraperService.normalizeSeriesName(series.title);
-    const tvdbMatch = await TVDBService.findBestMatch(normalizedTitle);
-
     let showId: string | null = null;
+    let tvdbMatch: any = null;
 
     if (saveToDatabase) {
-      // Create or get existing show using authenticated client
-      const showName =
-        tvdbMatch.show && tvdbMatch.confidence > 0.6
-          ? tvdbMatch.show.name
-          : series.title;
-
-      // First try to find existing show
-      const { data: existingShow } = await supabase
-        .from("shows")
-        .select("id")
-        .eq("name", showName)
-        .eq("source", "rtp")
-        .single();
-
-      if (existingShow) {
-        showId = existingShow.id; // Keep as string UUID
+      if (selectedShowId) {
+        // Use the selected show ID provided by the user
+        showId = selectedShowId;
+        console.log(`Using selected show ID: ${showId}`);
       } else {
-        // Create new show
-        const showData = {
-          name: showName,
-          source: "rtp",
-          ...(tvdbMatch.show &&
-            tvdbMatch.confidence > 0.6 && {
-              tvdb_id: tvdbMatch.show.id,
-              tvdb_slug: tvdbMatch.show.slug,
-              description: tvdbMatch.show.overview,
-              genre: tvdbMatch.show.genres?.join(", "),
-              poster_url: tvdbMatch.show.image,
-            }),
-        };
+        // Legacy behavior: Try to find matching show in TVDB
+        const normalizedTitle = RTPScraperService.normalizeSeriesName(series.title);
+        tvdbMatch = await TVDBService.findBestMatch(normalizedTitle);
 
-        const { data: newShow, error: showError } = await supabase
+        // Create or get existing show using authenticated client
+        const showName =
+          tvdbMatch.show && tvdbMatch.confidence > 0.6
+            ? tvdbMatch.show.name
+            : series.title;
+
+        // First try to find existing show
+        const { data: existingShow } = await supabase
           .from("shows")
-          .insert(showData)
           .select("id")
+          .eq("name", showName)
+          .eq("source", "rtp")
           .single();
 
-        if (showError) {
-          console.error("Error creating show:", showError);
-          return NextResponse.json(
-            { error: `Failed to create show: ${showError.message}` },
-            { status: 500 }
-          );
-        }
+        if (existingShow) {
+          showId = existingShow.id; // Keep as string UUID
+        } else {
+          // Create new show
+          const showData = {
+            name: showName,
+            source: "rtp",
+            ...(tvdbMatch.show &&
+              tvdbMatch.confidence > 0.6 && {
+                tvdb_id: tvdbMatch.show.id,
+                tvdb_slug: tvdbMatch.show.slug,
+                description: tvdbMatch.show.overview,
+                genre: tvdbMatch.show.genres?.join(", "),
+                poster_url: tvdbMatch.show.image,
+              }),
+          };
 
-        showId = newShow.id; // Keep as string UUID
+          const { data: newShow, error: showError } = await supabase
+            .from("shows")
+            .insert(showData)
+            .select("id")
+            .single();
+
+          if (showError) {
+            console.error("Error creating show:", showError);
+            return NextResponse.json(
+              { error: `Failed to create show: ${showError.message}` },
+              { status: 500 }
+            );
+          }
+
+          showId = newShow.id; // Keep as string UUID
+        }
       }
     }
 
@@ -408,8 +416,9 @@ export async function POST(request: NextRequest) {
         totalEpisodes: series.episodes.length,
         processedEpisodes: episodesToProcess.length,
         selectedEpisodes: selectedEpisodes || null,
+        selectedShowId: selectedShowId || null,
         tvdbMatch:
-          tvdbMatch.confidence > 0.6
+          tvdbMatch && tvdbMatch.confidence > 0.6
             ? {
                 name: tvdbMatch.show?.name,
                 confidence: tvdbMatch.confidence,
