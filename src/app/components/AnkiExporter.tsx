@@ -19,15 +19,15 @@ interface AnkiExporterProps {
   onDeselectAll?: () => void;
 }
 
-export default function AnkiExporter({ 
-  phrases, 
+export default function AnkiExporter({
+  phrases,
   isExportMode = false,
   onEnterExportMode,
   onExitExportMode,
   selectedCount = 0,
   totalCount = 0,
   onSelectAll,
-  onDeselectAll
+  onDeselectAll,
 }: AnkiExporterProps) {
   const generateAnkiCSV = (): string => {
     const headers = ["Front", "Back"];
