@@ -6,13 +6,13 @@ import { User, Upload, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface UserDropdownProps {
-  user: { email: string } | null
+  user: { email?: string } | null
   isAdmin: boolean
   onSignOut: () => void
 }
 
 export function UserDropdown({ user, isAdmin, onSignOut }: UserDropdownProps) {
-  if (!user) return null
+  if (!user || !user.email) return null
 
   return (
     <DropdownMenu.Root>

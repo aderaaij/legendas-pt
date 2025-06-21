@@ -4,7 +4,7 @@ import { useState } from 'react';
 import RTPScraperService from '@/lib/rtp-scraper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useExtractionJob } from '@/hooks/useExtractionJobs';
-import JobStatusBanner from './JobStatusBanner';
+import JobStatusBanner from '@/app/components/JobStatusBanner';
 
 interface ScrapingResult {
   episode: number;

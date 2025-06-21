@@ -6,7 +6,7 @@ import {
 } from "../utils/extractPhrasesUitls";
 
 import { callPhraseExtractionAPI } from "@/utils/phraseExtractionApi";
-import { ExtractionSettings } from "@/app/components/PhraseExtractor";
+import { ExtractionSettings } from "@/app/upload/components/PhraseExtractor";
 import { SubtitleMetadata } from "@/app/upload/page";
 import {
   cleanSubtitleContent,

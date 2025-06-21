@@ -1,7 +1,6 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import { AuthModal } from '@/app/components/AuthModal'
 import { ProfileStats } from '@/app/components/ProfileStats'
 
 export default function ProfilePageClient() {
@@ -20,7 +19,7 @@ export default function ProfilePageClient() {
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <h1 className="text-2xl font-bold">Sign in to view your profile</h1>
         <p className="text-gray-600">Track your learning progress and view detailed statistics.</p>
-        <AuthModal />
+        <p className="text-sm text-gray-500">Please use the navigation menu to sign in.</p>
       </div>
     )
   }

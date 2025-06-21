@@ -70,3 +70,13 @@ export interface DueCard {
   state: string;
   reps: number;
 }
+
+export interface StudyStats {
+  total: number;
+  new: number;
+  learning: number;
+  review: number;
+  relearning: number;
+  totalReviews: number;
+  totalLapses: number;
+}
