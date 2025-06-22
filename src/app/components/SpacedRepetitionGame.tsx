@@ -1,11 +1,14 @@
 "use client";
 
-import { RotateCcw, Trophy, Brain } from "lucide-react";
+import React, { useState } from "react";
+import { RotateCcw, Trophy, Brain, ArrowLeftRight } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { StudyCard } from "./StudyCard";
 import { StudyProgressBar } from "./StudyProgressBar";
 import { useSpacedRepetitionGame } from "@/hooks/useSpacedRepetitionGame";
+import { useFavorites } from "@/hooks/useFavorites";
+import { StudyDirection } from "@/types/spaced-repetition";
 
 interface SpacedRepetitionGameProps {
   episodeId: string;
@@ -20,6 +23,10 @@ export function SpacedRepetitionGame({
   open,
   onClose,
 }: SpacedRepetitionGameProps) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
+  const [studyDirection, setStudyDirection] = useState<StudyDirection>("pt-en");
+
   const {
     cards,
     currentCard,
@@ -36,7 +43,38 @@ export function SpacedRepetitionGame({
     initializeGame,
     accuracy,
     duration,
-  } = useSpacedRepetitionGame({ episodeId, onClose });
+  } = useSpacedRepetitionGame({ episodeId, studyDirection, onClose });
+
+  const toggleDirection = () => {
+    const newDirection = studyDirection === "pt-en" ? "en-pt" : "pt-en";
+    setStudyDirection(newDirection);
+    
+    // The hook's useEffect will automatically reinitialize when studyDirection changes
+    // due to the dependency array including studyDirection
+  };
+
+  const handleToggleFavorite = async (phraseId: string) => {
+    try {
+      await toggleFavorite(phraseId);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  // Add keyboard shortcut for direction toggle
+  React.useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (loading || gameComplete || !open) return;
+
+      if (event.key === "r" || event.key === "R") {
+        event.preventDefault();
+        toggleDirection();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [loading, gameComplete, open, toggleDirection]);
 
   if (loading) {
     return (
@@ -284,13 +322,25 @@ export function SpacedRepetitionGame({
                       {episodeTitle}
                     </Dialog.Description>
                   </div>
-                  <Dialog.Close asChild>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={toggleDirection}
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 text-sm"
+                      title={studyDirection === "pt-en" ? "Switch to English → Portuguese" : "Switch to Portuguese → English"}
+                    >
+                      <ArrowLeftRight className="w-4 h-4" />
+                      <span className="hidden sm:inline">
+                        {studyDirection === "pt-en" ? "🇵🇹→🇬🇧" : "🇬🇧→🇵🇹"}
+                      </span>
                     </button>
-                  </Dialog.Close>
+                    <Dialog.Close asChild>
+                      <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </Dialog.Close>
+                  </div>
                 </motion.div>
 
                 {/* Progress bar */}
@@ -322,6 +372,9 @@ export function SpacedRepetitionGame({
                       onFlip={handleFlip}
                       cardNumber={currentCardIndex + 1}
                       totalCards={cards.length}
+                      isFavorite={isFavorite(currentCard.phrase.id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      studyDirection={studyDirection}
                     />
                   </AnimatePresence>
                 </motion.div>

@@ -1,5 +1,7 @@
 import { ExtractedPhrase } from '@/lib/supabase';
 
+export type StudyDirection = 'pt-en' | 'en-pt';
+
 export interface StudySession {
   id: string;
   user_id: string;
@@ -18,6 +20,7 @@ export interface CardStudy {
   id: string;
   user_id: string;
   phrase_id: string;
+  study_direction: StudyDirection;
   due_date: string;
   stability: number;
   difficulty: number;
@@ -69,6 +72,7 @@ export interface DueCard {
   due_date: string;
   state: string;
   reps: number;
+  study_direction: StudyDirection;
 }
 
 export interface StudyStats {

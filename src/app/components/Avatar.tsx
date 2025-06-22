@@ -36,7 +36,7 @@ export function Avatar({
   const avatarContent = (
     <div className={`relative ${className}`}>
       <div
-        className="rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300"
+        className="rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300 cursor-pointer"
         style={{ width: size, height: size }}
       >
         {!imageError ? (

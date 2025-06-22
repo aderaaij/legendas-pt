@@ -34,17 +34,11 @@ export function Navigation() {
             >
               <Captions size="48" /> LegendasPT
             </Link>
-
-            <div className="hidden md:flex space-x-4">
-              <Link href="/" className="text-gray-600 hover:text-gray-900">
-                Home
-              </Link>
-            </div>
           </div>
 
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
-              <UserDropdown 
+              <UserDropdown
                 user={user}
                 isAdmin={isAdmin}
                 onSignOut={handleSignOut}

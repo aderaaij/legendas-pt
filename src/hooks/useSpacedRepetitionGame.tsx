@@ -3,17 +3,20 @@ import { studyService } from "@/lib/study-service";
 import {
   StudyCard as StudyCardType,
   StudyRating,
+  StudyDirection,
   StudySession,
 } from "@/types/spaced-repetition";
 import { useAuth } from "@/hooks/useAuth";
 
 interface UseSpacedRepetitionGameProps {
   episodeId: string;
+  studyDirection: StudyDirection;
   onClose: () => void;
 }
 
 export function useSpacedRepetitionGame({
   episodeId,
+  studyDirection,
   onClose,
 }: UseSpacedRepetitionGameProps) {
   const { isAuthenticated, user } = useAuth();
@@ -37,7 +40,7 @@ export function useSpacedRepetitionGame({
       setError("");
 
       // Get due cards
-      const dueCards = await studyService.getDueCards(episodeId, 20);
+      const dueCards = await studyService.getDueCards(episodeId, studyDirection, 20);
 
       if (dueCards.length === 0) {
         setError("No cards available for study at this time.");
@@ -60,7 +63,7 @@ export function useSpacedRepetitionGame({
     } finally {
       setLoading(false);
     }
-  }, [episodeId, isAuthenticated, user]);
+  }, [episodeId, studyDirection, isAuthenticated, user]);
 
   useEffect(() => {
     initializeGame();
@@ -82,6 +85,7 @@ export function useSpacedRepetitionGame({
           await studyService.processStudyResponse(
             currentCard.phrase.id,
             rating,
+            studyDirection,
             responseTime
           );
         }
@@ -129,7 +133,7 @@ export function useSpacedRepetitionGame({
         }
       }
     },
-    [cards, currentCardIndex, session, sessionStats, isAuthenticated]
+    [cards, currentCardIndex, session, sessionStats, studyDirection, isAuthenticated]
   );
 
   const handleRestart = useCallback(() => {

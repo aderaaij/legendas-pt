@@ -83,8 +83,8 @@ export interface ExtractedPhrase {
 export interface ExtractionJob {
   id: string;
   user_id: string;
-  job_type: 'rtp_series' | 'manual_upload';
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  job_type: "rtp_series" | "manual_upload";
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   progress: number; // 0-100
   total_episodes: number;
   completed_episodes: number;
@@ -385,7 +385,6 @@ export class PhraseExtractionService {
   static async findExistingExtraction(
     contentHash: string
   ): Promise<PhraseExtraction | null> {
-
     const { data, error } = await supabase
       .from("phrase_extractions")
       .select(
@@ -1038,7 +1037,7 @@ export class PhraseExtractionService {
   // Job Management Methods
   static async createExtractionJob(
     userId: string,
-    jobType: 'rtp_series' | 'manual_upload',
+    jobType: "rtp_series" | "manual_upload",
     seriesTitle?: string,
     seriesUrl?: string,
     totalEpisodes: number = 0,
@@ -1046,11 +1045,11 @@ export class PhraseExtractionService {
   ): Promise<ExtractionJob> {
     const client = authenticatedSupabase || supabase;
     const { data, error } = await client
-      .from('extraction_jobs')
+      .from("extraction_jobs")
       .insert({
         user_id: userId,
         job_type: jobType,
-        status: 'pending',
+        status: "pending",
         progress: 0,
         total_episodes: totalEpisodes,
         completed_episodes: 0,
@@ -1062,8 +1061,12 @@ export class PhraseExtractionService {
       .single();
 
     if (error) {
-      console.error('Database error creating extraction job:', error);
-      throw new Error(`Failed to create extraction job: ${error.message || 'Database table may not exist'}`);
+      console.error("Database error creating extraction job:", error);
+      throw new Error(
+        `Failed to create extraction job: ${
+          error.message || "Database table may not exist"
+        }`
+      );
     }
 
     return data;
@@ -1071,7 +1074,19 @@ export class PhraseExtractionService {
 
   static async updateExtractionJob(
     jobId: string,
-    updates: Partial<Pick<ExtractionJob, 'status' | 'progress' | 'completed_episodes' | 'failed_episodes' | 'current_episode' | 'error_message' | 'results' | 'completed_at'>>,
+    updates: Partial<
+      Pick<
+        ExtractionJob,
+        | "status"
+        | "progress"
+        | "completed_episodes"
+        | "failed_episodes"
+        | "current_episode"
+        | "error_message"
+        | "results"
+        | "completed_at"
+      >
+    >,
     authenticatedSupabase?: any
   ): Promise<ExtractionJob> {
     const client = authenticatedSupabase || supabase;
@@ -1081,9 +1096,9 @@ export class PhraseExtractionService {
     };
 
     const { data, error } = await client
-      .from('extraction_jobs')
+      .from("extraction_jobs")
       .update(updateData)
-      .eq('id', jobId)
+      .eq("id", jobId)
       .select()
       .single();
 
@@ -1094,16 +1109,19 @@ export class PhraseExtractionService {
     return data;
   }
 
-  static async getExtractionJob(jobId: string, authenticatedSupabase?: any): Promise<ExtractionJob | null> {
+  static async getExtractionJob(
+    jobId: string,
+    authenticatedSupabase?: any
+  ): Promise<ExtractionJob | null> {
     const client = authenticatedSupabase || supabase;
     const { data, error } = await client
-      .from('extraction_jobs')
-      .select('*')
-      .eq('id', jobId)
+      .from("extraction_jobs")
+      .select("*")
+      .eq("id", jobId)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null; // Job not found
       }
       throw new Error(`Failed to get extraction job: ${error.message}`);
@@ -1112,12 +1130,15 @@ export class PhraseExtractionService {
     return data;
   }
 
-  static async getUserExtractionJobs(userId: string, limit: number = 10): Promise<ExtractionJob[]> {
+  static async getUserExtractionJobs(
+    userId: string,
+    limit: number = 10
+  ): Promise<ExtractionJob[]> {
     const { data, error } = await supabase
-      .from('extraction_jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .from("extraction_jobs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error) {
@@ -1127,13 +1148,15 @@ export class PhraseExtractionService {
     return data || [];
   }
 
-  static async getActiveExtractionJobs(userId: string): Promise<ExtractionJob[]> {
+  static async getActiveExtractionJobs(
+    userId: string
+  ): Promise<ExtractionJob[]> {
     const { data, error } = await supabase
-      .from('extraction_jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .in('status', ['pending', 'running'])
-      .order('created_at', { ascending: false });
+      .from("extraction_jobs")
+      .select("*")
+      .eq("user_id", userId)
+      .in("status", ["pending", "running"])
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to get active extraction jobs: ${error.message}`);
@@ -1144,7 +1167,7 @@ export class PhraseExtractionService {
 
   static async cancelExtractionJob(jobId: string): Promise<ExtractionJob> {
     return this.updateExtractionJob(jobId, {
-      status: 'cancelled',
+      status: "cancelled",
       completed_at: new Date().toISOString(),
     });
   }
@@ -1427,20 +1450,26 @@ export class PhraseExtractionService {
     } catch (error) {
       return {
         success: false,
-        message: `Merge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Merge failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       };
     }
   }
 
   // Find potentially duplicate shows by name similarity
-  static async findDuplicateShows(): Promise<Array<{
-    normalizedName: string;
-    shows: Show[];
-  }>> {
+  static async findDuplicateShows(): Promise<
+    Array<{
+      normalizedName: string;
+      shows: Show[];
+    }>
+  > {
     const { data: allShows, error } = await supabase
       .from("shows")
       .select("*")
       .order("name");
+
+    console.log(allShows);
 
     if (error || !allShows) {
       return [];

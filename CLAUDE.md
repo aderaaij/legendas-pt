@@ -71,8 +71,14 @@ extracted_phrases - Individual phrases with Portuguese/English translations
 user_profiles - User profile management with role assignment (user/admin)
 user_favorites - User phrase favorites
 user_study_sessions - Spaced repetition study session tracking
-user_card_studies - Individual card progress with FSRS algorithm data
+user_card_studies - Individual card progress with FSRS algorithm data (includes study_direction: 'pt-en' | 'en-pt')
 ```
+
+**Key Database Changes (Dec 2024):**
+- Added `study_direction` column to `user_card_studies` for direction-specific progress tracking
+- Updated `get_due_cards_for_user()` database function to filter by study direction
+- Compound unique constraint on `(user_id, phrase_id, study_direction)` to prevent duplicates
+- Proper UUID/TEXT type handling in database functions
 
 ### Authentication System
 The application implements a **role-based authentication system** with two user roles:
@@ -90,8 +96,12 @@ The application implements a **role-based authentication system** with two user 
 The application uses a service layer pattern:
 - `PhraseExtractionService` - Central data access layer for database operations
 - `TVDBService` - External API integration for show metadata
-- `StudyService` - Spaced repetition management with FSRS algorithm integration
+- `StudyService` - Spaced repetition management with direction-specific FSRS algorithm integration
 - OpenAI API calls are made directly from components/hooks
+
+**StudyService Key Methods:**
+- `getDueCards(episodeId, studyDirection, limit)` - Fetch direction-specific due cards
+- `processStudyResponse(phraseId, rating, studyDirection, responseTime)` - Update FSRS progress per direction
 
 ### Core Workflow
 1. Upload subtitle file → Auto-detect metadata → Parse content
@@ -110,10 +120,18 @@ The application includes an advanced spaced repetition system for optimal langua
 
 **Core Features:**
 - **FSRS Algorithm** - Uses `ts-fsrs` library for scientifically-optimized scheduling
-- **Anki-style Interface** - Portuguese → English flashcard system with 4-button rating
-- **Progress Tracking** - Persistent learning progress for authenticated users
+- **Direction-Specific Learning** - Separate progress tracking for Portuguese→English (recognition) and English→Portuguese (production)
+- **Bidirectional Study Interface** - Toggle between study directions with visual indicators (🇵🇹→🇬🇧 / 🇬🇧→🇵🇹)
+- **Anki-style Interface** - 4-button rating system with flip animation
+- **Progress Tracking** - Persistent learning progress for authenticated users per direction
 - **Guest Mode** - Temporary study sessions for non-authenticated users
-- **Keyboard Shortcuts** - Space to flip, 1-4 for ratings, Escape to close
+- **Keyboard Shortcuts** - Space to flip, 1-4 for ratings, R to toggle direction, Escape to close
+- **Favorite Integration** - Heart button to favorite phrases during study sessions
+
+**Pedagogical Design:**
+- **Recognition vs Production** - Portuguese→English (easier, receptive learning) and English→Portuguese (harder, productive learning) tracked separately
+- **Independent FSRS Scheduling** - Each direction has its own optimized spaced repetition intervals based on difficulty
+- **Scientific Accuracy** - Aligns with language learning research showing different cognitive pathways for recognition and production
 
 **Learning States:**
 - **New**: Cards being learned for the first time
@@ -123,8 +141,9 @@ The application includes an advanced spaced repetition system for optimal langua
 
 **User Experience:**
 - Study sessions accessible via "Start Study" button on episode pages
-- Real-time progress tracking with accuracy and timing statistics
-- Intelligent scheduling based on individual memory patterns
+- Real-time progress tracking with accuracy and timing statistics per direction
+- Direction toggle automatically restarts session with fresh cards
+- Intelligent scheduling based on individual memory patterns per cognitive skill
 - Seamless integration with existing authentication and favorites systems
 
 ## Environment Variables Required
