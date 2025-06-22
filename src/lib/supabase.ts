@@ -77,6 +77,10 @@ export interface ExtractedPhrase {
   context?: string;
   confidence_score?: number;
   position_in_content?: number;
+  start_time?: string;
+  end_time?: string;
+  speaker?: string;
+  matched_confidence?: number;
   created_at: string;
 }
 

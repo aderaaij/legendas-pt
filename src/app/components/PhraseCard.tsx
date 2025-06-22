@@ -1,6 +1,7 @@
 import { ExtractedPhrase } from "@/lib/supabase";
 import { FavoriteButton } from "./FavoriteButton";
 import { PhraseProgressBar } from "./PhraseProgressBar";
+import { formatTimestampRange } from "@/utils/timeUtils";
 
 interface PhraseCardProps {
   phrase: ExtractedPhrase;
@@ -14,6 +15,7 @@ interface PhraseCardProps {
   isLearned?: boolean;
   showProgress?: boolean;
   viewMode?: 'grid' | 'list';
+  showTimestamp?: boolean;
 }
 
 export const PhraseCard = ({ 
@@ -27,7 +29,8 @@ export const PhraseCard = ({
   learningState = 'New',
   isLearned = false,
   showProgress = false,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  showTimestamp = true
 }: PhraseCardProps) => {
   const isListView = viewMode === 'list';
   
@@ -49,7 +52,21 @@ export const PhraseCard = ({
           )}
           
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
-            <div className="font-semibold text-gray-800 break-words">{phrase.phrase}</div>
+            <div className="space-y-1">
+              <div className="font-semibold text-gray-800 break-words">{phrase.phrase}</div>
+              {showTimestamp && (phrase.start_time || phrase.end_time) && (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span className="bg-gray-200 px-2 py-1 rounded text-gray-700">
+                    ⏱️ {formatTimestampRange(phrase.start_time, phrase.end_time)}
+                  </span>
+                  {phrase.speaker && (
+                    <span className="bg-blue-100 px-2 py-1 rounded text-blue-700">
+                      🎭 {phrase.speaker}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="text-gray-600 break-words">{phrase.translation}</div>
           </div>
           
@@ -93,6 +110,18 @@ export const PhraseCard = ({
         )}
         <div className="flex flex-col flex-1 min-h-0">
           <div className="font-semibold text-gray-800 mb-2">{phrase.phrase}</div>
+          {showTimestamp && (phrase.start_time || phrase.end_time) && (
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <span className="bg-gray-200 px-2 py-1 rounded text-gray-700">
+                ⏱️ {formatTimestampRange(phrase.start_time, phrase.end_time)}
+              </span>
+              {phrase.speaker && (
+                <span className="bg-blue-100 px-2 py-1 rounded text-blue-700">
+                  🎭 {phrase.speaker}
+                </span>
+              )}
+            </div>
+          )}
           <div className="text-sm text-gray-600 mb-3 flex-1">{phrase.translation}</div>
           {showProgress && (
             <PhraseProgressBar
