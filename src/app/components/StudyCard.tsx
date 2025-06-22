@@ -5,7 +5,9 @@ import { motion } from "motion/react";
 import {
   StudyCard as StudyCardType,
   StudyRating,
+  StudyDirection,
 } from "@/types/spaced-repetition";
+import { FavoriteButton } from "./FavoriteButton";
 
 interface StudyCardProps {
   card: StudyCardType;
@@ -14,6 +16,9 @@ interface StudyCardProps {
   onFlip: () => void;
   cardNumber: number;
   totalCards: number;
+  isFavorite: boolean;
+  onToggleFavorite: (phraseId: string) => Promise<void>;
+  studyDirection: StudyDirection;
 }
 
 export function StudyCard({
@@ -23,6 +28,9 @@ export function StudyCard({
   onFlip,
   cardNumber,
   totalCards,
+  isFavorite,
+  onToggleFavorite,
+  studyDirection,
 }: StudyCardProps) {
   const [startTime, setStartTime] = useState(Date.now());
 
@@ -94,15 +102,24 @@ export function StudyCard({
     >
       {/* Progress indicator */}
       <div className="w-full max-w-md mb-4">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
           <span>
             Card {cardNumber} of {totalCards}
           </span>
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${stateInfo.color}`}
-          >
-            {stateInfo.label}
-          </span>
+          <div className="flex items-center gap-2">
+            <FavoriteButton
+              phraseId={card.phrase.id}
+              size={16}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+              className="hover:scale-110"
+            />
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${stateInfo.color}`}
+            >
+              {stateInfo.label}
+            </span>
+          </div>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
@@ -122,7 +139,7 @@ export function StudyCard({
           animate={{ rotateY: showAnswer ? 180 : 0 }}
           transition={{ duration: 0.6, ease: "easeInOut" }}
         >
-          {/* Front of card (Portuguese) */}
+          {/* Front of card */}
           <motion.div
             className="w-full bg-white rounded-xl shadow-lg border border-gray-200 backface-hidden"
             style={{
@@ -132,20 +149,20 @@ export function StudyCard({
           >
             <div className="p-5 text-center study-card-container flex flex-col justify-between hover:shadow-xl transition-shadow duration-200">
               <div className="text-xs text-gray-500 uppercase tracking-wide mb-3 font-medium">
-                Portuguese
+                {studyDirection === "pt-en" ? "Portuguese" : "English"}
               </div>
               <div className="flex-1 flex items-center justify-center px-2">
                 <div className="text-lg sm:text-xl font-semibold text-gray-900 leading-relaxed study-card-text">
-                  {card.phrase.phrase}
+                  {studyDirection === "pt-en" ? card.phrase.phrase : card.phrase.translation}
                 </div>
               </div>
               <div className="text-xs text-gray-400 mt-3">
-                Click to reveal translation
+                Click to reveal {studyDirection === "pt-en" ? "translation" : "Portuguese original"}
               </div>
             </div>
           </motion.div>
 
-          {/* Back of card (Portuguese + English) */}
+          {/* Back of card */}
           <motion.div
             className="absolute top-0 left-0 w-full bg-white rounded-xl shadow-lg border border-gray-200 backface-hidden"
             style={{
@@ -155,22 +172,45 @@ export function StudyCard({
           >
             <div className="p-5 text-center study-card-container flex flex-col justify-between hover:shadow-xl transition-shadow duration-200">
               <div className="flex-1 space-y-3 px-2">
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
-                    Portuguese
-                  </div>
-                  <div className="text-base font-medium text-gray-700 leading-relaxed study-card-text">
-                    {card.phrase.phrase}
-                  </div>
-                </div>
-                <div className="border-t border-gray-200 pt-3">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
-                    English
-                  </div>
-                  <div className="text-base sm:text-lg font-semibold text-gray-900 leading-relaxed study-card-text">
-                    {card.phrase.translation}
-                  </div>
-                </div>
+                {studyDirection === "pt-en" ? (
+                  <>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
+                        Portuguese
+                      </div>
+                      <div className="text-base font-medium text-gray-700 leading-relaxed study-card-text">
+                        {card.phrase.phrase}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-200 pt-3">
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
+                        English
+                      </div>
+                      <div className="text-base sm:text-lg font-semibold text-gray-900 leading-relaxed study-card-text">
+                        {card.phrase.translation}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
+                        English
+                      </div>
+                      <div className="text-base font-medium text-gray-700 leading-relaxed study-card-text">
+                        {card.phrase.translation}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-200 pt-3">
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-medium">
+                        Portuguese
+                      </div>
+                      <div className="text-base sm:text-lg font-semibold text-gray-900 leading-relaxed study-card-text">
+                        {card.phrase.phrase}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
@@ -230,7 +270,7 @@ export function StudyCard({
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 0.3 }}
           >
-            Keyboard shortcuts: 1-4 for rating, Space to flip
+            Keyboard shortcuts: 1-4 for rating, Space to flip, R to switch direction
           </motion.div>
         </motion.div>
       )}

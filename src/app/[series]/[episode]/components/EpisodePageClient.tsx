@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { FileText, Settings, Brain, Grid3X3, List } from "lucide-react";
-import Link from "next/link";
+import { FileText, Grid3X3, List } from "lucide-react";
+
 import { motion, AnimatePresence } from "motion/react";
 
 import { ExtractedPhrase, Show, Episode } from "@/lib/supabase";
@@ -12,7 +12,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCardProgress } from "@/hooks/useCardProgress";
 import { PhraseCard } from "@/app/components/PhraseCard";
-import { EpisodeStatistics } from "@/app/components/EpisodeStatistics";
 import {
   PhraseSortAndFilter,
   SortOption,
@@ -148,21 +147,13 @@ export default function EpisodePageClient({
           />
 
           {/* Episode info section */}
-          <EpisodeInfoSection 
+          <EpisodeInfoSection
             show={show}
             episode={episode}
             phrases={phrases}
             onStartStudy={() => setShowStudyGame(true)}
           />
         </div>
-
-        {/* Episode Statistics */}
-        {/* <EpisodeStatistics
-          totalPhrases={phrases.length}
-          season={episode.season || 0}
-          episodeNumber={episode.episode_number || 0}
-          showName={show.name || ""}
-        /> */}
 
         {/* Phrases Grid */}
         {phrases.length > 0 ? (

@@ -2,9 +2,9 @@
 
 import { useRef } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
-import { SubtitleMetadata } from "../upload/page";
+import { SubtitleMetadata } from "../page";
 import { useSubtitleUploader } from "@/hooks/useSubtitleUploader";
-import ShowSelector from "./ShowSelector";
+import ShowSelector from "@/app/components/ShowSelector";
 
 interface SubtitleUploaderProps {
   onSubtitleLoad: (

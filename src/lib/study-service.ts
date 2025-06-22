@@ -5,6 +5,7 @@ import {
   CardStudy,
   StudyCard,
   StudyRating,
+  StudyDirection,
   DueCard,
 } from '@/types/spaced-repetition';
 
@@ -20,12 +21,12 @@ export class StudyService {
   /**
    * Get cards due for study for a specific episode
    */
-  async getDueCards(episodeId: string, limit: number = 20): Promise<StudyCard[]> {
+  async getDueCards(episodeId: string, studyDirection: StudyDirection, limit: number = 20): Promise<StudyCard[]> {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
       // For guest users, get all phrases from the episode as new cards
-      return this.getGuestCards(episodeId, limit);
+      return this.getGuestCards(episodeId, studyDirection, limit);
     }
 
     // Get due cards using the database function
@@ -33,6 +34,7 @@ export class StudyService {
       .rpc('get_due_cards_for_user', {
         p_user_id: user.id,
         p_episode_id: episodeId,
+        p_study_direction: studyDirection,
         p_limit: limit
       }) as { data: DueCard[] | null, error: any };
 
@@ -41,31 +43,32 @@ export class StudyService {
       throw error;
     }
 
-    // Convert to StudyCard format with batched queries
+    // Convert to StudyCard format - the function now returns all needed data
     const studyCards: StudyCard[] = [];
     
     if (!dueCards?.length) return studyCards;
     
     const phraseIds = dueCards.map(card => card.phrase_id);
     
-    // Batch fetch all phrases
+    // Batch fetch all phrases to get full phrase objects
     const { data: phrases } = await supabase
       .from('extracted_phrases')
       .select('*')
       .in('id', phraseIds);
     
-    // Batch fetch all existing card studies (no .single() to avoid PGRST116 errors)
+    // Batch fetch card studies for additional metadata if needed
     const { data: cardStudies } = await supabase
       .from('user_card_studies')
       .select('*')
       .eq('user_id', user.id)
+      .eq('study_direction', studyDirection)
       .in('phrase_id', phraseIds);
     
     // Create lookup maps for efficient matching
     const phraseMap = new Map((phrases || []).map(p => [p.id, p]));
     const cardStudyMap = new Map((cardStudies || []).map(cs => [cs.phrase_id, cs]));
     
-    // Build study cards
+    // Build study cards using data from the database function
     for (const card of dueCards) {
       const phrase = phraseMap.get(card.phrase_id);
       if (phrase) {
@@ -85,7 +88,7 @@ export class StudyService {
   /**
    * Get cards for guest users (no progress tracking)
    */
-  private async getGuestCards(episodeId: string, limit: number): Promise<StudyCard[]> {
+  private async getGuestCards(episodeId: string, studyDirection: StudyDirection, limit: number): Promise<StudyCard[]> {
     // Get phrases for this episode
     const { data: extractions } = await supabase
       .from('phrase_extractions')
@@ -113,6 +116,7 @@ export class StudyService {
   async processStudyResponse(
     phraseId: string,
     rating: StudyRating,
+    studyDirection: StudyDirection,
     _responseTime: number
   ): Promise<CardStudy | null> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -128,6 +132,7 @@ export class StudyService {
       .select('*')
       .eq('user_id', user.id)
       .eq('phrase_id', phraseId)
+      .eq('study_direction', studyDirection)
       .limit(1);
     
     const existingStudy = existingStudies?.[0] || null;
@@ -163,6 +168,7 @@ export class StudyService {
     const updatedStudy: Partial<CardStudy> = {
       user_id: user.id,
       phrase_id: phraseId,
+      study_direction: studyDirection,
       due_date: updatedCard.due.toISOString(),
       stability: updatedCard.stability,
       difficulty: updatedCard.difficulty,

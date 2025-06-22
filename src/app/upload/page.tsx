@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Upload, BookOpen, Languages, Globe, Merge } from "lucide-react";
-import SubtitleUploader from "@/app/components/SubtitleUploader";
-import PhraseExtractor from "@/app/components/PhraseExtractor";
-import RTPImporter from "@/app/components/RTPImporter";
-import ShowMerger from "@/app/components/ShowMerger";
-import { AdminRoute } from "@/app/components/ProtectedRoute";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+import {
+  ArrowLeft,
+  Upload,
+  BookOpen,
+  Languages,
+  Globe,
+  Merge,
+} from "lucide-react";
+
+import { AdminRoute } from "@/app/components/ProtectedRoute";
 import { generateShowSlug } from "@/utils/slugify";
+
+import SubtitleUploader from "./components/SubtitleUploader";
+import PhraseExtractor from "./components/PhraseExtractor";
+import RTPImporter from "./components/RTPImporter";
+import ShowMerger from "./components/ShowMerger";
 
 export interface SubtitleMetadata {
   source: string;
@@ -19,12 +29,14 @@ export interface SubtitleMetadata {
 }
 
 export default function UploadPage() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'rtp' | 'merge'>('upload');
+  const [activeTab, setActiveTab] = useState<"upload" | "rtp" | "merge">(
+    "upload"
+  );
   const [subtitleContent, setSubtitleContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [metadata, setMetadata] = useState<SubtitleMetadata | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
-  
+
   const router = useRouter();
 
   const handleSubtitleLoad = (
@@ -45,14 +57,20 @@ export default function UploadPage() {
     setIsRedirecting(false);
   };
 
-  const handleExtractionSuccess = async (showName: string, season?: number, episodeNumber?: number) => {
+  const handleExtractionSuccess = async (
+    showName: string,
+    season?: number,
+    episodeNumber?: number
+  ) => {
     setIsRedirecting(true);
-    
+
     // Generate the appropriate redirect URL
     if (season && episodeNumber) {
       // Redirect to episode edit page
       const seriesSlug = generateShowSlug(showName);
-      const episodeSlug = `s${String(season).padStart(2, '0')}e${String(episodeNumber).padStart(2, '0')}`;
+      const episodeSlug = `s${String(season).padStart(2, "0")}e${String(
+        episodeNumber
+      ).padStart(2, "0")}`;
       router.push(`/${seriesSlug}/${episodeSlug}/edit`);
     } else {
       // Redirect to series page if no episode info
@@ -93,11 +111,11 @@ export default function UploadPage() {
               <div className="border-b border-gray-200">
                 <nav className="flex space-x-8" aria-label="Tabs">
                   <button
-                    onClick={() => setActiveTab('upload')}
+                    onClick={() => setActiveTab("upload")}
                     className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'upload'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      activeTab === "upload"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 px-4">
@@ -106,11 +124,11 @@ export default function UploadPage() {
                     </div>
                   </button>
                   <button
-                    onClick={() => setActiveTab('rtp')}
+                    onClick={() => setActiveTab("rtp")}
                     className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'rtp'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      activeTab === "rtp"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 px-4">
@@ -119,11 +137,11 @@ export default function UploadPage() {
                     </div>
                   </button>
                   <button
-                    onClick={() => setActiveTab('merge')}
+                    onClick={() => setActiveTab("merge")}
                     className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'merge'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      activeTab === "merge"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 px-4">
@@ -135,7 +153,7 @@ export default function UploadPage() {
               </div>
 
               <div className="p-8">
-                {activeTab === 'upload' && (
+                {activeTab === "upload" && (
                   <div className="space-y-8">
                     {/* Upload Section */}
                     <div>
@@ -147,7 +165,10 @@ export default function UploadPage() {
                           Upload Subtitles
                         </h2>
                       </div>
-                      <SubtitleUploader onSubtitleLoad={handleSubtitleLoad} onCancel={handleCancel} />
+                      <SubtitleUploader
+                        onSubtitleLoad={handleSubtitleLoad}
+                        onCancel={handleCancel}
+                      />
                     </div>
 
                     {/* Extraction Section - only show when subtitle is loaded */}
@@ -172,7 +193,7 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {activeTab === 'rtp' && (
+                {activeTab === "rtp" && (
                   <div>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="bg-green-100 p-2 rounded-full">
@@ -186,7 +207,7 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {activeTab === 'merge' && (
+                {activeTab === "merge" && (
                   <div>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="bg-purple-100 p-2 rounded-full">
@@ -216,11 +237,11 @@ export default function UploadPage() {
                     Redirecting to the editing interface...
                   </p>
                 </div>
-                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </AdminRoute>
-    );
+      </div>
+    </AdminRoute>
+  );
 }

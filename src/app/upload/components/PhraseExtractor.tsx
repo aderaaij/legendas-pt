@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Play, Settings } from "lucide-react";
-import { usePhraseExtraction } from "../../hooks/usePhraseExtraction";
-import { SubtitleMetadata } from "../upload/page";
+import { usePhraseExtraction } from "@/hooks/usePhraseExtraction";
+import { SubtitleMetadata } from "../page";
 import { parseShowInfo } from "@/utils/extractPhrasesUitls";
 
 interface PhraseExtractorProps {
