@@ -816,161 +816,198 @@ export class PhraseExtractionService {
 
   // Get shows with their extraction statistics for homepage
   static async getShowsWithExtractionStats() {
-    // First get all shows
+    // Try to use optimized database function first
+    const { data, error } = await supabase.rpc('get_shows_with_extraction_stats');
 
-    const { data: shows, error: showsError } = await supabase
-      .from("shows")
-      .select("*")
-      .order("name");
+    if (error && error.message?.includes('Could not find the function')) {
+      console.warn('Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql');
+      
+      // Fallback to optimized aggregated query (much better than the original N+1 approach)
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('shows')
+        .select(`
+          id,
+          name,
+          source,
+          network,
+          rating,
+          poster_url,
+          tvdb_confidence,
+          created_at,
+          phrase_extractions!show_id (
+            id,
+            created_at
+          )
+        `)
+        .order('name');
 
-    if (showsError) {
-      throw new Error(`Failed to get shows: ${showsError.message}`);
+      if (fallbackError) {
+        throw new Error(`Failed to get shows: ${fallbackError.message}`);
+      }
+
+      if (!fallbackData || fallbackData.length === 0) {
+        return [];
+      }
+
+      // For each show, get phrase counts using a single aggregated query
+      const showsWithStats = await Promise.all(
+        fallbackData
+          .filter((show) => show.phrase_extractions?.length > 0)
+          .map(async (show) => {
+            // Get phrase count for all extractions of this show in one query
+            const { count: phraseCount } = await supabase
+              .from('extracted_phrases')
+              .select('id', { count: 'exact' })
+              .in('extraction_id', show.phrase_extractions.map((ext: any) => ext.id));
+
+            const extractions = show.phrase_extractions || [];
+            const lastExtraction = extractions.length > 0 
+              ? extractions.reduce((latest: string, extraction: any) => 
+                  new Date(extraction.created_at) > new Date(latest) 
+                    ? extraction.created_at 
+                    : latest
+                , extractions[0].created_at)
+              : show.created_at;
+
+            return {
+              id: show.id,
+              name: show.name,
+              source: show.source,
+              extractionCount: extractions.length,
+              totalPhrases: phraseCount || 0,
+              lastExtraction,
+              network: show.network,
+              rating: show.rating,
+              poster_url: show.poster_url,
+              tvdb_confidence: show.tvdb_confidence,
+            };
+          })
+      );
+
+      return showsWithStats.sort(
+        (a, b) => new Date(b.lastExtraction).getTime() - new Date(a.lastExtraction).getTime()
+      );
     }
 
-    if (!shows || shows.length === 0) {
+    if (error) {
+      throw new Error(`Failed to get shows: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
       return [];
     }
 
-    // Get extraction counts and current phrase counts for each show
-    const showsWithStats = await Promise.all(
-      shows.map(async (show) => {
-        const { data: extractions, error: extractionsError } = await supabase
-          .from("phrase_extractions")
-          .select("id, created_at")
-          .eq("show_id", show.id)
-          .order("created_at", { ascending: false });
-
-        if (extractionsError) {
-          console.error(
-            `Error getting extractions for show ${show.id}:`,
-            extractionsError
-          );
-          return null;
-        }
-
-        const extractionCount = extractions?.length || 0;
-
-        // Get current phrase count by counting actual phrases
-        let totalPhrases = 0;
-        if (extractions && extractions.length > 0) {
-          for (const extraction of extractions) {
-            const { data: phrases } = await supabase
-              .from("extracted_phrases")
-              .select("id")
-              .eq("extraction_id", extraction.id);
-            totalPhrases += phrases?.length || 0;
-          }
-        }
-
-        const lastExtraction = extractions?.[0]?.created_at || show.created_at;
-
-        // Only return shows that have extractions
-        if (extractionCount > 0) {
-          return {
-            id: show.id,
-            name: show.name,
-            source: show.source,
-            extractionCount,
-            totalPhrases,
-            lastExtraction,
-            network: show.network,
-            rating: show.rating,
-            poster_url: show.poster_url,
-            tvdb_confidence: show.tvdb_confidence,
-          };
-        }
-
-        return null;
-      })
-    );
-
-    // Filter out null results and sort by last extraction date
-    return showsWithStats
-      .filter(Boolean)
-      .sort(
-        (a, b) =>
-          new Date(b!.lastExtraction).getTime() -
-          new Date(a!.lastExtraction).getTime()
-      ) as Array<{
-      id: string;
-      name: string;
-      source: string;
-      extractionCount: number;
-      totalPhrases: number;
-      lastExtraction: string;
-      network?: string;
-      rating?: number;
-      poster_url?: string;
-      tvdb_confidence?: number;
-    }>;
+    // Transform the database function result to match expected interface
+    return data.map((show: any) => ({
+      id: show.id,
+      name: show.name,
+      source: show.source,
+      extractionCount: parseInt(show.extraction_count),
+      totalPhrases: parseInt(show.total_phrases),
+      lastExtraction: show.last_extraction,
+      network: show.network,
+      rating: show.rating,
+      poster_url: show.poster_url,
+      tvdb_confidence: show.tvdb_confidence,
+    }));
   }
 
   // Get episodes for a show with their extraction statistics
   static async getEpisodesWithExtractionStats(showId: string) {
-    const { data: episodes, error: episodesError } = await supabase
-      .from("episodes")
-      .select("*")
-      .eq("show_id", showId)
-      .order("season", { ascending: true })
-      .order("episode_number", { ascending: true });
+    // Try to use optimized database function first
+    const { data, error } = await supabase.rpc('get_episodes_with_extraction_stats', {
+      show_id_param: showId
+    });
 
-    if (episodesError) {
-      throw new Error(`Failed to get episodes: ${episodesError.message}`);
+    if (error && error.message?.includes('Could not find the function')) {
+      console.warn('Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql');
+      
+      // Fallback to optimized aggregated query
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('episodes')
+        .select(`
+          *,
+          phrase_extractions!episode_id (
+            id,
+            created_at
+          )
+        `)
+        .eq('show_id', showId)
+        .order('season', { ascending: true })
+        .order('episode_number', { ascending: true });
+
+      if (fallbackError) {
+        throw new Error(`Failed to get episodes: ${fallbackError.message}`);
+      }
+
+      if (!fallbackData || fallbackData.length === 0) {
+        return [];
+      }
+
+      // For each episode, get phrase counts using a single aggregated query
+      const episodesWithStats = await Promise.all(
+        fallbackData
+          .filter((episode) => episode.phrase_extractions?.length > 0)
+          .map(async (episode) => {
+            // Get phrase count for all extractions of this episode in one query
+            const { count: phraseCount } = await supabase
+              .from('extracted_phrases')
+              .select('id', { count: 'exact' })
+              .in('extraction_id', episode.phrase_extractions.map((ext: any) => ext.id));
+
+            const extractions = episode.phrase_extractions || [];
+            const lastExtraction = extractions.length > 0 
+              ? extractions.reduce((latest: string, extraction: any) => 
+                  new Date(extraction.created_at) > new Date(latest) 
+                    ? extraction.created_at 
+                    : latest
+                , extractions[0].created_at)
+              : null;
+
+            // Remove the nested data from the episode object before returning
+            const { phrase_extractions: _phrase_extractions, ...episodeData } = episode;
+
+            return {
+              ...episodeData,
+              extractionCount: extractions.length,
+              totalPhrases: phraseCount || 0,
+              lastExtraction,
+            };
+          })
+      );
+
+      return episodesWithStats;
     }
 
-    if (!episodes || episodes.length === 0) {
+    if (error) {
+      throw new Error(`Failed to get episodes: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
       return [];
     }
 
-    // Get extraction counts and current phrase counts for each episode
-    const episodesWithStats = await Promise.all(
-      episodes.map(async (episode) => {
-        const { data: extractions, error: extractionsError } = await supabase
-          .from("phrase_extractions")
-          .select("id, created_at")
-          .eq("episode_id", episode.id)
-          .order("created_at", { ascending: false });
-
-        if (extractionsError) {
-          console.error(
-            `Error getting extractions for episode ${episode.id}:`,
-            extractionsError
-          );
-          return {
-            ...episode,
-            extractionCount: 0,
-            totalPhrases: 0,
-            lastExtraction: null,
-          };
-        }
-
-        const extractionCount = extractions?.length || 0;
-
-        // Get current phrase count by counting actual phrases
-        let totalPhrases = 0;
-        if (extractions && extractions.length > 0) {
-          for (const extraction of extractions) {
-            const { data: phrases } = await supabase
-              .from("extracted_phrases")
-              .select("id")
-              .eq("extraction_id", extraction.id);
-            totalPhrases += phrases?.length || 0;
-          }
-        }
-
-        const lastExtraction = extractions?.[0]?.created_at || null;
-
-        return {
-          ...episode,
-          extractionCount,
-          totalPhrases,
-          lastExtraction,
-        };
-      })
-    );
-
-    // Only return episodes that have extractions
-    return episodesWithStats.filter((ep) => ep.extractionCount > 0);
+    // Transform the database function result to match expected interface
+    return data.map((episode: any) => ({
+      id: episode.id,
+      show_id: episode.show_id,
+      season: episode.season,
+      episode_number: episode.episode_number,
+      title: episode.title,
+      air_date: episode.air_date,
+      duration_minutes: episode.duration_minutes,
+      description: episode.description,
+      tvdb_id: episode.tvdb_id,
+      overview: episode.overview,
+      aired: episode.aired,
+      runtime: episode.runtime,
+      episode_image: episode.episode_image,
+      created_at: episode.created_at,
+      updated_at: episode.updated_at,
+      extractionCount: parseInt(episode.extraction_count),
+      totalPhrases: parseInt(episode.total_phrases),
+      lastExtraction: episode.last_extraction,
+    }));
   }
 
   // Get phrases for a specific episode
