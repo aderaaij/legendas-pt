@@ -13,12 +13,12 @@ const eslintConfig = defineConfig([
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "no-unused-vars": "off", // Disable the base rule as it can conflict with TypeScript
-      // React Compiler-era rules introduced by eslint-plugin-react-hooks v7
-      // (bundled by Next 16). Surfaced as warnings for incremental cleanup
-      // rather than blocking; each flags a real pattern worth addressing.
+      // React Compiler-era rules from eslint-plugin-react-hooks v7 (bundled by
+      // Next 16). purity and immutability are enforced (the codebase is clean).
+      // set-state-in-effect stays a warning: the remaining hits are all
+      // legitimate "fetch data on mount" effects whose full removal needs a
+      // data-fetching-layer change, not a hooks tweak.
       "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
     },
   },
   // Override default ignores of eslint-config-next.

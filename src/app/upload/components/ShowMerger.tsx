@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PhraseExtractionService, Show } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,11 +19,7 @@ export default function ShowMerger() {
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    loadDuplicateShows();
-  }, []);
-
-  const loadDuplicateShows = async () => {
+  const loadDuplicateShows = useCallback(async () => {
     try {
       const duplicates = await PhraseExtractionService.findDuplicateShows();
 
@@ -35,7 +31,11 @@ export default function ShowMerger() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadDuplicateShows();
+  }, [loadDuplicateShows]);
 
   const handleMerge = async (
     primaryShowId: string,

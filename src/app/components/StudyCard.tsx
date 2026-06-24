@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { motion } from "motion/react";
 import {
   StudyCard as StudyCardType,
@@ -32,16 +32,21 @@ export function StudyCard({
   onToggleFavorite,
   studyDirection,
 }: StudyCardProps) {
-  const [startTime, setStartTime] = useState(Date.now());
+  // startTime is only read when responding (never rendered), so a ref avoids
+  // both an impure Date.now() in render and a setState-in-effect on card change.
+  const startTimeRef = useRef(0);
 
   useEffect(() => {
-    setStartTime(Date.now());
+    startTimeRef.current = Date.now();
   }, [card]);
 
-  const handleResponse = (rating: StudyRating) => {
-    const responseTime = Date.now() - startTime;
-    onResponse(rating, responseTime);
-  };
+  const handleResponse = useCallback(
+    (rating: StudyRating) => {
+      const responseTime = Date.now() - startTimeRef.current;
+      onResponse(rating, responseTime);
+    },
+    [onResponse]
+  );
 
   const getRatingLabel = (rating: StudyRating) => {
     switch (rating) {

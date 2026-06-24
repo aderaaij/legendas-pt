@@ -26,12 +26,15 @@ export function useSpacedRepetitionGame({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [session, setSession] = useState<StudySession | null>(null);
-  const [sessionStats, setSessionStats] = useState({
+  const [sessionStats, setSessionStats] = useState(() => ({
     studied: 0,
     correct: 0,
     startTime: Date.now(),
-  });
+  }));
   const [gameComplete, setGameComplete] = useState(false);
+  // Captured when the session completes so `duration` can be derived from a
+  // stable value instead of calling Date.now() during render.
+  const [endTime, setEndTime] = useState<number | null>(null);
 
   // Load cards and create session
   const initializeGame = useCallback(async () => {
@@ -120,6 +123,7 @@ export function useSpacedRepetitionGame({
               completed_at: new Date().toISOString(),
             });
           }
+          setEndTime(Date.now());
           setGameComplete(true);
         }
       } catch (err) {
@@ -129,6 +133,7 @@ export function useSpacedRepetitionGame({
           setCurrentCardIndex(currentCardIndex + 1);
           setShowAnswer(false);
         } else {
+          setEndTime(Date.now());
           setGameComplete(true);
         }
       }
@@ -140,6 +145,7 @@ export function useSpacedRepetitionGame({
     setCurrentCardIndex(0);
     setShowAnswer(false);
     setGameComplete(false);
+    setEndTime(null);
     setSessionStats({
       studied: 0,
       correct: 0,
@@ -183,7 +189,9 @@ export function useSpacedRepetitionGame({
     sessionStats.studied > 0
       ? (sessionStats.correct / sessionStats.studied) * 100
       : 0;
-  const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
+  const duration = endTime
+    ? Math.floor((endTime - sessionStats.startTime) / 1000)
+    : 0;
 
   return {
     // State

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { X } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -21,13 +21,19 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   
   const { signIn, signUp } = useAuth()
 
+  const resetForm = useCallback(() => {
+    setEmail('')
+    setPassword('')
+    setError(null)
+  }, [])
+
   // Update mode when defaultMode changes and modal is opened
   useEffect(() => {
     if (isOpen) {
       setMode(defaultMode)
       resetForm()
     }
-  }, [isOpen, defaultMode])
+  }, [isOpen, defaultMode, resetForm])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,12 +59,6 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
     } finally {
       setLoading(false)
     }
-  }
-
-  const resetForm = () => {
-    setEmail('')
-    setPassword('')
-    setError(null)
   }
 
   const switchMode = () => {
