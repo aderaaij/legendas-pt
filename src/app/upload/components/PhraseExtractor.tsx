@@ -8,7 +8,11 @@ import { parseShowInfo } from "@/utils/extractPhrasesUitls";
 
 interface PhraseExtractorProps {
   subtitleContent: string;
-  onExtractionSuccess: (showName: string, season?: number, episodeNumber?: number) => void;
+  onExtractionSuccess: (
+    showName: string,
+    season?: number,
+    episodeNumber?: number
+  ) => void;
   fileName?: string;
   metadata: SubtitleMetadata | null;
 }
@@ -17,7 +21,6 @@ export interface ExtractionSettings {
   saveToDatabase: boolean;
   forceReExtraction: boolean;
 }
-
 
 export default function PhraseExtractor({
   subtitleContent,
@@ -45,8 +48,9 @@ export default function PhraseExtractor({
 
     try {
       await handleExtraction(subtitleContent, () => {
-        // Get show info from metadata or filename
-        const { showName, season, episodeNumber } = metadata || parseShowInfo(fileName);
+        const { showName, season, episodeNumber } =
+          metadata || parseShowInfo(fileName);
+
         onExtractionSuccess(showName, season, episodeNumber);
       });
     } catch (error) {
@@ -58,7 +62,6 @@ export default function PhraseExtractor({
       );
     }
   };
-
 
   return (
     <div className="space-y-4">
@@ -98,7 +101,7 @@ export default function PhraseExtractor({
             />
             <span className="text-sm text-gray-700">Save to database</span>
           </label>
-          
+
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -106,7 +109,9 @@ export default function PhraseExtractor({
               onChange={(e) => setForceReExtraction(e.target.checked)}
               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">Force re-extraction (add to existing phrases)</span>
+            <span className="text-sm text-gray-700">
+              Force re-extraction (add to existing phrases)
+            </span>
           </label>
         </div>
       )}

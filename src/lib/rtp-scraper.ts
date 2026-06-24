@@ -1,24 +1,4 @@
-interface RTPEpisode {
-  id: string;
-  url: string;
-  title: string;
-  episodeNumber: number;
-  airDate: string;
-  subtitleUrl?: string;
-}
-
-interface RTPSeries {
-  id: string;
-  title: string;
-  url: string;
-  episodes: RTPEpisode[];
-}
-
-interface ScrapedSubtitle {
-  episode: RTPEpisode;
-  content: string;
-  filename: string;
-}
+import type { RTPEpisode, RTPSeries, ScrapedSubtitle } from "@/types/rtp";
 
 class RTPScraperService {
   private static readonly BASE_URL = "https://www.rtp.pt";
@@ -78,11 +58,6 @@ class RTPScraperService {
         ? titleMatch[1].replace(" - RTP Play", "").trim()
         : "Unknown Series";
 
-      // Extract episodes from the HTML
-      console.log(
-        "HTML snippet around episodes:",
-        html.substring(html.indexOf("Ep."), html.indexOf("Ep.") + 500)
-      );
       const episodes = this.extractEpisodes(html, seriesId, seriesSlug);
 
       return {
@@ -104,41 +79,64 @@ class RTPScraperService {
   ): RTPEpisode[] {
     const episodes: RTPEpisode[] = [];
 
-    // Parse the specific HTML structure for episode items
-    // Look for complete episode blocks: <a href="/play/p14147/e812786/o-americano" ... episode data ... </a>
-    const episodeBlockRegex =
-      /<a href="\/play\/p\d+\/(e\d+)\/[^"]*"[^>]*class="episode-item[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
+    // Look for episode articles within the HTML structure
+    // Episodes 1-12: <article class="col-xs-12 col-sm-4 col-md-3 episode-article">
+    // Episodes 13-16: <article class="col-xs-6 col-sm-4 col-md-3 episode-article">
+    const episodeArticleRegex =
+      /<article[^>]*class="[^"]*episode-article[^"]*"[^>]*>([\s\S]*?)<\/article>/g;
 
-    let blockMatch;
-    while ((blockMatch = episodeBlockRegex.exec(html)) !== null) {
-      const episodeId = blockMatch[1];
-      const episodeContent = blockMatch[2];
+    let articleMatch;
+    let articleCount = 0;
+    while ((articleMatch = episodeArticleRegex.exec(html)) !== null) {
+      articleCount++;
+      const articleContent = articleMatch[1];
+
+      // Extract episode ID and URL from the <a> tag - use more flexible pattern
+      const linkMatch =
+        articleContent.match(
+          /<a href="\/play\/p\d+\/(e\d+)\/[^"]*"[^>]*title="([^"]*)"[^>]*class="episode-item[^"]*"[^>]*>/
+        ) ||
+        articleContent.match(
+          /<a href="\/play\/p\d+\/(e\d+)\/[^"]*"[^>]*class="episode-item[^"]*"[^>]*title="([^"]*)"[^>]*>/
+        ) ||
+        articleContent.match(/<a href="\/play\/p\d+\/(e\d+)\/[^"]*"[^>]*>/);
+
+      if (!linkMatch) {
+        continue;
+      }
+
+      const episodeId = linkMatch[1];
+      const linkTitle = linkMatch[2] || "";
 
       // Extract episode number from the content
-      const episodeNumberMatch = episodeContent.match(
+      const episodeNumberMatch = articleContent.match(
         /<div class="episode">Ep\.\s*(\d+)<\/div>/
       );
-      if (!episodeNumberMatch) continue;
+      if (!episodeNumberMatch) {
+        continue;
+      }
       const episodeNumber = parseInt(episodeNumberMatch[1]);
 
-      // Extract episode date
-      const episodeDateMatch = episodeContent.match(
-        /<div class="episode-date">([^<]+)<\/div>/
+      // Extract date from meta content if available
+      const metaContentMatch = articleContent.match(
+        /<meta content="[^"]*Ep\.\s*\d+\s*([^"]+)"/
       );
-      const airDate = episodeDateMatch ? episodeDateMatch[1].trim() : "";
+      const airDate = metaContentMatch ? metaContentMatch[1].trim() : "";
 
-      // Extract episode title
-      const episodeTitleMatch = episodeContent.match(
-        /<p class="episode-title">\s*([^<]+)\s*<\/p>/
-      );
-      const title = episodeTitleMatch
-        ? episodeTitleMatch[1].trim()
-        : `Episode ${episodeNumber}`;
+      // Use link title for episode title, fallback to generic title
+      // Convert series slug to expected title format (e.g., "por-do-sol" -> "Pôr do Sol")
+      const expectedShowName = seriesSlug
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      const expectedGenericTitle = `Aceder a ${expectedShowName}`;
+
+      const title =
+        linkTitle && linkTitle !== expectedGenericTitle
+          ? linkTitle.replace(/^Aceder a\s+/, "").trim()
+          : `Episode ${episodeNumber}`;
 
       const parsedDate = this.parsePortugueseDate(airDate);
-      console.log(
-        `Found episode ${episodeNumber}: "${title}" (${airDate} -> ${parsedDate}) [${episodeId}]`
-      );
 
       episodes.push({
         id: episodeId,
@@ -149,17 +147,51 @@ class RTPScraperService {
       });
     }
 
+    // Second try: If we didn't get enough episodes, try a broader approach
+    if (episodes.length < 10) {
+      // Assume most series have at least 10 episodes
+
+      // Look for any links to episodes, regardless of surrounding HTML structure
+      const broadEpisodeRegex =
+        /<a[^>]*href="\/play\/p\d+\/(e\d+)\/[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
+      const foundEpisodeIds = new Set(episodes.map((ep) => ep.id));
+
+      let broadMatch;
+      while ((broadMatch = broadEpisodeRegex.exec(html)) !== null) {
+        const episodeId = broadMatch[1];
+        const episodeContent = broadMatch[2];
+
+        // Skip if we already found this episode
+        if (foundEpisodeIds.has(episodeId)) continue;
+
+        // Look for episode number in the content
+        const episodeNumberMatch =
+          episodeContent.match(/Ep\.\s*(\d+)/) ||
+          episodeContent.match(/Episode\s+(\d+)/i) ||
+          episodeContent.match(/(\d+)/);
+
+        if (episodeNumberMatch) {
+          const episodeNumber = parseInt(episodeNumberMatch[1]);
+
+          // Basic validation - episode numbers should be reasonable
+          if (episodeNumber > 0 && episodeNumber < 100) {
+            const title = `Episode ${episodeNumber}`;
+
+            episodes.push({
+              id: episodeId,
+              url: `${this.BASE_URL}/play/${seriesId}/${episodeId}/${seriesSlug}`,
+              title: title,
+              episodeNumber: episodeNumber,
+              airDate: "",
+            });
+          }
+        }
+      }
+    }
+
     const sortedEpisodes = episodes.sort(
       (a, b) => a.episodeNumber - b.episodeNumber
     );
-    console.log("Final episodes found:", sortedEpisodes.length);
-    console.log(
-      "Episodes:",
-      sortedEpisodes.map(
-        (e) => `Ep.${e.episodeNumber}: "${e.title}" (RTP ID: ${e.id})`
-      )
-    );
-    console.log("Full episode data:", JSON.stringify(sortedEpisodes, null, 2));
 
     return sortedEpisodes;
   }
@@ -175,22 +207,16 @@ class RTPScraperService {
 
       const html = await response.text();
 
-      console.log(`Searching for subtitles in episode ${episode.id}...`);
-      console.log(`Episode URL: ${episode.url}`);
-      console.log(`Episode title: ${episode.title}`);
-      // console.log(html);
       let subtitleUrl = null;
 
       // Look for RTPPlayer initialization with vtt configuration
       // Pattern: var player1 = new RTPPlayer({ ... vtt: [['PT','Português adaptado','https://...vtt']] ... });
-      console.log("Looking for RTPPlayer initialization...");
 
       const rtpPlayerRegex = /new\s+RTPPlayer\s*\(\s*\{([\s\S]*?)\}\s*\)\s*;/;
       const rtpPlayerMatch = html.match(rtpPlayerRegex);
 
       if (rtpPlayerMatch) {
         const playerConfig = rtpPlayerMatch[1];
-        console.log("Found RTPPlayer configuration");
 
         // Extract the vtt array from the player configuration
         // vtt: [['PT','Português adaptado','https://cdn-ondemand.rtp.pt/nas2.share/legendas/video/web/p14147/p14147_1_20250120163227e008t6122d.vtt']]
@@ -200,10 +226,7 @@ class RTPScraperService {
 
         if (vttMatch) {
           subtitleUrl = vttMatch[1];
-          console.log(`Found subtitle URL in RTPPlayer config: ${subtitleUrl}`);
         } else {
-          console.log("No vtt configuration found in RTPPlayer");
-
           // Debug: show what the vtt section looks like
           const vttSectionRegex = /vtt:\s*\[[^\]]+\]/;
           const vttSection = playerConfig.match(vttSectionRegex);
@@ -219,44 +242,15 @@ class RTPScraperService {
 
       // Fallback: Look for any VTT URLs in the HTML as a backup
       if (!subtitleUrl) {
-        console.log("Fallback: Looking for any VTT URLs...");
         const vttUrlRegex =
           /(https:\/\/cdn-ondemand\.rtp\.pt\/nas2\.share\/legendas\/video\/web\/p\d+\/[^"'\s]+\.vtt)/;
         const vttUrlMatch = html.match(vttUrlRegex);
         if (vttUrlMatch) {
           subtitleUrl = vttUrlMatch[1];
-          console.log(`Found subtitle URL via fallback: ${subtitleUrl}`);
-        } else {
-          console.log("No VTT URLs found in fallback search");
         }
       }
 
       if (!subtitleUrl) {
-        console.warn(`No subtitle found for episode ${episode.id}`);
-        console.log("=== DEBUGGING SUBTITLE SEARCH FAILURE ===");
-        console.log("Episode details:", {
-          id: episode.id,
-          title: episode.title,
-          url: episode.url,
-        });
-        console.log(
-          'HTML contains "RTPPlayer":',
-          html.includes("RTPPlayer") ? "YES" : "NO"
-        );
-        console.log(
-          'HTML contains "vtt":',
-          html.includes("vtt") ? "YES" : "NO"
-        );
-
-        // Show a snippet around RTPPlayer if it exists
-        const rtpPlayerIndex = html.indexOf("RTPPlayer");
-        if (rtpPlayerIndex !== -1) {
-          const start = Math.max(0, rtpPlayerIndex - 100);
-          const end = Math.min(html.length, rtpPlayerIndex + 500);
-          console.log("RTPPlayer context:", html.substring(start, end));
-        }
-
-        console.log("=== END DEBUGGING ===");
         return null;
       }
 
@@ -352,4 +346,3 @@ class RTPScraperService {
 }
 
 export default RTPScraperService;
-export type { RTPSeries, RTPEpisode, ScrapedSubtitle };

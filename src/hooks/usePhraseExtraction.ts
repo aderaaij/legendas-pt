@@ -75,17 +75,37 @@ export const usePhraseExtraction = ({
       processingTime: number,
       existingExtraction?: any
     ) => {
-      if (!settings.saveToDatabase || !phrases.length) return;
+      console.log("=== DEBUG: saveToDatabase function called ===");
+      console.log("Settings.saveToDatabase:", settings.saveToDatabase);
+      console.log("Phrases.length:", phrases.length);
+      
+      if (!settings.saveToDatabase) {
+        console.log("Early return: saveToDatabase is false");
+        return;
+      }
+      
+      if (!phrases.length) {
+        console.log("Early return: no phrases to save");
+        return;
+      }
 
       try {
+        console.log("=== DEBUG: saveToDatabase called ===");
+        console.log("Phrases count:", phrases.length);
+        console.log("Metadata:", metadata);
+        console.log("FileName:", fileName);
 
         const { showName, season, episodeNumber } =
           metadata || parseShowInfo(fileName);
+        
+        console.log("Parsed show info:", { showName, season, episodeNumber });
 
         const show = await PhraseExtractionService.findOrCreateShow(
           showName,
           metadata?.source || "rtp"
         );
+        
+        console.log("Found/created show:", show);
 
         let episode;
         if (season && episodeNumber) {
@@ -95,8 +115,15 @@ export const usePhraseExtraction = ({
             episodeNumber,
             `Episode ${episodeNumber}`
           );
+          console.log("Found/created episode:", episode);
+        } else {
+          console.log("No season/episode info - creating show-only extraction");
         }
 
+        console.log("Checking force re-extraction logic...");
+        console.log("settings.forceReExtraction:", settings.forceReExtraction);
+        console.log("existingExtraction:", existingExtraction);
+        
         // If we have an existing extraction and force re-extraction is enabled,
         // update the existing extraction
         if (settings.forceReExtraction && existingExtraction) {
@@ -129,6 +156,8 @@ export const usePhraseExtraction = ({
           return;
         }
 
+        console.log("Creating new extraction (not force re-extraction)...");
+        
         // Create new extraction (original behavior)
         const extractionData = {
           content_hash: contentHash,
@@ -151,10 +180,20 @@ export const usePhraseExtraction = ({
           translation: phrase.translation,
         }));
 
-        await PhraseExtractionService.saveExtraction(
-          extractionData,
-          phrasesData
-        );
+        console.log("Saving extraction with data:", extractionData);
+        console.log("Phrases to save:", phrasesData.length);
+        console.log("About to call PhraseExtractionService.saveExtraction...");
+        
+        try {
+          await PhraseExtractionService.saveExtraction(
+            extractionData,
+            phrasesData
+          );
+          console.log("Extraction saved successfully!");
+        } catch (saveError) {
+          console.error("Error in saveExtraction:", saveError);
+          throw saveError;
+        }
       } catch (error) {
         console.error("Failed to save to database (continuing anyway):", error);
       }
@@ -164,6 +203,9 @@ export const usePhraseExtraction = ({
 
   const extractPhrases = useCallback(
     async (subtitleContent: string): Promise<PhraseItem[]> => {
+      console.log("=== DEBUG: extractPhrases called ===");
+      console.log("Subtitle content length:", subtitleContent?.length);
+      
       if (!subtitleContent) {
         console.warn("No subtitle content provided");
         return [];
@@ -175,15 +217,95 @@ export const usePhraseExtraction = ({
         const contentHash = generateContentHash(cleanContent);
 
 
+        // Get show and episode info first
+        const { showName, season, episodeNumber } = metadata || parseShowInfo(fileName);
+        console.log("Parsed show info:", { showName, season, episodeNumber });
+
+        const show = await PhraseExtractionService.findOrCreateShow(
+          showName,
+          metadata?.source || "rtp"
+        );
+        console.log("Found/created show:", show);
+
+        let episode;
+        if (season && episodeNumber) {
+          episode = await PhraseExtractionService.findOrCreateEpisode(
+            show.id,
+            season,
+            episodeNumber,
+            `Episode ${episodeNumber}`
+          );
+          console.log("Found/created episode:", episode);
+        }
+
         // Check for existing extraction
+        console.log("Checking for existing extraction with hash:", contentHash);
         const { phrases: existingPhrases, extraction: existingExtraction } = await checkExistingExtraction(contentHash);
+        console.log("Existing extraction result:", { existingPhrases: existingPhrases?.length || 0, existingExtraction: !!existingExtraction });
+        
         if (existingPhrases && !settings.forceReExtraction) {
+          console.log("Found existing phrases - checking if we need to create new extraction for different episode");
+          
+          // If we have a new episode that's different from the existing extraction's episode,
+          // we should create a new extraction record pointing to the new episode
+          // This includes cases where existing extraction has no episode (episode_id: null)
+          if (
+            episode &&
+            existingExtraction &&
+            (existingExtraction.episode_id === null ||
+              existingExtraction.episode_id !== episode.id)
+          ) {
+            console.log("Creating new extraction record for different episode");
+            console.log("Existing extraction episode_id:", existingExtraction.episode_id);
+            console.log("New episode id:", episode.id);
+            
+            // Create new extraction data for the new episode
+            const extractionData = {
+              content_hash: contentHash,
+              content_preview: cleanContent.slice(0, 200),
+              content_length: cleanContent.length,
+              show_id: show.id,
+              episode_id: episode.id,
+              source: fileName || "uploaded_file",
+              capture_timestamp: new Date().toISOString(),
+              language: "pt",
+              max_phrases: existingPhrases.length,
+              total_phrases_found: existingPhrases.length,
+              was_truncated: false,
+              extraction_params: {},
+              processing_time_ms: 0, // Reusing existing extraction
+            };
+
+            const phrasesData = existingPhrases.map((phrase) => ({
+              phrase: phrase.phrase,
+              translation: phrase.translation,
+            }));
+
+            console.log("Saving new extraction for episode:", extractionData);
+            console.log("About to save extraction with episode_id:", episode.id);
+            try {
+              const saveResult = await PhraseExtractionService.saveExtraction(extractionData, phrasesData);
+              console.log("New extraction saved successfully for episode!");
+              console.log("Saved extraction result:", saveResult.extraction);
+              console.log("Saved extraction ID:", saveResult.extraction.id);
+              console.log("Saved extraction episode_id:", saveResult.extraction.episode_id);
+            } catch (saveError) {
+              console.error("Error saving new extraction for episode:", saveError);
+              // Continue anyway since we have the phrases
+            }
+          } else {
+            console.log("Existing extraction already associated with correct episode or no episode specified");
+          }
+          
           return existingPhrases;
         }
 
         // Call API for new extraction
+        console.log("Calling phrase extraction API...");
         const newPhrases = await callPhraseExtractionAPI(cleanContent);
         const processingTime = Date.now() - startTime;
+        
+        console.log("API returned phrases:", newPhrases.length);
 
         // If force re-extraction and we have existing phrases, combine them
         let finalPhrases = newPhrases;

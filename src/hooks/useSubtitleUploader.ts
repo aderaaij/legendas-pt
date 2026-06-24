@@ -68,15 +68,22 @@ export const useSubtitleUploader = ({
 
     // Build metadata from selected show and episode
     const metadata: SubtitleMetadata = {
-      source: show.source,
+      source: show.source || "manual_upload", // fallback if show.source is null
       showName: show.name,
       season: episode?.season,
       episodeNumber: episode?.episode_number,
     };
+    
+    console.log("=== DEBUG: handleShowSelected ===");
+    console.log("Selected show:", show);
+    console.log("Selected episode:", episode);
+    console.log("Built metadata:", metadata);
 
     setMetadata(metadata);
     onSubtitleLoad(subtitleContent, fileName, metadata);
-    // Keep the metadata form open so user can change selection
+    
+    // Hide the metadata form after successful selection
+    setShowMetadataForm(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -128,6 +135,7 @@ export const useSubtitleUploader = ({
     error,
     setError,
     showMetadataForm,
+    setShowMetadataForm,
     handleFileSelect,
     handleShowSelected,
     isDragging,

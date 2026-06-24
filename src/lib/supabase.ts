@@ -821,15 +821,20 @@ export class PhraseExtractionService {
   // Get shows with their extraction statistics for homepage
   static async getShowsWithExtractionStats() {
     // Try to use optimized database function first
-    const { data, error } = await supabase.rpc('get_shows_with_extraction_stats');
+    const { data, error } = await supabase.rpc(
+      "get_shows_with_extraction_stats"
+    );
 
-    if (error && error.message?.includes('Could not find the function')) {
-      console.warn('Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql');
-      
+    if (error && error.message?.includes("Could not find the function")) {
+      console.warn(
+        "Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql"
+      );
+
       // Fallback to optimized aggregated query (much better than the original N+1 approach)
       const { data: fallbackData, error: fallbackError } = await supabase
-        .from('shows')
-        .select(`
+        .from("shows")
+        .select(
+          `
           id,
           name,
           source,
@@ -842,8 +847,9 @@ export class PhraseExtractionService {
             id,
             created_at
           )
-        `)
-        .order('name');
+        `
+        )
+        .order("name");
 
       if (fallbackError) {
         throw new Error(`Failed to get shows: ${fallbackError.message}`);
@@ -860,18 +866,24 @@ export class PhraseExtractionService {
           .map(async (show) => {
             // Get phrase count for all extractions of this show in one query
             const { count: phraseCount } = await supabase
-              .from('extracted_phrases')
-              .select('id', { count: 'exact' })
-              .in('extraction_id', show.phrase_extractions.map((ext: any) => ext.id));
+              .from("extracted_phrases")
+              .select("id", { count: "exact" })
+              .in(
+                "extraction_id",
+                show.phrase_extractions.map((ext: any) => ext.id)
+              );
 
             const extractions = show.phrase_extractions || [];
-            const lastExtraction = extractions.length > 0 
-              ? extractions.reduce((latest: string, extraction: any) => 
-                  new Date(extraction.created_at) > new Date(latest) 
-                    ? extraction.created_at 
-                    : latest
-                , extractions[0].created_at)
-              : show.created_at;
+            const lastExtraction =
+              extractions.length > 0
+                ? extractions.reduce(
+                    (latest: string, extraction: any) =>
+                      new Date(extraction.created_at) > new Date(latest)
+                        ? extraction.created_at
+                        : latest,
+                    extractions[0].created_at
+                  )
+                : show.created_at;
 
             return {
               id: show.id,
@@ -889,7 +901,9 @@ export class PhraseExtractionService {
       );
 
       return showsWithStats.sort(
-        (a, b) => new Date(b.lastExtraction).getTime() - new Date(a.lastExtraction).getTime()
+        (a, b) =>
+          new Date(b.lastExtraction).getTime() -
+          new Date(a.lastExtraction).getTime()
       );
     }
 
@@ -919,26 +933,33 @@ export class PhraseExtractionService {
   // Get episodes for a show with their extraction statistics
   static async getEpisodesWithExtractionStats(showId: string) {
     // Try to use optimized database function first
-    const { data, error } = await supabase.rpc('get_episodes_with_extraction_stats', {
-      show_id_param: showId
-    });
+    const { data, error } = await supabase.rpc(
+      "get_episodes_with_extraction_stats",
+      {
+        show_id_param: showId,
+      }
+    );
 
-    if (error && error.message?.includes('Could not find the function')) {
-      console.warn('Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql');
-      
+    if (error && error.message?.includes("Could not find the function")) {
+      console.warn(
+        "Database function not found, falling back to aggregated query. Please run the SQL from database-functions.sql"
+      );
+
       // Fallback to optimized aggregated query
       const { data: fallbackData, error: fallbackError } = await supabase
-        .from('episodes')
-        .select(`
+        .from("episodes")
+        .select(
+          `
           *,
           phrase_extractions!episode_id (
             id,
             created_at
           )
-        `)
-        .eq('show_id', showId)
-        .order('season', { ascending: true })
-        .order('episode_number', { ascending: true });
+        `
+        )
+        .eq("show_id", showId)
+        .order("season", { ascending: true })
+        .order("episode_number", { ascending: true });
 
       if (fallbackError) {
         throw new Error(`Failed to get episodes: ${fallbackError.message}`);
@@ -955,21 +976,28 @@ export class PhraseExtractionService {
           .map(async (episode) => {
             // Get phrase count for all extractions of this episode in one query
             const { count: phraseCount } = await supabase
-              .from('extracted_phrases')
-              .select('id', { count: 'exact' })
-              .in('extraction_id', episode.phrase_extractions.map((ext: any) => ext.id));
+              .from("extracted_phrases")
+              .select("id", { count: "exact" })
+              .in(
+                "extraction_id",
+                episode.phrase_extractions.map((ext: any) => ext.id)
+              );
 
             const extractions = episode.phrase_extractions || [];
-            const lastExtraction = extractions.length > 0 
-              ? extractions.reduce((latest: string, extraction: any) => 
-                  new Date(extraction.created_at) > new Date(latest) 
-                    ? extraction.created_at 
-                    : latest
-                , extractions[0].created_at)
-              : null;
+            const lastExtraction =
+              extractions.length > 0
+                ? extractions.reduce(
+                    (latest: string, extraction: any) =>
+                      new Date(extraction.created_at) > new Date(latest)
+                        ? extraction.created_at
+                        : latest,
+                    extractions[0].created_at
+                  )
+                : null;
 
             // Remove the nested data from the episode object before returning
-            const { phrase_extractions: _phrase_extractions, ...episodeData } = episode;
+            const { phrase_extractions: _phrase_extractions, ...episodeData } =
+              episode;
 
             return {
               ...episodeData,
@@ -1509,8 +1537,6 @@ export class PhraseExtractionService {
       .from("shows")
       .select("*")
       .order("name");
-
-    console.log(allShows);
 
     if (error || !allShows) {
       return [];

@@ -23,6 +23,7 @@ export default function SubtitleUploader({
     isLoading,
     fileName,
     showMetadataForm,
+    setShowMetadataForm,
     handleShowSelected,
     handleDrop,
     isDragging,
@@ -129,6 +130,32 @@ export default function SubtitleUploader({
         <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">
           <FileText className="w-4 h-4" />
           <span className="text-sm font-medium">Loaded: {fileName}</span>
+        </div>
+      )}
+
+      {/* Show current selection and allow editing */}
+      {selectedShow && !showMetadataForm && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-blue-800 mb-1">Selected for Extraction:</h4>
+              <p className="text-sm text-blue-700">
+                <strong>{selectedShow.name}</strong>
+                {selectedEpisode && (
+                  <span> - Season {selectedEpisode.season}, Episode {selectedEpisode.episode_number}</span>
+                )}
+                {!selectedEpisode && (
+                  <span> - No specific episode selected</span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowMetadataForm(true)}
+              className="text-sm text-blue-600 hover:text-blue-700 underline"
+            >
+              Change Selection
+            </button>
+          </div>
         </div>
       )}
 
