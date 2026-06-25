@@ -13,16 +13,18 @@ export const fieldInputStyle: CSSProperties = {
 interface FieldLabelProps {
   children: ReactNode;
   icon?: ReactNode;
+  /** Overrides merged over the default muted label color. */
+  style?: CSSProperties;
 }
 
 /** A form label matching the app's muted style, optionally with a leading icon. */
-export function FieldLabel({ children, icon }: FieldLabelProps) {
+export function FieldLabel({ children, icon, style }: FieldLabelProps) {
   return (
     <label
       className={`block text-sm font-medium mb-1${
         icon ? " flex items-center gap-1" : ""
       }`}
-      style={{ color: "var(--muted)" }}
+      style={{ color: "var(--muted)", ...style }}
     >
       {icon}
       {children}
@@ -39,6 +41,7 @@ interface FormFieldProps {
   min?: string | number;
   icon?: ReactNode;
   hint?: ReactNode;
+  labelStyle?: CSSProperties;
 }
 
 /** Labeled single-line input with the shared field styling. `onChange`
@@ -52,10 +55,13 @@ export function FormField({
   min,
   icon,
   hint,
+  labelStyle,
 }: FormFieldProps) {
   return (
     <div>
-      <FieldLabel icon={icon}>{label}</FieldLabel>
+      <FieldLabel icon={icon} style={labelStyle}>
+        {label}
+      </FieldLabel>
       <input
         type={type}
         value={value}
@@ -80,6 +86,7 @@ interface FormTextareaProps {
   onChange: (value: string) => void;
   rows?: number;
   placeholder?: string;
+  labelStyle?: CSSProperties;
 }
 
 /** Labeled multi-line textarea with the shared field styling. */
@@ -89,10 +96,11 @@ export function FormTextarea({
   onChange,
   rows = 3,
   placeholder,
+  labelStyle,
 }: FormTextareaProps) {
   return (
     <div>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel style={labelStyle}>{label}</FieldLabel>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
