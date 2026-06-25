@@ -1,15 +1,16 @@
 "use client";
 
-import { FileText, Languages } from "lucide-react";
-import Link from "next/link";
+import { Film } from "lucide-react";
 
-import { useHomePage, ShowWithExtractions } from "@/hooks/useHomePage";
-import { useAuth } from "@/hooks/useAuth";
-import { ShowCard } from "./ShowCard";
+import { useHomePage } from "@/hooks/useHomePage";
+import { LibraryShow } from "@/lib/supabase";
+import { buildLibraryRows, pickFeaturedShow } from "@/utils/libraryRows";
+import { HeroSection } from "./cena/HeroSection";
+import { ShowRail } from "./cena/ShowRail";
 import JobStatusBanner from "./JobStatusBanner";
 
 interface HomePageProps {
-  initialShows: ShowWithExtractions[];
+  initialShows: LibraryShow[];
   initialStats: {
     totalShows: number;
     totalExtractions: number;
@@ -28,109 +29,70 @@ export default function HomePage({
     initialStats,
     initialError
   );
-  const { isAdmin } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-tr from-blue-200 to-pink-200 flex items-center justify-center">
+      <div className="grid min-h-[60vh] place-items-center" style={{ background: "var(--bg)" }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading shows...</p>
+          <div
+            className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+          />
+          <p style={{ color: "var(--muted)" }}>A carregar séries…</p>
         </div>
       </div>
     );
   }
 
+  const featured = pickFeaturedShow(shows);
+  const rows = buildLibraryRows(shows);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-300 to-pink-100">
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-black text-gray-900 mb-4 flex items-center justify-center gap-3 tracking-wider" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif', letterSpacing: '0.05em' }}>
-            <Languages className="text-blue-600" />
-            PORTUGUESE SUBTITLE LIBRARY
-          </h1>
-          <div className="border-t-4 border-b-4 border-black py-3 mx-auto max-w-4xl mb-6">
-            <p className="text-xl font-bold text-gray-800 uppercase tracking-wide" style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-              Explore extracted Portuguese phrases from your favorite shows
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
+      {error && (
+        <div
+          className="mx-auto mt-6 max-w-2xl rounded-lg p-4"
+          style={{ background: "rgba(229,9,20,.1)", border: "1px solid rgba(229,9,20,.3)" }}
+        >
+          <p style={{ color: "var(--accent2)" }}>{error}</p>
+          <button
+            onClick={refetch}
+            className="mt-2 text-sm underline hover:no-underline"
+            style={{ color: "var(--accent2)" }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {shows.length === 0 && !error ? (
+        <div className="grid min-h-[60vh] place-items-center px-4">
+          <div
+            className="max-w-md rounded-2xl p-12 text-center"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            <Film className="mx-auto mb-4 h-16 w-16" style={{ color: "var(--faint)" }} />
+            <h3 className="mb-2 text-xl font-bold">Ainda não há séries</h3>
+            <p style={{ color: "var(--muted)" }}>
+              Carrega legendas para começar a criar a tua biblioteca.
             </p>
           </div>
+        </div>
+      ) : (
+        <main className="-mt-[68px]">
+          {featured && <HeroSection show={featured} />}
 
-          {/* {isAdmin && (
-            <div className="flex items-center justify-center">
-              <Link
-                href="/upload"
-                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
-              >
-                <Upload className="w-5 h-5" />
-                <span>Upload New Subtitles</span>
-              </Link>
-            </div>
-          )} */}
-        </header>
-
-        <JobStatusBanner />
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={refetch}
-              className="mt-2 text-red-700 underline hover:no-underline text-sm"
-            >
-              Try again
-            </button>
+          <div className="px-5 md:px-10">
+            <JobStatusBanner />
           </div>
-        )}
 
-        {shows.length === 0 && !loading && !error ? (
-          <div className="text-center py-16">
-            <div className="bg-white rounded-xl shadow-lg p-12 max-w-md mx-auto">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No Shows Yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                {isAdmin
-                  ? "Upload your first subtitle file to get started!"
-                  : "Contact an admin to upload subtitle files."}
-              </p>
-              {isAdmin && (
-                <Link
-                  href="/upload"
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Upload Subtitles
-                </Link>
-              )}
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Statistics */}
-            {/* <LibraryStatistics stats={stats} /> */}
+          {rows.map((row) => (
+            <ShowRail key={row.key} row={row} />
+          ))}
 
-            {/* Shows Header */}
-
-            {/* Shows Grid */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  Available Shows
-                </h2>
-                <span className="text-sm text-gray-500">
-                  Click any show to explore phrases
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {shows.map((show) => (
-                  <ShowCard key={show.id} show={show} />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+          <div className="h-[60px]" />
+        </main>
+      )}
     </div>
   );
 }

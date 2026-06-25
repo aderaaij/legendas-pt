@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateContentHash } from "@/utils/extractPhrasesUitls";
+import { parseVTTWithTimestamps, parseSRTWithTimestamps, matchPhrasesToTimestamps, SubtitleBlock } from "@/utils/subtitleUtils";
 
 interface PhraseExtractionRequest {
   content: string;
@@ -14,6 +15,7 @@ interface PhraseExtractionRequest {
   forceReExtraction?: boolean;
   showId?: string;
   episodeId?: string;
+  fileType?: 'vtt' | 'srt' | 'txt';
 }
 
 // Define the JSON schema for structured outputs
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest) {
       forceReExtraction = false,
       showId,
       episodeId,
+      fileType,
     }: PhraseExtractionRequest = await request.json();
 
     // If saveToDatabase is true, we need authentication
@@ -99,6 +102,26 @@ export async function POST(request: NextRequest) {
         { error: "Content is required" },
         { status: 400 }
       );
+    }
+
+    // Parse subtitles with timestamps if format is VTT or SRT
+    let originalBlocks: SubtitleBlock[] = [];
+    let contentForAI = content;
+    
+    try {
+      if (fileType === 'vtt' || (filename && filename.endsWith('.vtt'))) {
+        originalBlocks = parseVTTWithTimestamps(content);
+        // Clean content for AI by joining all text blocks
+        contentForAI = originalBlocks.map(block => block.text).join(' ');
+      } else if (fileType === 'srt' || (filename && filename.endsWith('.srt'))) {
+        originalBlocks = parseSRTWithTimestamps(content);
+        // Clean content for AI by joining all text blocks  
+        contentForAI = originalBlocks.map(block => block.text).join(' ');
+      }
+    } catch (timestampParseError) {
+      console.warn('Failed to parse timestamps, falling back to original content:', timestampParseError);
+      // If timestamp parsing fails, use original content as fallback
+      contentForAI = content;
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -146,7 +169,7 @@ CRITICAL REQUIREMENTS:
 IMPORTANT: Be extremely thorough. Extract hundreds of phrases if they exist in the content. This is for dedicated language learners who want maximum exposure to authentic Portuguese. Don't hold back - extract everything that could be useful for learning.
 
 Content:
-${content}`;
+${contentForAI}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -413,14 +436,23 @@ ${content}`;
           throw new Error(`Failed to save extraction: ${extractionError.message}`);
         }
 
+        // Match phrases to timestamps if we have original blocks
+        const phrasesWithTimestamps = originalBlocks.length > 0 
+          ? matchPhrasesToTimestamps(validPhrases, originalBlocks)
+          : validPhrases.map((phrase: { phrase: string; translation: string }) => ({ ...phrase, matchedConfidence: 0 }));
+
         // Insert phrases directly with authenticated client
-        const phrasesWithExtractionId = validPhrases.map((phrase: any, index: number) => ({
+        const phrasesWithExtractionId = phrasesWithTimestamps.map((phrase: any, index: number) => ({
           phrase: phrase.phrase,
           translation: phrase.translation,
           context: phrase.context || null,
           confidence_score: 0.9,
           extraction_id: extraction.id,
           position_in_content: index,
+          start_time: phrase.startTime || null,
+          end_time: phrase.endTime || null,
+          speaker: phrase.speaker || null,
+          matched_confidence: phrase.matchedConfidence || null,
         }));
 
         const { error: phrasesError } = await authenticatedSupabase

@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Anton, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Navigation } from "@/app/components/Navigation";
 import Footer from "@/app/components/Footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const anton = Anton({
+  variable: "--font-anton",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
-  title: "Legenda PT - Learn Portuguese with TV Shows",
+  title: "CENA — Aprende português com televisão",
   description:
-    "Learn Portuguese through extracted phrases from your favorite TV shows. Explore, download, and enhance your language skills with our subtitle library.",
+    "Aprende português através de frases extraídas das tuas séries favoritas. Explora, estuda com repetição espaçada e exporta para Anki.",
 };
+
+// Apply the persisted theme before paint to avoid a flash of the wrong palette.
+const themeScript = `(function(){try{var t=localStorage.getItem('cena-theme');document.documentElement.setAttribute('data-theme',t==='warm'?'warm':'noir');}catch(e){document.documentElement.setAttribute('data-theme','noir');}})();`;
 
 export default function RootLayout({
   children,
@@ -27,9 +32,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt" data-theme="noir">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${hankenGrotesk.variable} ${anton.variable} antialiased`}
       >
         <AuthProvider>
           <Navigation />

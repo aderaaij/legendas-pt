@@ -1,14 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Show, Episode, PhraseExtractionService } from "@/lib/supabase";
 import TVDBService, { TVDBSearchResult } from "@/lib/tvdb";
 
 export function useShowSelector() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQueryState] = useState("");
   const [existingShows, setExistingShows] = useState<Show[]>([]);
-  const [filteredShows, setFilteredShows] = useState<Show[]>([]);
   const [isSearchingTVDB, setIsSearchingTVDB] = useState(false);
   const [tvdbResults, setTvdbResults] = useState<TVDBSearchResult[]>([]);
-  const [showTVDBResults, setShowTVDBResults] = useState(false);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(false);
@@ -28,7 +26,6 @@ export function useShowSelector() {
       try {
         const shows = await PhraseExtractionService.getAllShows();
         setExistingShows(shows);
-        setFilteredShows(shows);
 
         // Check which shows have phrase extractions
         const extractionChecks = await Promise.all(
@@ -52,27 +49,24 @@ export function useShowSelector() {
     loadShows();
   }, []);
 
-  // Filter existing shows based on search query
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredShows(existingShows);
-      setShowTVDBResults(false);
-      setTvdbResults([]);
-    } else {
-      const filtered = existingShows.filter((show) =>
-        show.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredShows(filtered);
-
-      // If no existing shows match, show the option to search TVDB
-      if (filtered.length === 0) {
-        setShowTVDBResults(true);
-      } else {
-        setShowTVDBResults(false);
-        setTvdbResults([]);
-      }
-    }
+  // Derive the filtered list during render instead of syncing it via an effect.
+  const filteredShows = useMemo(() => {
+    if (searchQuery.trim() === "") return existingShows;
+    return existingShows.filter((show) =>
+      show.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   }, [searchQuery, existingShows]);
+
+  // Offer the "search TVDB" option only when a query matches no existing show.
+  const showTVDBResults =
+    searchQuery.trim() !== "" && filteredShows.length === 0;
+
+  // Wrap the query setter so stale TVDB results are cleared whenever the query
+  // changes (this was previously a side effect of the filter effect).
+  const setSearchQuery = useCallback((query: string) => {
+    setSearchQueryState(query);
+    setTvdbResults([]);
+  }, []);
 
   // Search TVDB when user clicks "Add new show"
   const searchTVDB = useCallback(async () => {
@@ -156,8 +150,7 @@ export function useShowSelector() {
         // Update local state
         setExistingShows((prev) => [...prev, newShow]);
         setSelectedShow(newShow);
-        setSearchQuery("");
-        setShowTVDBResults(false);
+        setSearchQueryState("");
         setTvdbResults([]);
 
         // Immediately fetch and load episodes from TVDB for the new show

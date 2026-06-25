@@ -1,17 +1,10 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-  //allow for no-explicit-any
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
@@ -20,8 +13,16 @@ const eslintConfig = [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "no-unused-vars": "off", // Disable the base rule as it can conflict with TypeScript
+      // React Compiler-era rules from eslint-plugin-react-hooks v7 (bundled by
+      // Next 16). purity and immutability are enforced (the codebase is clean).
+      // set-state-in-effect stays a warning: the remaining hits are all
+      // legitimate "fetch data on mount" effects whose full removal needs a
+      // data-fetching-layer change, not a hooks tweak.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
-];
+  // Override default ignores of eslint-config-next.
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+]);
 
 export default eslintConfig;

@@ -7,21 +7,21 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen py-12" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow-sm rounded-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Privacy Policy</h1>
-          <p className="text-sm text-gray-600 mb-8">Last updated: December 19, 2024</p>
+        <div className="rounded-lg p-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <h1 className="text-3xl font-bold mb-6" style={{ color: 'var(--text)' }}>Privacy Policy</h1>
+          <p className="text-sm mb-8" style={{ color: 'var(--muted)' }}>Last updated: December 19, 2024</p>
 
-          <div className="prose prose-gray max-w-none">
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Introduction</h2>
+          <div className="prose prose-invert max-w-none">
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Introduction</h2>
             <p className="mb-4">
               LegendasPT (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Portuguese language learning application.
             </p>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Information We Collect</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Information We Collect</h2>
             
-            <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Account Information</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3" style={{ color: 'var(--text)' }}>Account Information</h3>
             <p className="mb-4">When you create an account, we collect:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Email address</strong> - Used for authentication and account management</li>
@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
               <li><strong>Account role</strong> - User or admin designation for access control</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Learning Data</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3" style={{ color: 'var(--text)' }}>Learning Data</h3>
             <p className="mb-4">When you use our learning features, we collect:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Phrase favorites</strong> - Portuguese phrases you&apos;ve marked as favorites</li>
@@ -43,14 +43,14 @@ export default function PrivacyPolicy() {
               </li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Technical Information</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3" style={{ color: 'var(--text)' }}>Technical Information</h3>
             <p className="mb-4">We automatically collect:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Usage data</strong> - How you interact with the application</li>
               <li><strong>Performance data</strong> - Application performance and error information</li>
             </ul>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">How We Use Your Information</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>How We Use Your Information</h2>
             <p className="mb-4">We use your information to:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Provide authentication</strong> - Secure access to your account</li>
@@ -59,14 +59,14 @@ export default function PrivacyPolicy() {
               <li><strong>Communicate with you</strong> - Send important account and service updates</li>
             </ul>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Data Storage and Security</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Data Storage and Security</h2>
             
-            <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Storage</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3" style={{ color: 'var(--text)' }}>Storage</h3>
             <p className="mb-4">
               Your data is stored securely using Supabase, a trusted database provider that complies with industry security standards.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Security Measures</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3" style={{ color: 'var(--text)' }}>Security Measures</h3>
             <p className="mb-4">We implement appropriate technical and organizational measures to protect your personal data, including:</p>
             <ul className="list-disc pl-6 mb-4">
               <li>Encryption of data in transit and at rest</li>
@@ -74,7 +74,7 @@ export default function PrivacyPolicy() {
               <li>Regular security monitoring</li>
             </ul>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Data Sharing</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Data Sharing</h2>
             <p className="mb-4">We do not sell, trade, or rent your personal information to third parties. We may share your information only:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>With service providers</strong> - Supabase for data storage and authentication</li>
@@ -82,7 +82,7 @@ export default function PrivacyPolicy() {
               <li><strong>For TV show metadata</strong> - We query The TVDB API for show information, but do not share your personal data</li>
             </ul>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Your Rights (GDPR)</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Your Rights (GDPR)</h2>
             <p className="mb-4">If you are located in the European Union, you have the following rights:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Access</strong> - Request a copy of the personal data we hold about you</li>
@@ -93,7 +93,7 @@ export default function PrivacyPolicy() {
             </ul>
             <p className="mb-4">To exercise these rights, contact us at [contact email].</p>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Data Retention</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Data Retention</h2>
             <p className="mb-4">We retain your personal data only as long as necessary for the purposes outlined in this policy:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Account data</strong> - Until you delete your account</li>
@@ -101,22 +101,22 @@ export default function PrivacyPolicy() {
               <li><strong>Technical data</strong> - Up to 12 months for performance analysis</li>
             </ul>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Cookies</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Cookies</h2>
             <p className="mb-4">
               We use essential cookies for authentication and application functionality. These cookies are necessary for the service to work and do not require consent.
             </p>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Children&apos;s Privacy</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Children&apos;s Privacy</h2>
             <p className="mb-4">
               Our service is not intended for children under 16. We do not knowingly collect personal information from children under 16.
             </p>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Changes to This Policy</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Changes to This Policy</h2>
             <p className="mb-4">
               We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the &quot;Last updated&quot; date.
             </p>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">Contact Us</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4" style={{ color: 'var(--text)' }}>Contact Us</h2>
             <p className="mb-4">If you have any questions about this Privacy Policy, please contact us at:</p>
             <ul className="list-disc pl-6 mb-4">
               <li><strong>Email:</strong> [Your contact email]</li>

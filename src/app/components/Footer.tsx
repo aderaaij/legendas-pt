@@ -1,30 +1,33 @@
-import Link from 'next/link'
+import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="text-sm text-gray-600">
-            © {new Date().getFullYear()} LegendasPT. All rights reserved.
-          </div>
-          
-          <div className="flex space-x-6">
-            <Link 
-              href="/privacy" 
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Privacy Policy
-            </Link>
-            <Link 
-              href="/terms" 
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Terms of Service
-            </Link>
-          </div>
+    <footer style={{ borderTop: "1px solid var(--border)" }}>
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 sm:px-6 md:flex-row md:gap-0 lg:px-8">
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
+          <span className="font-display tracking-[0.16em]" style={{ color: "var(--text)" }}>
+            CENA
+          </span>
+          <span>© {new Date().getFullYear()} · Aprende português com televisão</span>
+        </div>
+
+        <div className="flex gap-6">
+          <Link
+            href="/privacy"
+            className="text-sm transition-colors hover:opacity-80"
+            style={{ color: "var(--muted)" }}
+          >
+            Privacidade
+          </Link>
+          <Link
+            href="/terms"
+            className="text-sm transition-colors hover:opacity-80"
+            style={{ color: "var(--muted)" }}
+          >
+            Termos
+          </Link>
         </div>
       </div>
     </footer>
-  )
+  );
 }

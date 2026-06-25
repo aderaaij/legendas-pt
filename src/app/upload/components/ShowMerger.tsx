@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PhraseExtractionService, Show } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,11 +19,7 @@ export default function ShowMerger() {
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    loadDuplicateShows();
-  }, []);
-
-  const loadDuplicateShows = async () => {
+  const loadDuplicateShows = useCallback(async () => {
     try {
       const duplicates = await PhraseExtractionService.findDuplicateShows();
 
@@ -35,7 +31,11 @@ export default function ShowMerger() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadDuplicateShows();
+  }, [loadDuplicateShows]);
 
   const handleMerge = async (
     primaryShowId: string,
@@ -70,14 +70,14 @@ export default function ShowMerger() {
   };
 
   if (loading) {
-    return <div className="p-4">Loading duplicate shows...</div>;
+    return <div className="p-4" style={{ color: "var(--muted)" }}>Loading duplicate shows...</div>;
   }
 
   if (duplicateGroups.length === 0) {
     return (
       <div className="p-4">
         <h2 className="text-xl font-bold mb-4">Show Merger</h2>
-        <p className="text-green-600">No duplicate shows found!</p>
+        <p style={{ color: "var(--green)" }}>No duplicate shows found!</p>
       </div>
     );
   }
@@ -88,11 +88,12 @@ export default function ShowMerger() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded ${
+          className="mb-4 p-3 rounded"
+          style={
             message.type === "success"
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
+              ? { background: "rgba(61,220,132,.1)", color: "var(--green)" }
+              : { background: "rgba(229,9,20,.1)", color: "var(--accent2)" }
+          }
         >
           {message.text}
         </div>
@@ -100,21 +101,26 @@ export default function ShowMerger() {
 
       <div className="space-y-6">
         {duplicateGroups.map((group, groupIndex) => (
-          <div key={group.normalizedName} className="border rounded-lg p-4">
+          <div
+            key={group.normalizedName}
+            className="rounded-lg p-4"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
             <h3 className="font-semibold mb-3">
               Potential duplicates for:{" "}
-              <span className="text-blue-600">{group.normalizedName}</span>
+              <span style={{ color: "var(--blue)" }}>{group.normalizedName}</span>
             </h3>
 
             <div className="space-y-3">
               {group.shows.map((show, showIndex) => (
                 <div
                   key={show.id}
-                  className="flex items-center justify-between bg-gray-50 p-3 rounded"
+                  className="flex items-center justify-between p-3 rounded"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
                 >
                   <div>
                     <div className="font-medium">{show.name}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm" style={{ color: "var(--muted)" }}>
                       Source: {show.source} | Created:{" "}
                       {new Date(show.created_at).toLocaleDateString()}
                       {show.tvdb_confidence &&
@@ -130,7 +136,8 @@ export default function ShowMerger() {
                         handleMerge(group.shows[0].id, show.id, groupIndex)
                       }
                       disabled={merging === `${group.shows[0].id}-${show.id}`}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                      className="px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                      style={{ background: "var(--accent)", color: "#fff" }}
                     >
                       {merging === `${group.shows[0].id}-${show.id}`
                         ? "Merging..."
@@ -139,7 +146,7 @@ export default function ShowMerger() {
                   )}
 
                   {showIndex === 0 && (
-                    <span className="text-sm text-green-600 font-medium">
+                    <span className="text-sm font-medium" style={{ color: "var(--green)" }}>
                       Primary (keep this one)
                     </span>
                   )}
@@ -147,7 +154,7 @@ export default function ShowMerger() {
               ))}
             </div>
 
-            <div className="mt-3 text-sm text-gray-600">
+            <div className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
               The first show will be kept as the primary, and all episodes and
               extractions from other shows will be moved to it.
             </div>

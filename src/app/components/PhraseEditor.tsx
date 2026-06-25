@@ -242,8 +242,8 @@ export default function PhraseEditor({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Loading phrases...</span>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}></div>
+        <span className="ml-2" style={{ color: "var(--muted)" }}>Loading phrases...</span>
       </div>
     );
   }
@@ -255,7 +255,8 @@ export default function PhraseEditor({
         <div className="flex flex-col space-x-3">
           <button
             onClick={onBack}
-            className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center space-x-1 transition-colors"
+            style={{ color: "var(--muted)" }}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Management</span>
@@ -263,22 +264,23 @@ export default function PhraseEditor({
 
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>
                 {displayShowName}
               </h1>
               <button
                 onClick={() => setShowMetadataEditor(true)}
-                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                className="p-1 transition-colors"
+                style={{ color: "var(--faint)" }}
                 title="Edit metadata"
               >
                 <Settings className="w-4 h-4" />
               </button>
             </div>
             {displayEpisodeTitle && (
-              <p className="text-gray-600">{displayEpisodeTitle}</p>
+              <p style={{ color: "var(--muted)" }}>{displayEpisodeTitle}</p>
             )}
             {currentShow && (
-              <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+              <div className="flex items-center space-x-2 text-sm mt-1" style={{ color: "var(--faint)" }}>
                 {currentShow.network && <span>{currentShow.network}</span>}
                 {currentEpisode?.season && currentEpisode?.episode_number && (
                   <>
@@ -298,7 +300,8 @@ export default function PhraseEditor({
           {duplicateCount > 0 && (
             <button
               onClick={() => setShowDuplicateManager(true)}
-              className="flex items-center space-x-1 bg-orange-600 text-white px-3 py-2 rounded-md hover:bg-orange-700 transition-colors"
+              className="flex items-center space-x-1 px-3 py-2 rounded-md transition-colors"
+              style={{ background: "var(--amber)", color: "#221603" }}
             >
               <Copy className="w-4 h-4" />
               <span>Manage Duplicates ({duplicateCount})</span>
@@ -306,7 +309,8 @@ export default function PhraseEditor({
           )}
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-1 px-3 py-2 rounded-md transition-colors"
+            style={{ background: "var(--green)", color: "#04210f" }}
           >
             <Plus className="w-4 h-4" />
             <span>Add Phrase</span>
@@ -315,11 +319,12 @@ export default function PhraseEditor({
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-600 text-sm">{error}</p>
+        <div className="rounded-lg p-3" style={{ background: "rgba(229,9,20,.12)", border: "1px solid rgba(229,9,20,.25)" }}>
+          <p className="text-sm" style={{ color: "var(--accent2)" }}>{error}</p>
           <button
             onClick={() => setError("")}
-            className="text-red-700 underline hover:no-underline text-xs mt-1"
+            className="underline hover:no-underline text-xs mt-1"
+            style={{ color: "var(--accent2)" }}
           >
             Dismiss
           </button>
@@ -328,11 +333,11 @@ export default function PhraseEditor({
 
       {/* Add New Phrase Form */}
       {showAddForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-3">Add New Phrase</h3>
+        <div className="rounded-lg p-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <h3 className="font-semibold mb-3" style={{ color: "var(--text)" }}>Add New Phrase</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>
                 Portuguese Phrase *
               </label>
               <input
@@ -341,12 +346,13 @@ export default function PhraseEditor({
                 onChange={(e) =>
                   setNewPhrase((prev) => ({ ...prev, phrase: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md focus:outline-none"
+                style={{ background: "var(--bg2)", border: "1px solid var(--border)", color: "var(--text)" }}
                 placeholder="Enter Portuguese phrase..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>
                 English Translation *
               </label>
               <input
@@ -358,7 +364,8 @@ export default function PhraseEditor({
                     translation: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md focus:outline-none"
+                style={{ background: "var(--bg2)", border: "1px solid var(--border)", color: "var(--text)" }}
                 placeholder="Enter English translation..."
               />
             </div>
@@ -367,13 +374,15 @@ export default function PhraseEditor({
             <button
               onClick={addNewPhrase}
               disabled={saving}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 rounded-md disabled:opacity-50 transition-colors"
+              style={{ background: "var(--accent)", color: "#fff" }}
             >
               {saving ? "Adding..." : "Add Phrase"}
             </button>
             <button
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+              className="px-4 py-2 rounded-md transition-colors"
+              style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }}
             >
               Cancel
             </button>
@@ -382,12 +391,12 @@ export default function PhraseEditor({
       )}
 
       {/* Stats */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="flex items-center justify-between text-sm text-gray-600">
+      <div className="rounded-lg p-4" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between text-sm" style={{ color: "var(--muted)" }}>
           <span>{phrases.length} phrases total</span>
           <div className="flex items-center space-x-4">
             {duplicateCount > 0 && (
-              <span className="text-orange-600 font-medium">
+              <span className="font-medium" style={{ color: "var(--amber)" }}>
                 {duplicateCount} duplicates found
               </span>
             )}
@@ -403,20 +412,28 @@ export default function PhraseEditor({
         {phrases.map((phrase) => (
           <div
             key={phrase.id}
-            className={`bg-white rounded-lg border p-4 transition-all ${
-              phrase.hasChanges
-                ? "border-yellow-300 bg-yellow-50"
+            className="rounded-lg p-4 transition-all"
+            style={{
+              background: phrase.hasChanges
+                ? "rgba(245,196,81,.08)"
                 : phrase.isDuplicate
-                ? "border-orange-300 bg-orange-50"
-                : "border-gray-200"
-            }`}
+                ? "rgba(245,166,35,.08)"
+                : "var(--surface)",
+              border: `1px solid ${
+                phrase.hasChanges
+                  ? "rgba(245,196,81,.4)"
+                  : phrase.isDuplicate
+                  ? "rgba(245,166,35,.4)"
+                  : "var(--border)"
+              }`,
+            }}
           >
             {phrase.isEditing ? (
               /* Edit Mode */
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>
                       Portuguese Phrase
                     </label>
                     <input
@@ -425,11 +442,12 @@ export default function PhraseEditor({
                       onChange={(e) =>
                         updatePhrase(phrase.id, "phrase", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-md focus:outline-none"
+                      style={{ background: "var(--bg2)", border: "1px solid var(--border)", color: "var(--text)" }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium mb-1" style={{ color: "var(--muted)" }}>
                       English Translation
                     </label>
                     <input
@@ -438,7 +456,8 @@ export default function PhraseEditor({
                       onChange={(e) =>
                         updatePhrase(phrase.id, "translation", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-md focus:outline-none"
+                      style={{ background: "var(--bg2)", border: "1px solid var(--border)", color: "var(--text)" }}
                     />
                   </div>
                 </div>
@@ -446,14 +465,16 @@ export default function PhraseEditor({
                   <button
                     onClick={() => savePhrase(phrase.id)}
                     disabled={saving}
-                    className="flex items-center space-x-1 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    className="flex items-center space-x-1 px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                    style={{ background: "var(--green)", color: "#04210f" }}
                   >
                     <Save className="w-3 h-3" />
                     <span>{saving ? "Saving..." : "Save"}</span>
                   </button>
                   <button
                     onClick={() => cancelEditing(phrase.id)}
-                    className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400 transition-colors"
+                    className="px-3 py-1 rounded text-sm transition-colors"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }}
                   >
                     Cancel
                   </button>
@@ -464,28 +485,30 @@ export default function PhraseEditor({
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
-                    <div className="font-semibold text-gray-900">
+                    <div className="font-semibold" style={{ color: "var(--text)" }}>
                       {phrase.phrase}
                     </div>
                     {phrase.isDuplicate && (
-                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ background: "rgba(245,166,35,.15)", color: "var(--amber)" }}>
                         Duplicate ({phrase.duplicateCount})
                       </span>
                     )}
                   </div>
-                  <div className="text-gray-600 mb-2">{phrase.translation}</div>
+                  <div className="mb-2" style={{ color: "var(--muted)" }}>{phrase.translation}</div>
                 </div>
                 <div className="flex items-center space-x-1 ml-4">
                   <button
                     onClick={() => startEditing(phrase.id)}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    className="p-1 transition-colors"
+                    style={{ color: "var(--faint)" }}
                     title="Edit phrase"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => deletePhrase(phrase.id)}
-                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    className="p-1 transition-colors"
+                    style={{ color: "var(--faint)" }}
                     title="Delete phrase"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -498,11 +521,12 @@ export default function PhraseEditor({
       </div>
 
       {phrases.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No phrases found for this extraction.</p>
+        <div className="text-center py-12 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+          <p style={{ color: "var(--muted)" }}>No phrases found for this extraction.</p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="mt-2 text-blue-600 underline hover:no-underline"
+            className="mt-2 underline hover:no-underline"
+            style={{ color: "var(--accent2)" }}
           >
             Add the first phrase
           </button>

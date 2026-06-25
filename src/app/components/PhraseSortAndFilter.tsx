@@ -1,9 +1,14 @@
-import { useState } from 'react';
-import { ArrowUpDown, Heart, HeartOff } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useState } from "react";
+import { ChevronDown, Heart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
-export type SortOption = 'none' | 'alphabetical' | 'reverse-alphabetical' | 'progress-high' | 'progress-low';
-export type FilterOption = 'all' | 'favorites';
+export type SortOption =
+  | "none"
+  | "alphabetical"
+  | "reverse-alphabetical"
+  | "progress-high"
+  | "progress-low";
+export type FilterOption = "all" | "favorites";
 
 interface PhraseSortAndFilterProps {
   onSortChange: (sort: SortOption) => void;
@@ -19,44 +24,55 @@ export const PhraseSortAndFilter = ({
   onFilterChange,
   currentSort,
   currentFilter,
-  totalPhrases,
-  filteredPhrases,
 }: PhraseSortAndFilterProps) => {
   const { isAuthenticated } = useAuth();
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
 
   const sortOptions = [
-    { value: 'none' as const, label: 'Original Order' },
-    { value: 'alphabetical' as const, label: 'A-Z' },
-    { value: 'reverse-alphabetical' as const, label: 'Z-A' },
-    ...(isAuthenticated ? [
-      { value: 'progress-high' as const, label: 'Most Progress' },
-      { value: 'progress-low' as const, label: 'Least Progress' },
-    ] : []),
+    { value: "none" as const, label: "Ordem original" },
+    { value: "alphabetical" as const, label: "A-Z" },
+    { value: "reverse-alphabetical" as const, label: "Z-A" },
+    ...(isAuthenticated
+      ? [
+          { value: "progress-high" as const, label: "Mais progresso" },
+          { value: "progress-low" as const, label: "Menos progresso" },
+        ]
+      : []),
   ];
 
-  const getSortLabel = (sort: SortOption) => {
-    return sortOptions.find(option => option.value === sort)?.label || 'Original Order';
-  };
+  const currentSortLabel =
+    sortOptions.find((option) => option.value === currentSort)?.label ||
+    "Ordem original";
+
+  const pillBase =
+    "rounded-lg px-4 py-2 text-[13px] font-bold transition-colors cursor-pointer";
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-      {/* Sort Controls */}
-      <div className="flex items-center gap-2">
-        <ArrowUpDown className="w-4 h-4 text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">Sort:</span>
+    <div className="flex flex-wrap items-center gap-3">
+      {/* Sort */}
+      <div
+        className="flex items-center gap-2 rounded-[9px] py-[7px] pl-[14px] pr-2 text-[13px]"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          color: "var(--muted)",
+        }}
+      >
+        <span>Ordenar</span>
         <div className="relative">
           <button
-            onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
+            onClick={() => setSortDropdownOpen((v) => !v)}
+            className="flex items-center gap-[6px] rounded-md px-[10px] py-[5px] font-semibold"
+            style={{ background: "var(--surface2)", color: "var(--text)" }}
           >
-            {getSortLabel(currentSort)}
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            {currentSortLabel}
+            <ChevronDown className="h-3 w-3" />
           </button>
           {sortDropdownOpen && (
-            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10">
+            <div
+              className="absolute left-0 top-full z-20 mt-1 w-full min-w-[160px] overflow-hidden rounded-md shadow-lg"
+              style={{ background: "var(--surface2)", border: "1px solid var(--border2)" }}
+            >
               {sortOptions.map((option) => (
                 <button
                   key={option.value}
@@ -64,9 +80,15 @@ export const PhraseSortAndFilter = ({
                     onSortChange(option.value);
                     setSortDropdownOpen(false);
                   }}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                    currentSort === option.value ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                  }`}
+                  className="block w-full px-3 py-2 text-left text-[13px] transition-colors hover:opacity-80"
+                  style={{
+                    color:
+                      currentSort === option.value ? "var(--accent2)" : "var(--muted)",
+                    background:
+                      currentSort === option.value
+                        ? "rgba(229,9,20,.12)"
+                        : "transparent",
+                  }}
                 >
                   {option.label}
                 </button>
@@ -76,46 +98,45 @@ export const PhraseSortAndFilter = ({
         </div>
       </div>
 
-      {/* Filter Controls - Only show if user is authenticated */}
+      {/* Filter (authenticated only) */}
       {isAuthenticated && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Filter:</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onFilterChange('all')}
-              className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                currentFilter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => onFilterChange('favorites')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                currentFilter === 'favorites'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {currentFilter === 'favorites' ? (
-                <Heart className="w-4 h-4 fill-current" />
-              ) : (
-                <HeartOff className="w-4 h-4" />
-              )}
-              Favorites
-            </button>
-          </div>
+        <div className="flex gap-[6px]">
+          <button
+            onClick={() => onFilterChange("all")}
+            className={pillBase}
+            style={
+              currentFilter === "all"
+                ? { background: "var(--accent)", color: "#fff" }
+                : {
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                  }
+            }
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => onFilterChange("favorites")}
+            className={`${pillBase} flex items-center gap-[6px]`}
+            style={
+              currentFilter === "favorites"
+                ? { background: "var(--accent)", color: "#fff" }
+                : {
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                  }
+            }
+          >
+            <Heart
+              className="h-[13px] w-[13px]"
+              fill={currentFilter === "favorites" ? "currentColor" : "none"}
+            />
+            Favoritas
+          </button>
         </div>
       )}
-
-      {/* Results Summary */}
-      <div className="flex items-center gap-2 ml-auto">
-        <span className="text-sm text-gray-600">
-          Showing {filteredPhrases} of {totalPhrases} phrases
-        </span>
-      </div>
     </div>
   );
 };

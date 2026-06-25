@@ -2,11 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { FileText, Grid3X3, List } from "lucide-react";
-
 import { motion, AnimatePresence } from "motion/react";
 
 import { ExtractedPhrase, Show, Episode } from "@/lib/supabase";
-import { generateShowSlug } from "@/utils/slugify";
+import { episodeCode } from "@/utils/slugify";
 import AnkiExporter from "@/app/components/AnkiExporter";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -18,7 +17,6 @@ import {
   FilterOption,
 } from "@/app/components/PhraseSortAndFilter";
 import { SpacedRepetitionGame } from "@/app/components/SpacedRepetitionGame";
-import Breadcrumb from "@/app/components/Breadcrumb";
 import { EpisodeInfoSection } from "./EpisodeInfoSection";
 
 interface EpisodePageClientProps {
@@ -46,7 +44,6 @@ export default function EpisodePageClient({
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getProgressForPhrase } = useCardProgress(phrases.map((p) => p.id));
 
-  // Wrapper for toggleFavorite to match FavoriteButton's expected signature
   const handleToggleFavorite = async (phraseId: string): Promise<void> => {
     const result = await toggleFavorite(phraseId);
     if (result?.error) {
@@ -54,16 +51,13 @@ export default function EpisodePageClient({
     }
   };
 
-  // Filter and sort phrases
   const filteredAndSortedPhrases = useMemo(() => {
     let filtered = phrases;
 
-    // Apply filter
     if (filterOption === "favorites") {
       filtered = phrases.filter((phrase) => isFavorite(phrase.id));
     }
 
-    // Apply sort
     if (sortOption === "alphabetical") {
       filtered = [...filtered].sort((a, b) => a.phrase.localeCompare(b.phrase));
     } else if (sortOption === "reverse-alphabetical") {
@@ -72,20 +66,19 @@ export default function EpisodePageClient({
       filtered = [...filtered].sort((a, b) => {
         const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
         const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
-        return progressB - progressA; // Highest progress first
+        return progressB - progressA;
       });
     } else if (sortOption === "progress-low") {
       filtered = [...filtered].sort((a, b) => {
         const progressA = getProgressForPhrase(a.id)?.progressPercentage || 0;
         const progressB = getProgressForPhrase(b.id)?.progressPercentage || 0;
-        return progressA - progressB; // Lowest progress first
+        return progressA - progressB;
       });
     }
 
     return filtered;
   }, [phrases, sortOption, filterOption, isFavorite, getProgressForPhrase]);
 
-  // Selection handlers
   const handlePhraseToggle = (phraseId: string) => {
     setSelectedPhrases((prev) => {
       const newSet = new Set(prev);
@@ -98,17 +91,12 @@ export default function EpisodePageClient({
     });
   };
 
-  const handleSelectAll = () => {
+  const handleSelectAll = () =>
     setSelectedPhrases(new Set(filteredAndSortedPhrases.map((p) => p.id)));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedPhrases(new Set());
-  };
+  const handleDeselectAll = () => setSelectedPhrases(new Set());
 
   const handleEnterExportMode = () => {
     setIsExportMode(true);
-    // Select all filtered phrases when entering export mode
     setSelectedPhrases(new Set(filteredAndSortedPhrases.map((p) => p.id)));
   };
 
@@ -117,7 +105,6 @@ export default function EpisodePageClient({
     setSelectedPhrases(new Set());
   };
 
-  // Convert selected phrases to format expected by AnkiExporter
   const selectedPhrasesData = phrases.filter((p) => selectedPhrases.has(p.id));
   const ankiPhrases = selectedPhrasesData.map((phrase) => ({
     phrase: phrase.phrase,
@@ -125,59 +112,34 @@ export default function EpisodePageClient({
     frequency: 1,
   }));
 
+  const viewToggleClass = "grid h-8 w-8 place-items-center rounded-md transition-colors";
+
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header with Breadcrumbs */}
-        <div className="mb-8">
-          <Breadcrumb
-            items={[
-              { label: "Shows", href: "/" },
-              { label: show.name, href: `/${generateShowSlug(show.name)}` },
-              {
-                label: `S${episode.season
-                  ?.toString()
-                  .padStart(2, "0")}E${episode.episode_number
-                  ?.toString()
-                  .padStart(2, "0")}`,
-                isCurrentPage: true,
-              },
-            ]}
-            className="mb-6"
-          />
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
+      <EpisodeInfoSection
+        show={show}
+        episode={episode}
+        phrases={phrases}
+        onStartStudy={() => setShowStudyGame(true)}
+      />
 
-          {/* Episode info section */}
-          <EpisodeInfoSection
-            show={show}
-            episode={episode}
-            phrases={phrases}
-            onStartStudy={() => setShowStudyGame(true)}
-          />
-        </div>
-
-        {/* Phrases Grid */}
+      <section className="px-5 pb-[60px] pt-1 md:px-10">
         {phrases.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">Phrases</h2>
-              <div className="flex items-center space-x-3">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {phrases.length} phrases
-                </span>
-                <AnkiExporter
-                  phrases={ankiPhrases}
-                  isExportMode={isExportMode}
-                  onEnterExportMode={handleEnterExportMode}
-                  onExitExportMode={handleExitExportMode}
-                  selectedCount={selectedPhrases.size}
-                  totalCount={filteredAndSortedPhrases.length}
-                  onSelectAll={handleSelectAll}
-                  onDeselectAll={handleDeselectAll}
-                />
-              </div>
-            </div>
+          <>
+            <div className="mb-[22px] flex flex-wrap items-center gap-3">
+              <h2 className="text-[22px] font-extrabold tracking-[-0.01em]">Frases</h2>
+              <span
+                className="rounded-full px-[11px] py-1 text-[12px] font-bold"
+                style={{
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--muted)",
+                }}
+              >
+                {phrases.length} frases
+              </span>
+              <div className="flex-1" />
 
-            <div className="flex items-center justify-between mb-4">
               <PhraseSortAndFilter
                 onSortChange={setSortOption}
                 onFilterChange={setFilterOption}
@@ -186,31 +148,57 @@ export default function EpisodePageClient({
                 totalPhrases={phrases.length}
                 filteredPhrases={filteredAndSortedPhrases.length}
               />
-              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+
+              <div
+                className="flex items-center gap-1 rounded-lg p-1"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "grid"
-                      ? "bg-white shadow-sm text-gray-900"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="Grid view"
+                  className={viewToggleClass}
+                  style={{
+                    background: viewMode === "grid" ? "var(--surface2)" : "transparent",
+                    color: viewMode === "grid" ? "var(--text)" : "var(--muted)",
+                  }}
+                  title="Grelha"
                 >
-                  <Grid3X3 className="w-4 h-4" />
+                  <Grid3X3 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "list"
-                      ? "bg-white shadow-sm text-gray-900"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="List view"
+                  className={viewToggleClass}
+                  style={{
+                    background: viewMode === "list" ? "var(--surface2)" : "transparent",
+                    color: viewMode === "list" ? "var(--text)" : "var(--muted)",
+                  }}
+                  title="Lista"
                 >
-                  <List className="w-4 h-4" />
+                  <List className="h-4 w-4" />
                 </button>
               </div>
+
+              {!isExportMode && (
+                <AnkiExporter
+                  phrases={ankiPhrases}
+                  isExportMode={false}
+                  onEnterExportMode={handleEnterExportMode}
+                />
+              )}
             </div>
+
+            {isExportMode && (
+              <div className="mb-6">
+                <AnkiExporter
+                  phrases={ankiPhrases}
+                  isExportMode
+                  onExitExportMode={handleExitExportMode}
+                  selectedCount={selectedPhrases.size}
+                  totalCount={filteredAndSortedPhrases.length}
+                  onSelectAll={handleSelectAll}
+                  onDeselectAll={handleDeselectAll}
+                />
+              </div>
+            )}
 
             {filteredAndSortedPhrases.length > 0 ? (
               <AnimatePresence mode="wait">
@@ -222,7 +210,7 @@ export default function EpisodePageClient({
                   transition={{ duration: 0.3 }}
                   className={
                     viewMode === "grid"
-                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start"
+                      ? "grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3"
                       : "space-y-2"
                   }
                 >
@@ -233,11 +221,7 @@ export default function EpisodePageClient({
                         key={phrase.id || index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.2,
-                          delay: index * 0.02,
-                          ease: "easeOut",
-                        }}
+                        transition={{ duration: 0.2, delay: index * 0.02, ease: "easeOut" }}
                         className={viewMode === "grid" ? "h-full" : ""}
                       >
                         <PhraseCard
@@ -248,9 +232,7 @@ export default function EpisodePageClient({
                           isFavorite={isFavorite(phrase.id)}
                           onToggleFavorite={handleToggleFavorite}
                           showProgress={isAuthenticated}
-                          progressPercentage={
-                            progressData?.progressPercentage || 0
-                          }
+                          progressPercentage={progressData?.progressPercentage || 0}
                           learningState={progressData?.state || "New"}
                           isLearned={progressData?.isLearned || false}
                           viewMode={viewMode}
@@ -261,39 +243,35 @@ export default function EpisodePageClient({
                 </motion.div>
               </AnimatePresence>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-600">
-                  {filterOption === "favorites"
-                    ? "No favorite phrases found. Try favoriting some phrases first!"
-                    : "No phrases match your current filters."}
-                </p>
+              <div className="py-8 text-center" style={{ color: "var(--muted)" }}>
+                {filterOption === "favorites"
+                  ? "Ainda não há frases favoritas. Marca algumas com o coração!"
+                  : "Nenhuma frase corresponde aos filtros."}
               </div>
             )}
-          </div>
+          </>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No Phrases Found
-            </h3>
-            <p className="text-gray-600">
-              This episode doesn&apos;t have any extracted phrases yet.
+          <div
+            className="rounded-2xl p-12 text-center"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            <FileText className="mx-auto mb-4 h-16 w-16" style={{ color: "var(--faint)" }} />
+            <h3 className="mb-2 text-xl font-bold">Sem frases</h3>
+            <p style={{ color: "var(--muted)" }}>
+              Este episódio ainda não tem frases extraídas.
             </p>
           </div>
         )}
+      </section>
 
-        {/* Spaced Repetition Game */}
-        <SpacedRepetitionGame
-          episodeId={episode.id}
-          episodeTitle={`S${episode.season
-            ?.toString()
-            .padStart(2, "0")}E${episode.episode_number
-            ?.toString()
-            .padStart(2, "0")}${episode.title ? ` - ${episode.title}` : ""}`}
-          open={showStudyGame}
-          onClose={() => setShowStudyGame(false)}
-        />
-      </div>
+      <SpacedRepetitionGame
+        episodeId={episode.id}
+        episodeTitle={`${episodeCode(episode.season, episode.episode_number)}${
+          episode.title ? ` — ${episode.title}` : ""
+        }`}
+        open={showStudyGame}
+        onClose={() => setShowStudyGame(false)}
+      />
     </div>
   );
 }

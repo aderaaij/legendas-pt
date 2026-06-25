@@ -1,14 +1,13 @@
 import HomePage from "./components/HomePage";
-import { PhraseExtractionService } from "@/lib/supabase";
-import { ShowWithExtractions } from "@/hooks/useHomePage";
+import { PhraseExtractionService, LibraryShow } from "@/lib/supabase";
 
 export default async function Home() {
   // Server-side data fetching
-  let initialShows: ShowWithExtractions[] = [];
+  let initialShows: LibraryShow[] = [];
   let error: string | null = null;
 
   try {
-    initialShows = await PhraseExtractionService.getShowsWithExtractionStats();
+    initialShows = await PhraseExtractionService.getLibraryShows();
   } catch (err) {
     error = `Failed to load shows: ${
       err instanceof Error ? err.message : "Unknown error"

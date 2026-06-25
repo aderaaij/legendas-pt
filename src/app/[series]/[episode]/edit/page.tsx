@@ -263,10 +263,16 @@ export default function EpisodeEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--bg)", color: "var(--text)" }}
+      >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading episode...</p>
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-2 mx-auto mb-4"
+            style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+          ></div>
+          <p style={{ color: "var(--muted)" }}>Loading episode...</p>
         </div>
       </div>
     );
@@ -274,13 +280,23 @@ export default function EpisodeEditPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--bg)", color: "var(--text)" }}
+      >
         <div className="text-center max-w-md">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-600 mb-4">{error}</p>
+          <div
+            className="rounded-[var(--radius-lg)] p-6"
+            style={{
+              background: "rgba(229,9,20,.12)",
+              border: "1px solid rgba(229,9,20,.25)",
+            }}
+          >
+            <p className="mb-4" style={{ color: "var(--accent2)" }}>{error}</p>
             <Link
               href="/"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              className="inline-block px-4 py-2 rounded-md transition-opacity hover:opacity-90"
+              style={{ background: "var(--accent)", color: "#fff" }}
             >
               Back to Homepage
             </Link>
@@ -292,7 +308,7 @@ export default function EpisodeEditPage() {
 
   if (viewMode === "phrase-edit" && editingSession) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
         <div className="container mx-auto px-4 py-8">
           <PhraseEditor
             extractionId={editingSession.extractionId}
@@ -307,7 +323,7 @@ export default function EpisodeEditPage() {
 
   return (
     <AdminRoute redirectTo="/">
-      <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
+      <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
         <div className="container mx-auto px-4 py-8">
           {/* Header with Breadcrumbs */}
           <div className="flex flex-col justify-between mb-8">
@@ -339,11 +355,11 @@ export default function EpisodeEditPage() {
               />
 
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-3xl font-bold" style={{ color: "var(--text)" }}>
                   Edit {show?.name}
                 </h1>
                 {episodeData && (
-                  <p className="text-gray-600">
+                  <p style={{ color: "var(--muted)" }}>
                     Season {episodeData.season}, Episode{" "}
                     {episodeData.episode_number}
                     {episodeData.title && ` - ${episodeData.title}`}
@@ -354,15 +370,19 @@ export default function EpisodeEditPage() {
           </div>
 
           {/* Episode Management */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div
+            className="rounded-[var(--radius-lg)] p-6 mb-8"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">
+              <h2 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>
                 Episode Settings
               </h2>
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowMetadataEditor(true)}
-                  className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-opacity hover:opacity-90"
+                  style={{ background: "var(--accent)", color: "#fff" }}
                 >
                   <Edit3 className="w-4 h-4" />
                   <span>Edit Metadata</span>
@@ -370,10 +390,14 @@ export default function EpisodeEditPage() {
                 <button
                   onClick={deleteEpisode}
                   disabled={deleting === episodeData!.id}
-                  className="inline-flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--accent2)" }}
                 >
                   {deleting === episodeData!.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div
+                      className="animate-spin rounded-full h-4 w-4 border-2"
+                      style={{ borderColor: "var(--accent2)", borderTopColor: "transparent" }}
+                    ></div>
                   ) : (
                     <Trash2 className="w-4 h-4" />
                   )}
@@ -383,51 +407,63 @@ export default function EpisodeEditPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div
+                className="p-4 rounded-[var(--radius)]"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+              >
                 <div className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FileText className="w-5 h-5" style={{ color: "var(--blue)" }} />
                   <div>
-                    <p className="text-lg font-bold text-blue-600">
+                    <p className="text-lg font-bold" style={{ color: "var(--blue)" }}>
                       {phrases.length}
                     </p>
-                    <p className="text-sm text-gray-600">Total Phrases</p>
+                    <p className="text-sm" style={{ color: "var(--muted)" }}>Total Phrases</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div
+                className="p-4 rounded-[var(--radius)]"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+              >
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <TrendingUp className="w-5 h-5" style={{ color: "var(--green)" }} />
                   <div>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-lg font-bold" style={{ color: "var(--green)" }}>
                       {extractions.length}
                     </p>
-                    <p className="text-sm text-gray-600">Extractions</p>
+                    <p className="text-sm" style={{ color: "var(--muted)" }}>Extractions</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-purple-50 p-4 rounded-lg">
+              <div
+                className="p-4 rounded-[var(--radius)]"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+              >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <Calendar className="w-5 h-5" style={{ color: "var(--gold)" }} />
                   <div>
-                    <p className="text-lg font-bold text-purple-600">
+                    <p className="text-lg font-bold" style={{ color: "var(--gold)" }}>
                       S{episodeData?.season?.toString().padStart(2, "0")}E
                       {episodeData?.episode_number?.toString().padStart(2, "0")}
                     </p>
-                    <p className="text-sm text-gray-600">Episode</p>
+                    <p className="text-sm" style={{ color: "var(--muted)" }}>Episode</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-orange-50 p-4 rounded-lg">
+              <div
+                className="p-4 rounded-[var(--radius)]"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+              >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-orange-600" />
+                  <Calendar className="w-5 h-5" style={{ color: "var(--amber)" }} />
                   <div>
-                    <p className="text-lg font-bold text-orange-600">
+                    <p className="text-lg font-bold" style={{ color: "var(--amber)" }}>
                       {show?.name}
                     </p>
-                    <p className="text-sm text-gray-600">Show</p>
+                    <p className="text-sm" style={{ color: "var(--muted)" }}>Show</p>
                   </div>
                 </div>
               </div>
@@ -435,12 +471,18 @@ export default function EpisodeEditPage() {
           </div>
 
           {/* Extractions Management */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div
+            className="rounded-[var(--radius-lg)] p-6"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">
+              <h2 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>
                 Phrase Extractions
               </h2>
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              <span
+                className="px-3 py-1 rounded-full text-sm font-medium"
+                style={{ background: "rgba(91,140,255,.15)", color: "var(--blue)" }}
+              >
                 {extractions.length} extractions
               </span>
             </div>
@@ -450,26 +492,30 @@ export default function EpisodeEditPage() {
                 {extractions.map((extraction) => (
                   <div
                     key={extraction.id}
-                    className="bg-gray-50 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition-shadow"
+                    className="rounded-[var(--radius)] p-4 flex items-center justify-between transition-colors"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
                   >
                     <div className="flex items-center space-x-3">
-                      <FileText className="w-5 h-5 text-gray-400" />
+                      <FileText className="w-5 h-5" style={{ color: "var(--faint)" }} />
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium" style={{ color: "var(--text)" }}>
                           {extraction.source}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm" style={{ color: "var(--muted)" }}>
                           {extraction.current_phrase_count} phrases
                           {extraction.current_phrase_count !==
                             extraction.total_phrases_found && (
-                            <span className="text-gray-400">
+                            <span style={{ color: "var(--faint)" }}>
                               {" "}
                               (originally {extraction.total_phrases_found})
                             </span>
                           )}{" "}
                           • {formatDate(extraction.created_at)}
                           {extraction.was_truncated && (
-                            <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                            <span
+                              className="ml-2 px-2 py-1 rounded text-xs"
+                              style={{ background: "rgba(245,176,65,.15)", color: "var(--amber)" }}
+                            >
                               Truncated
                             </span>
                           )}
@@ -487,14 +533,18 @@ export default function EpisodeEditPage() {
                               extraction.source
                             )
                           }
-                          className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                          className="flex items-center space-x-1 px-3 py-1 rounded-md transition-opacity hover:opacity-90 text-sm"
+                          style={{ background: "var(--accent)", color: "#fff" }}
                         >
                           <Edit3 className="w-3 h-3" />
                           <span>Edit Phrases</span>
                         </button>
                       ) : (
                         <div className="flex items-center space-x-2">
-                          <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded flex items-center space-x-1">
+                          <div
+                            className="text-xs px-2 py-1 rounded flex items-center space-x-1"
+                            style={{ background: "rgba(229,9,20,.12)", color: "var(--accent2)" }}
+                          >
                             <AlertTriangle className="w-3 h-3" />
                             <span>No phrases remaining</span>
                           </div>
@@ -504,11 +554,15 @@ export default function EpisodeEditPage() {
                       <button
                         onClick={() => deleteExtraction(extraction.id)}
                         disabled={deleting === extraction.id}
-                        className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                        className="p-1 transition-colors disabled:opacity-50 hover:opacity-80"
+                        style={{ color: "var(--faint)" }}
                         title="Delete this extraction"
                       >
                         {deleting === extraction.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                          <div
+                            className="animate-spin rounded-full h-4 w-4 border-2"
+                            style={{ borderColor: "var(--accent2)", borderTopColor: "transparent" }}
+                          ></div>
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
@@ -519,11 +573,11 @@ export default function EpisodeEditPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--faint)" }} />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>
                   No Extractions Found
                 </h3>
-                <p className="text-gray-600">
+                <p style={{ color: "var(--muted)" }}>
                   This episode doesn&apos;t have any phrase extractions yet.
                 </p>
               </div>

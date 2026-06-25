@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Upload } from "lucide-react";
+
 import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "./AuthModal";
-import { Captions } from "lucide-react";
 import { UserDropdown } from "./UserDropdown";
-import Link from "next/link";
+
+type Theme = "noir" | "warm";
 
 export function Navigation() {
   const { user, isAdmin, isAuthenticated, signOut } = useAuth();
@@ -13,9 +16,25 @@ export function Navigation() {
   const [authModalMode, setAuthModalMode] = useState<"login" | "signup">(
     "login"
   );
+  const [theme, setTheme] = useState<Theme>("noir");
 
-  const handleSignOut = async () => {
-    await signOut();
+  // The inline script in the layout sets data-theme before paint; mirror it
+  // into state so the toggle label stays in sync.
+  useEffect(() => {
+    const current =
+      (document.documentElement.getAttribute("data-theme") as Theme) || "noir";
+    setTheme(current);
+  }, []);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "noir" ? "warm" : "noir";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("cena-theme", next);
+    } catch {
+      /* ignore storage failures (private mode) */
+    }
   };
 
   const openAuthModal = (mode: "login" | "signup") => {
@@ -25,51 +44,91 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="container px-8 mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-6">
-            <Link
-              href="/"
-              className="text-xl font-bold text-gray-900 flex items-center gap-2"
+      <nav
+        className="sticky top-0 z-40 flex items-center gap-6 px-5 py-4 md:px-10"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(8,8,10,.95), rgba(8,8,10,.55) 70%, transparent)",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <Link href="/" className="flex items-center gap-3">
+          <span
+            className="grid h-[30px] w-[30px] place-items-center rounded-[7px]"
+            style={{
+              background: "var(--accent)",
+              boxShadow: "0 6px 16px -4px var(--accent)",
+            }}
+          >
+            <span className="block h-[9px] w-[13px] rounded-[2px] border-2 border-white" />
+          </span>
+          <span
+            className="font-display text-[21px] tracking-[0.16em]"
+            style={{ color: "var(--text)" }}
+          >
+            CENA
+          </span>
+        </Link>
+
+        <div className="ml-3 hidden items-center gap-6 sm:flex">
+          <Link
+            href="/"
+            className="text-sm font-semibold"
+            style={{ color: "var(--text)" }}
+          >
+            Biblioteca
+          </Link>
+        </div>
+
+        <div className="flex-1" />
+
+        <button
+          onClick={toggleTheme}
+          title="Alternar direção visual"
+          className="flex items-center gap-2 rounded-full px-3 py-[7px] text-[12.5px] font-semibold"
+          style={{ border: "1px solid var(--border2)", color: "var(--muted)" }}
+        >
+          <span
+            className="h-[9px] w-[9px] rounded-full"
+            style={{
+              background: "var(--accent)",
+              boxShadow: "0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent)",
+            }}
+          />
+          {theme === "warm" ? "Cinema" : "Noir"}
+        </button>
+
+        {isAdmin && (
+          <Link
+            href="/upload"
+            title="Carregar legendas"
+            className="grid h-[34px] w-[34px] place-items-center rounded-lg"
+            style={{ border: "1px solid var(--border2)", color: "var(--muted)" }}
+          >
+            <Upload className="h-[17px] w-[17px]" />
+          </Link>
+        )}
+
+        {isAuthenticated ? (
+          <UserDropdown user={user} isAdmin={isAdmin} onSignOut={signOut} />
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openAuthModal("login")}
+              className="px-3 py-2 text-sm font-medium"
+              style={{ color: "var(--muted)" }}
             >
-              <Captions size="48" /> LegendasPT
-            </Link>
+              Entrar
+            </button>
+            <button
+              onClick={() => openAuthModal("signup")}
+              className="rounded-lg px-4 py-2 text-sm font-bold text-white"
+              style={{ background: "var(--accent)" }}
+            >
+              Criar conta
+            </button>
           </div>
-
-          <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              <UserDropdown
-                user={user}
-                isAdmin={isAdmin}
-                onSignOut={handleSignOut}
-              />
-            ) : (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => openAuthModal("login")}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => openAuthModal("signup")}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile menu - simplified for now */}
-        <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
-          <div className="flex flex-col space-y-2">
-            <Link href="/" className="text-gray-600 hover:text-gray-900">
-              Home
-            </Link>
-          </div>
-        </div>
+        )}
       </nav>
 
       <AuthModal

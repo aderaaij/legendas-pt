@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface StudyProgressBarProps {
   currentCard: number;
@@ -13,42 +13,48 @@ export function StudyProgressBar({
   correctCards,
   studiedCards,
 }: StudyProgressBarProps) {
-  const progressPercentage = (currentCard / totalCards) * 100;
-  const accuracyPercentage = studiedCards > 0 ? (correctCards / studiedCards) * 100 : 0;
+  const progressPercentage = totalCards > 0 ? (currentCard / totalCards) * 100 : 0;
+  const accuracyPercentage =
+    studiedCards > 0 ? Math.round((correctCards / studiedCards) * 100) : 100;
 
   return (
-    <div className="bg-white border-b border-gray-200 p-4">
-      {/* Progress bar */}
-      <div className="mb-3">
-        <div className="flex justify-between text-sm text-gray-600 mb-1">
-          <span>Progress</span>
-          <span>{currentCard} / {totalCards}</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
+    <div className="px-6 pb-2 pt-[18px]">
+      <div className="mb-2 flex justify-between text-[12.5px]">
+        <span className="font-semibold" style={{ color: "var(--muted)" }}>
+          Progresso
+        </span>
+        <span className="font-bold" style={{ color: "var(--text)" }}>
+          {currentCard} / {totalCards}
+        </span>
       </div>
 
-      {/* Stats */}
-      <div className="flex justify-between text-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-gray-600">Correct: {correctCards}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-gray-600">Incorrect: {studiedCards - correctCards}</span>
-          </div>
+      <div
+        className="mb-3 h-[6px] overflow-hidden rounded-full"
+        style={{ background: "rgba(255,255,255,.1)" }}
+      >
+        <div
+          className="h-full rounded-full transition-[width] duration-[400ms] ease-out"
+          style={{
+            width: `${progressPercentage}%`,
+            background: "linear-gradient(90deg, var(--accent), var(--accent2))",
+          }}
+        />
+      </div>
+
+      <div className="flex justify-between text-[12.5px]">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-[6px]" style={{ color: "var(--muted)" }}>
+            <span className="h-2 w-2 rounded-full" style={{ background: "var(--green)" }} />
+            Certas: <b style={{ color: "var(--text)" }}>{correctCards}</b>
+          </span>
+          <span className="flex items-center gap-[6px]" style={{ color: "var(--muted)" }}>
+            <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
+            Erradas: <b style={{ color: "var(--text)" }}>{studiedCards - correctCards}</b>
+          </span>
         </div>
-        {studiedCards > 0 && (
-          <div className="text-gray-600">
-            Accuracy: <span className="font-medium">{accuracyPercentage.toFixed(0)}%</span>
-          </div>
-        )}
+        <span style={{ color: "var(--muted)" }}>
+          Precisão: <b style={{ color: "var(--text)" }}>{accuracyPercentage}%</b>
+        </span>
       </div>
     </div>
   );

@@ -71,6 +71,20 @@ export function parseShowSlug(slug: string): {
 }
 
 
+// "S01E01"-style episode code for display.
+export function episodeCode(season?: number, episodeNumber?: number): string {
+  return `S${String(season ?? 0).padStart(2, "0")}E${String(
+    episodeNumber ?? 0
+  ).padStart(2, "0")}`;
+}
+
+// "s01e01"-style slug fragment used in episode routes.
+export function episodeSlugPart(season?: number, episodeNumber?: number): string {
+  return `s${String(season ?? 0).padStart(2, "0")}e${String(
+    episodeNumber ?? 0
+  ).padStart(2, "0")}`;
+}
+
 // Normalize show name for comparison and searching
 export function normalizeShowName(showName: string): string {
   return normalizePortugueseText(showName)

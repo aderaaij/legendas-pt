@@ -38,6 +38,41 @@ WHERE user_id = 'your-user-id-here';
 
 See `AUTHENTICATION_SETUP.md` for detailed authentication setup instructions.
 
+## Backups & Disaster Recovery
+
+All application data lives **only** in Supabase — there is no other persistence
+layer. The project has run on the Supabase free tier, where a project can be
+**paused/terminated after inactivity**; when that happens Supabase provides
+downloadable backups (a `db_cluster-*.backup.gz` SQL dump and a `*.storage.zip`).
+This happened once (June 2026) and the project was restored to a **new** project.
+
+To restore a `db_cluster` backup into a brand-new Supabase project:
+
+1. Create a fresh project (save the DB password; leave the public schema empty).
+2. Generate a clean, conflict-free restore file (do **not** run the raw cluster
+   dump — it recreates Supabase's managed roles/schemas and fails):
+   ```bash
+   gunzip -c ~/Downloads/db_cluster-*.backup.gz > db_cluster.sql
+   python3 scripts/restore-from-cluster-dump.py db_cluster.sql restore.sql
+   ```
+3. Load it with `psql` (the SQL editor can't stream `COPY`; install via
+   `brew install libpq`):
+   ```bash
+   psql "postgresql://postgres:[PW]@db.[NEW-REF].supabase.co:5432/postgres" \
+        -v ON_ERROR_STOP=1 -f restore.sql
+   ```
+4. Update `.env.local` with the new project's `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (use the **publishable**/anon key, never the
+   secret/service_role key), then restart `npm run dev`.
+
+What the generator handles (see the script header for details): keeps the whole
+`public` schema + data, preserves `auth.users`/`auth.identities` so existing
+logins and user-linked data (study progress, favorites) survive with the same
+UUIDs, drops `ALTER DEFAULT PRIVILEGES FOR ROLE` blocks (non-superuser `postgres`
+can't run them), and re-creates the `auth.users` signup trigger after `COMMIT`.
+The `*.storage.zip` backup only matters if Storage buckets were used (they were
+empty here — the app stores image URLs, not uploaded files).
+
 ## Architecture Overview
 
 ### Tech Stack
