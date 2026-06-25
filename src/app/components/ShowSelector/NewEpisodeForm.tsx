@@ -4,12 +4,15 @@ import { useState } from "react";
 import { Plus, Loader2, Edit3 } from "lucide-react";
 
 import { Show, Episode, PhraseExtractionService } from "@/lib/supabase";
+import { fieldInputStyle } from "@/app/components/ui/FormField";
 
 interface NewEpisodeFormProps {
   selectedShow: Show;
   onCreated: (episode: Episode) => void;
   onCancel: () => void;
 }
+
+const fieldClassName = "w-full px-3 py-2 text-sm rounded focus:outline-none";
 
 /** Inline form to manually create a new episode for the selected show. */
 export default function NewEpisodeForm({
@@ -59,14 +62,25 @@ export default function NewEpisodeForm({
   };
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+    <div
+      className="rounded-lg p-4 space-y-3"
+      style={{
+        background: "rgba(91,140,255,.08)",
+        border: "1px solid rgba(91,140,255,.25)",
+      }}
+    >
       <div className="flex items-center gap-2">
-        <Edit3 className="w-4 h-4 text-blue-600" />
-        <h4 className="text-sm font-medium text-blue-900">Add New Episode</h4>
+        <Edit3 className="w-4 h-4" style={{ color: "var(--blue)" }} />
+        <h4 className="text-sm font-medium" style={{ color: "var(--blue)" }}>
+          Add New Episode
+        </h4>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "var(--muted)" }}
+          >
             Season
           </label>
           <input
@@ -76,12 +90,16 @@ export default function NewEpisodeForm({
             onChange={(e) =>
               setNewEpisodeData((prev) => ({ ...prev, season: e.target.value }))
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={fieldClassName}
+            style={fieldInputStyle}
             placeholder="1"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "var(--muted)" }}
+          >
             Episode
           </label>
           <input
@@ -94,13 +112,17 @@ export default function NewEpisodeForm({
                 episodeNumber: e.target.value,
               }))
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={fieldClassName}
+            style={fieldInputStyle}
             placeholder="1"
           />
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label
+          className="block text-xs font-medium mb-1"
+          style={{ color: "var(--muted)" }}
+        >
           Title (optional)
         </label>
         <input
@@ -109,7 +131,8 @@ export default function NewEpisodeForm({
           onChange={(e) =>
             setNewEpisodeData((prev) => ({ ...prev, title: e.target.value }))
           }
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={fieldClassName}
+          style={fieldInputStyle}
           placeholder="Episode title"
         />
       </div>
@@ -121,7 +144,8 @@ export default function NewEpisodeForm({
             !newEpisodeData.season ||
             !newEpisodeData.episodeNumber
           }
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 py-2 text-sm rounded transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: "var(--blue)", color: "#04122e" }}
         >
           {isCreatingEpisode ? (
             <>
@@ -138,7 +162,12 @@ export default function NewEpisodeForm({
         <button
           onClick={onCancel}
           disabled={isCreatingEpisode}
-          className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 disabled:opacity-50"
+          className="px-3 py-2 text-sm rounded transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{
+            background: "var(--surface2)",
+            border: "1px solid var(--border2)",
+            color: "var(--text)",
+          }}
         >
           Cancel
         </button>
