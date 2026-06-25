@@ -5,8 +5,12 @@ import { UserFavorite } from '@/types/auth'
 
 export function useFavorites() {
   const { user, isAuthenticated } = useAuth()
-  const [favorites, setFavorites] = useState<UserFavorite[]>([])
+  const [storedFavorites, setStoredFavorites] = useState<UserFavorite[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Favorites belong to the signed-in user; derive the empty list when logged
+  // out instead of clearing state synchronously in an effect.
+  const favorites = isAuthenticated && user ? storedFavorites : []
 
   const fetchFavorites = useCallback(async () => {
     if (!user) return
@@ -24,7 +28,7 @@ export function useFavorites() {
         return
       }
 
-      setFavorites(data || [])
+      setStoredFavorites(data || [])
     } catch (error) {
       console.error('Error in fetchFavorites:', error)
     } finally {
@@ -33,11 +37,11 @@ export function useFavorites() {
   }, [user])
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchFavorites()
-    } else {
-      setFavorites([])
-    }
+    if (!isAuthenticated || !user) return
+
+    ;(async () => {
+      await fetchFavorites()
+    })()
   }, [isAuthenticated, user, fetchFavorites])
 
   const addToFavorites = async (phraseId: string) => {
@@ -58,7 +62,7 @@ export function useFavorites() {
         return { error }
       }
 
-      setFavorites(prev => [data, ...prev])
+      setStoredFavorites(prev => [data, ...prev])
       return { data, error: null }
     } catch (error) {
       console.error('Error in addToFavorites:', error)
@@ -81,7 +85,7 @@ export function useFavorites() {
         return { error }
       }
 
-      setFavorites(prev => prev.filter(fav => fav.phrase_id !== phraseId))
+      setStoredFavorites(prev => prev.filter(fav => fav.phrase_id !== phraseId))
       return { error: null }
     } catch (error) {
       console.error('Error in removeFromFavorites:', error)

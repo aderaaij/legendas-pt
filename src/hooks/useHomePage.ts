@@ -47,7 +47,32 @@ export function useHomePage(
   };
 
   useEffect(() => {
-    loadShows();
+    // Skip the client fetch when the server already provided shows.
+    if (initialShows.length > 0) return;
+
+    let active = true;
+    (async () => {
+      try {
+        const libraryShows = await PhraseExtractionService.getLibraryShows();
+        if (active) setShows(libraryShows);
+      } catch (err) {
+        if (active) {
+          setError(
+            `Failed to load shows: ${
+              err instanceof Error ? err.message : "Unknown error"
+            }`
+          );
+          console.error("Error loading shows:", err);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Compute stats from shows data (use initial stats if provided)

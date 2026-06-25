@@ -167,7 +167,9 @@ export function useEpisodeEdit() {
   }, [series, episode]);
 
   useEffect(() => {
-    loadEpisodeData();
+    (async () => {
+      await loadEpisodeData();
+    })();
   }, [loadEpisodeData]);
 
   const handleEditExtraction = (

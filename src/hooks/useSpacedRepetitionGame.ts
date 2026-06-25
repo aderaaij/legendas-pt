@@ -69,7 +69,9 @@ export function useSpacedRepetitionGame({
   }, [episodeId, studyDirection, isAuthenticated, user]);
 
   useEffect(() => {
-    initializeGame();
+    (async () => {
+      await initializeGame();
+    })();
   }, [initializeGame]);
 
   const handleFlip = useCallback(() => {

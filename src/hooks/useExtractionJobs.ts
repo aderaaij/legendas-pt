@@ -119,7 +119,9 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
 
   // Initial load
   useEffect(() => {
-    refreshJobs();
+    (async () => {
+      await refreshJobs();
+    })();
   }, [refreshJobs]);
 
   return {
@@ -176,7 +178,9 @@ export function useExtractionJob(jobId: string | null) {
 
   // Initial load
   useEffect(() => {
-    refreshJob();
+    (async () => {
+      await refreshJob();
+    })();
   }, [refreshJob]);
 
   return {

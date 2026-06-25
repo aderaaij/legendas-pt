@@ -111,8 +111,9 @@ export function usePhraseEditor({
   }, [extractionId]);
 
   useEffect(() => {
-    loadPhrases();
-    loadMetadata();
+    (async () => {
+      await Promise.all([loadPhrases(), loadMetadata()]);
+    })();
   }, [extractionId, loadPhrases, loadMetadata]);
 
   const startEditing = (phraseId: string) => {

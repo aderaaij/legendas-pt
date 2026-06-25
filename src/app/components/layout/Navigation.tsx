@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Upload } from "lucide-react";
 
@@ -10,31 +10,41 @@ import { UserDropdown } from "../common/UserDropdown";
 
 type Theme = "noir" | "warm";
 
+// The inline script in the layout sets data-theme before paint; read it from
+// the DOM via an external store so the toggle label stays in sync without an
+// effect (and without a hydration mismatch — the server snapshot is "noir").
+function subscribeTheme(callback: () => void) {
+  window.addEventListener("themechange", callback);
+  return () => window.removeEventListener("themechange", callback);
+}
+function getThemeSnapshot(): Theme {
+  return (document.documentElement.getAttribute("data-theme") as Theme) || "noir";
+}
+function getThemeServerSnapshot(): Theme {
+  return "noir";
+}
+
 export function Navigation() {
   const { user, isAdmin, isAuthenticated, signOut } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "signup">(
     "login"
   );
-  const [theme, setTheme] = useState<Theme>("noir");
-
-  // The inline script in the layout sets data-theme before paint; mirror it
-  // into state so the toggle label stays in sync.
-  useEffect(() => {
-    const current =
-      (document.documentElement.getAttribute("data-theme") as Theme) || "noir";
-    setTheme(current);
-  }, []);
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    getThemeServerSnapshot
+  );
 
   const toggleTheme = () => {
     const next: Theme = theme === "noir" ? "warm" : "noir";
-    setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     try {
       localStorage.setItem("cena-theme", next);
     } catch {
       /* ignore storage failures (private mode) */
     }
+    window.dispatchEvent(new Event("themechange"));
   };
 
   const openAuthModal = (mode: "login" | "signup") => {

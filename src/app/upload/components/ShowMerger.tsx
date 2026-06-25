@@ -34,7 +34,9 @@ export default function ShowMerger() {
   }, []);
 
   useEffect(() => {
-    loadDuplicateShows();
+    (async () => {
+      await loadDuplicateShows();
+    })();
   }, [loadDuplicateShows]);
 
   const handleMerge = async (
