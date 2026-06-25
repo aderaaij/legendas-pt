@@ -186,6 +186,11 @@ function extractEpisodes(html, seriesId, seriesSlug) {
   return episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
 }
 
+const extractLastId = (html) => {
+  const matches = [...html.matchAll(/last_id[^>]*>(\d+)</g)];
+  return matches.length ? matches[matches.length - 1][1] : null;
+};
+
 async function scrapeSeries(seriesUrl) {
   const response = await fetch(seriesUrl);
   if (!response.ok) throw new Error(`Failed to fetch series page: ${response.statusText}`);
@@ -194,7 +199,44 @@ async function scrapeSeries(seriesUrl) {
   if (!m) throw new Error("Invalid RTP series URL format");
   const titleMatch = html.match(/<title>([^<]+)<\/title>/);
   const title = titleMatch ? titleMatch[1].replace(" - RTP Play", "").trim() : "Unknown Series";
-  return { id: m[1], title, episodes: extractEpisodes(html, m[1], m[2]) };
+
+  const episodes = extractEpisodes(html, m[1], m[2]);
+  const seen = new Set(episodes.map((ep) => ep.id));
+
+  // RTP renders only the first page of episodes; page the rest via
+  // GET /play/bg_l_ep/ using a `stamp` cursor (last_id) + the NUMERIC program id.
+  const numericProgramId = m[1].replace(/^p/, "");
+  let stamp = extractLastId(html);
+  for (let page = 2; stamp && page <= 50; page++) {
+    let fragment;
+    try {
+      const params = new URLSearchParams({
+        stamp,
+        listProgram: numericProgramId,
+        page: String(page),
+        type: "all",
+      });
+      const res = await fetch(`${BASE_URL}/play/bg_l_ep/?${params.toString()}`, {
+        headers: { Referer: seriesUrl },
+      });
+      if (!res.ok) break;
+      fragment = await res.text();
+    } catch {
+      break;
+    }
+    const more = extractEpisodes(fragment, m[1], m[2]).filter((ep) => !seen.has(ep.id));
+    if (more.length === 0) break;
+    for (const ep of more) {
+      seen.add(ep.id);
+      episodes.push(ep);
+    }
+    const nextStamp = extractLastId(fragment);
+    if (!nextStamp || nextStamp === stamp) break;
+    stamp = nextStamp;
+  }
+
+  episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
+  return { id: m[1], title, episodes };
 }
 
 async function scrapeEpisodeSubtitle(episode) {

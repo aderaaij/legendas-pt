@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       forceReExtraction = false,
       selectedEpisodes = null,
       selectedShowId = null,
+      season: seasonOverride = null,
     } = await request.json();
 
     // Get the authorization header
@@ -102,6 +103,12 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Season for every episode in this import: explicit override wins, else the
+    // season parsed from the RTP series title (e.g. "…, temporada 2"), else 1.
+    // RTP episode titles don't carry the season, so we resolve it once here
+    // rather than per-episode.
+    const resolvedSeason: number = seasonOverride ?? series.season ?? 1;
 
     // Filter episodes based on selection first to get accurate count
     const episodesToProcess = selectedEpisodes && Array.isArray(selectedEpisodes) 
@@ -250,10 +257,8 @@ export async function POST(request: NextRequest) {
         // Create episode in database if needed
         let episodeId: string | null = null;
         if (saveToDatabase && showId) {
-          // Parse season from episode title if available, otherwise default to 1
-          const seasonMatch = episode.title.match(/[Ss](?:eason|érie)?\s*(\d+)/);
-          const season = seasonMatch ? parseInt(seasonMatch[1]) : 1;
-          
+          const season = resolvedSeason;
+
           console.log(`Creating/finding episode: Show=${showId}, Season=${season}, Episode=${episode.episodeNumber}, Title="${episode.title}", RTP_ID=${episode.id}`);
           
           // First try to find existing episode by RTP episode ID (more precise)
