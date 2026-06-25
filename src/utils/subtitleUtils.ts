@@ -1,4 +1,4 @@
-import { PhraseItem } from "@/app/components/AnkiExporter";
+import { PhraseItem } from "@/types/phrase";
 
 export interface SubtitleBlock {
   text: string;

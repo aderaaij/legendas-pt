@@ -3,7 +3,7 @@ import { PhraseExtractionService } from "../lib/supabase";
 import {
   generateContentHash,
   parseShowInfo,
-} from "../utils/extractPhrasesUitls";
+} from "../utils/extractPhrasesUtils";
 
 import { callPhraseExtractionAPI } from "@/utils/phraseExtractionApi";
 import { ExtractionSettings } from "@/app/upload/components/PhraseExtractor";
@@ -12,7 +12,7 @@ import {
   cleanSubtitleContent,
   createFallbackPhrases,
 } from "@/utils/subtitleUtils";
-import { PhraseItem } from "@/app/components/AnkiExporter";
+import { PhraseItem } from "@/types/phrase";
 
 interface UsePhraseExtractionProps {
   settings: ExtractionSettings;

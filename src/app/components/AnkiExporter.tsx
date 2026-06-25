@@ -2,11 +2,7 @@
 
 import { Download, FileDown, X } from "lucide-react";
 
-export interface PhraseItem {
-  phrase: string;
-  translation: string;
-  frequency?: number;
-}
+import { PhraseItem } from "@/types/phrase";
 
 interface AnkiExporterProps {
   phrases: PhraseItem[];
