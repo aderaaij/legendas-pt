@@ -203,11 +203,18 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 
 ### Directories
 - `/src/app/` - Next.js App Router pages and layouts
-- `/src/app/components/` - Reusable UI components
+- `/src/app/components/` - Reusable UI components, grouped by intent: `layout/`,
+  `home/`, `study/`, `phrase/`, `common/`, and `ui/` (shared primitives:
+  ModalBase, FormField, StatCard). Large components are folders with an
+  `index.tsx` orchestrator + a `use*` hook + small presentational parts.
 - `/src/contexts/` - React contexts (AuthContext for authentication state)
 - `/src/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction, useAuth, useFavorites)
-- `/src/lib/` - Service layer (supabase.ts, tvdb.ts)
-- `/src/types/` - TypeScript type definitions (auth.ts)
+- `/src/lib/` - Service layer. `supabase.ts` is a thin barrel: it exports the
+  client, re-exports DB types, and assembles the `PhraseExtractionService` facade
+  from per-domain modules in `/src/lib/db/*` (shows, episodes, extractions,
+  phrases, extraction-jobs, stats, dedup). Also `tvdb.ts`, `rtp-scraper.ts`,
+  `study-service.ts`.
+- `/src/types/` - TypeScript type definitions (auth.ts, database.ts, phrase.ts)
 - `/src/utils/` - Utility functions for content processing and API interactions
 
 ## Code instructions
