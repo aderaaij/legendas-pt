@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Show, Episode, PhraseExtractionService } from "@/lib/supabase";
+import { Show, PhraseExtractionService } from "@/lib/supabase";
 import TVDBService, { TVDBSearchResult } from "@/lib/tvdb";
+import { useEpisodeSelection } from "@/hooks/useEpisodeSelection";
 
 export function useShowSelector() {
   const [searchQuery, setSearchQueryState] = useState("");
@@ -8,8 +9,6 @@ export function useShowSelector() {
   const [isSearchingTVDB, setIsSearchingTVDB] = useState(false);
   const [tvdbResults, setTvdbResults] = useState<TVDBSearchResult[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(false);
   const [isCreatingShow, setIsCreatingShow] = useState(false);
   const [error, setError] = useState<string>("");
   const [showsWithExtractions, setShowsWithExtractions] = useState<Set<string>>(
@@ -19,6 +18,15 @@ export function useShowSelector() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
     null
   );
+
+  const {
+    episodes,
+    isLoadingEpisodes,
+    loadEpisodes,
+    loadEpisodesForNewShow,
+    refreshEpisodes: refreshShowEpisodes,
+    clearEpisodes,
+  } = useEpisodeSelection(setError);
 
   // Load existing shows on mount
   useEffect(() => {
@@ -87,44 +95,14 @@ export function useShowSelector() {
   }, [searchQuery]);
 
   // Handle selecting an existing show
-  const handleSelectExistingShow = useCallback(async (show: Show) => {
-    setSelectedShow(show);
-    setIsLoadingEpisodes(true);
-    setError("");
-
-    try {
-      if (show.tvdb_id) {
-        // Always fetch fresh episode data from TVDB for shows with TVDB ID
-        const episodeList =
-          await PhraseExtractionService.fetchAndSaveEpisodesFromTVDB(show);
-        setEpisodes(episodeList);
-      } else {
-        // Fallback to database episodes for shows without TVDB ID
-        const episodeList = await PhraseExtractionService.getEpisodesForShow(
-          show.id
-        );
-        setEpisodes(episodeList);
-      }
-    } catch (err) {
-      // If TVDB fetch fails, try to get episodes from database as fallback
-      try {
-        const episodeList = await PhraseExtractionService.getEpisodesForShow(
-          show.id
-        );
-        setEpisodes(episodeList);
-        if (episodeList.length === 0) {
-          setError("No episodes found for this show");
-        }
-      } catch {
-        setError(
-          err instanceof Error ? err.message : "Failed to load episodes"
-        );
-        setEpisodes([]);
-      }
-    } finally {
-      setIsLoadingEpisodes(false);
-    }
-  }, []);
+  const handleSelectExistingShow = useCallback(
+    async (show: Show) => {
+      setSelectedShow(show);
+      setError("");
+      await loadEpisodes(show);
+    },
+    [loadEpisodes]
+  );
 
   // Handle creating a new show from TVDB result
   const handleCreateShowFromTVDB = useCallback(
@@ -154,47 +132,21 @@ export function useShowSelector() {
         setTvdbResults([]);
 
         // Immediately fetch and load episodes from TVDB for the new show
-        setIsLoadingEpisodes(true);
-        try {
-          const episodeList =
-            await PhraseExtractionService.fetchAndSaveEpisodesFromTVDB(newShow);
-          setEpisodes(episodeList);
-        } catch (episodeError) {
-          console.error("Failed to load episodes for new show:", episodeError);
-          setEpisodes([]);
-        } finally {
-          setIsLoadingEpisodes(false);
-        }
+        await loadEpisodesForNewShow(newShow);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create show");
       } finally {
         setIsCreatingShow(false);
       }
     },
-    []
+    [loadEpisodesForNewShow]
   );
 
-  // Refresh episodes from TVDB
-  const refreshEpisodes = useCallback(async () => {
-    if (!selectedShow || !selectedShow.tvdb_id) return;
-
-    setIsLoadingEpisodes(true);
-    setError("");
-
-    try {
-      const episodeList =
-        await PhraseExtractionService.fetchAndSaveEpisodesFromTVDB(
-          selectedShow
-        );
-      setEpisodes(episodeList);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to refresh episodes"
-      );
-    } finally {
-      setIsLoadingEpisodes(false);
-    }
-  }, [selectedShow]);
+  // Refresh episodes from TVDB for the selected show
+  const refreshEpisodes = useCallback(
+    () => refreshShowEpisodes(selectedShow),
+    [refreshShowEpisodes, selectedShow]
+  );
 
   // Handle show deletion
   const handleDeleteShow = useCallback(
@@ -217,7 +169,7 @@ export function useShowSelector() {
           // Clear selection if this show was selected
           if (selectedShow?.id === show.id) {
             setSelectedShow(null);
-            setEpisodes([]);
+            clearEpisodes();
           }
         } else {
           setError(result.message);
@@ -229,7 +181,7 @@ export function useShowSelector() {
         setShowDeleteConfirm(null);
       }
     },
-    [selectedShow]
+    [selectedShow, clearEpisodes]
   );
 
   const clearError = useCallback(() => setError(""), []);
