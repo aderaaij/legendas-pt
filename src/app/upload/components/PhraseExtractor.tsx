@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Play, Settings } from "lucide-react";
-import { usePhraseExtraction } from "@/hooks/usePhraseExtraction";
+import { usePhraseExtraction } from "./usePhraseExtraction";
 import { SubtitleMetadata } from "../page";
 import { parseShowInfo } from "@/utils/extractPhrasesUtils";
 

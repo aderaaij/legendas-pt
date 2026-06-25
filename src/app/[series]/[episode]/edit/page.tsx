@@ -5,7 +5,7 @@ import Link from "next/link";
 import MetadataEditor from "@/app/components/phrase/MetadataEditor";
 import PhraseEditor from "@/app/components/phrase/PhraseEditor";
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
-import { useEpisodeEdit } from "@/hooks/useEpisodeEdit";
+import { useEpisodeEdit } from "./useEpisodeEdit";
 
 import EpisodeEditHeader from "./components/EpisodeEditHeader";
 import EpisodeSettingsCard from "./components/EpisodeSettingsCard";

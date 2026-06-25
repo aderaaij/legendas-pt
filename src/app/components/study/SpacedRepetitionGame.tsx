@@ -6,7 +6,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { StudyCard } from "./StudyCard";
 import { StudyProgressBar } from "./StudyProgressBar";
-import { useSpacedRepetitionGame } from "@/hooks/useSpacedRepetitionGame";
+import { useSpacedRepetitionGame } from "./useSpacedRepetitionGame";
 import { useFavorites } from "@/hooks/useFavorites";
 import { StudyDirection } from "@/types/spaced-repetition";
 

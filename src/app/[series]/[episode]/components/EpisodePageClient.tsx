@@ -9,7 +9,7 @@ import { episodeCode } from "@/utils/slugify";
 import AnkiExporter from "@/app/components/phrase/AnkiExporter";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
-import { useCardProgress } from "@/hooks/useCardProgress";
+import { useCardProgress } from "./useCardProgress";
 import { PhraseCard } from "@/app/components/phrase/PhraseCard";
 import {
   PhraseSortAndFilter,

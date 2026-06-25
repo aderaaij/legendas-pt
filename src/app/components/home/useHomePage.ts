@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PhraseExtractionService, LibraryShow } from "../lib/supabase";
+import { PhraseExtractionService, LibraryShow } from "@/lib/supabase";
 
 interface UseShowsReturn {
   shows: LibraryShow[];

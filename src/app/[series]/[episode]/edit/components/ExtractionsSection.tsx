@@ -2,7 +2,7 @@
 
 import { FileText } from "lucide-react";
 
-import type { EpisodeExtraction } from "@/hooks/useEpisodeEdit";
+import type { EpisodeExtraction } from "../useEpisodeEdit";
 
 import ExtractionRow from "./ExtractionRow";
 

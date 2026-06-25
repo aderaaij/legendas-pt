@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { SubtitleMetadata } from "../page";
-import { useSubtitleUploader } from "@/hooks/useSubtitleUploader";
+import { useSubtitleUploader } from "./useSubtitleUploader";
 import ShowSelector from "@/app/components/ShowSelector";
 
 interface SubtitleUploaderProps {

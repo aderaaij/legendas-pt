@@ -4,7 +4,7 @@ import { Trash2, Edit3, AlertTriangle, FileText } from "lucide-react";
 
 import { formatDate } from "@/utils/formatDate";
 
-import type { EpisodeExtraction } from "@/hooks/useEpisodeEdit";
+import type { EpisodeExtraction } from "../useEpisodeEdit";
 
 interface ExtractionRowProps {
   extraction: EpisodeExtraction;

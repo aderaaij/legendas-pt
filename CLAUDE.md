@@ -208,7 +208,13 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
   ModalBase, FormField, StatCard). Large components are folders with an
   `index.tsx` orchestrator + a `use*` hook + small presentational parts.
 - `/src/contexts/` - React contexts (AuthContext for authentication state)
-- `/src/hooks/` - Custom hooks for business logic (useHomePage, usePhraseExtraction, useAuth, useFavorites)
+- `/src/hooks/` - **Cross-cutting** custom hooks only — ones used by multiple
+  components across different domains (useAuth, useAuthedFetch, useFavorites,
+  useExtractionJobs). A hook bound to a single component is **colocated** next to
+  that component (e.g. `components/home/useHomePage.ts`,
+  `upload/components/usePhraseExtraction.ts`, `[series]/[episode]/edit/useEpisodeEdit.ts`),
+  matching the folder-component pattern where `index.tsx` sits beside its `use*` hook.
+  (useShowSelector/useEpisodeSelection stay here pending the ShowSelector reorg.)
 - `/src/lib/` - Service layer. `supabase.ts` is a thin barrel: it exports the
   client, re-exports DB types, and assembles the `PhraseExtractionService` facade
   from per-domain modules in `/src/lib/db/*` (shows, episodes, extractions,
