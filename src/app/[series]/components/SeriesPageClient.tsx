@@ -1,9 +1,8 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { Film } from "lucide-react";
 
 import { Show, Episode } from "@/lib/supabase";
-import Breadcrumb from "@/app/components/Breadcrumb";
 import { ShowInfoSection } from "./ShowInfoSection";
 import { SeriesEpisodeCard } from "./SeriesEpisodeCard";
 
@@ -23,56 +22,56 @@ export default function SeriesPageClient({
   show,
   episodes,
 }: SeriesPageClientProps) {
+  const sortedEpisodes = [...episodes].sort(
+    (a, b) =>
+      (a.season ?? 0) - (b.season ?? 0) ||
+      (a.episode_number ?? 0) - (b.episode_number ?? 0)
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Breadcrumb
-            items={[
-              { label: "Shows", href: "/" },
-              { label: show.name, isCurrentPage: true },
-            ]}
-            className="mb-6"
-          />
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
+      <ShowInfoSection show={show} episodes={episodes} />
 
-          {/* Show info section */}
-          <ShowInfoSection show={show} episodes={episodes} />
-        </div>
-
-        {/* Episodes Grid */}
-        {episodes.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">Episodes</h2>
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                {episodes.length} episodes
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {episodes.map((episode) => (
-                <SeriesEpisodeCard
-                  key={episode.id}
-                  episode={episode}
-                  show={show}
-                />
-              ))}
-            </div>
+      {episodes.length > 0 ? (
+        <section className="px-5 pb-[60px] pt-2 md:px-10">
+          <div className="mb-[22px] flex items-center gap-3">
+            <h2 className="text-[22px] font-extrabold tracking-[-0.01em]">Episódios</h2>
+            <span
+              className="rounded-full px-[11px] py-1 text-[12px] font-bold"
+              style={{
+                background: "var(--surface2)",
+                border: "1px solid var(--border)",
+                color: "var(--muted)",
+              }}
+            >
+              {episodes.length} {episodes.length === 1 ? "episódio" : "episódios"}
+            </span>
+            <div className="flex-1" />
+            <span className="hidden text-[12.5px] sm:block" style={{ color: "var(--faint)" }}>
+              Clica num episódio para ver as frases
+            </span>
           </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No Episodes Found
-            </h3>
-            <p className="text-gray-600">
-              This show doesn&apos;t have any episodes with extracted phrases
-              yet.
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {sortedEpisodes.map((episode) => (
+              <SeriesEpisodeCard key={episode.id} episode={episode} show={show} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="px-5 pb-[60px] md:px-10">
+          <div
+            className="rounded-2xl p-12 text-center"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            <Film className="mx-auto mb-4 h-16 w-16" style={{ color: "var(--faint)" }} />
+            <h3 className="mb-2 text-xl font-bold">Sem episódios</h3>
+            <p style={{ color: "var(--muted)" }}>
+              Esta série ainda não tem episódios com frases extraídas.
             </p>
           </div>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }

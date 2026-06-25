@@ -1,9 +1,14 @@
-import { Calendar, Play } from "lucide-react";
 import Link from "next/link";
+import { Calendar, Play } from "lucide-react";
 
-import { ClientDate } from "@/app/components/ClientDate";
-import { generateShowSlug } from "@/utils/slugify";
 import { Show } from "@/lib/supabase";
+import {
+  generateShowSlug,
+  episodeCode,
+  episodeSlugPart,
+} from "@/utils/slugify";
+import { formatDatePt } from "@/utils/formatDate";
+import { PosterArt } from "@/app/components/cena/PosterArt";
 import { EpisodeWithStats } from "./SeriesPageClient";
 
 interface SeriesEpisodeCardProps {
@@ -11,55 +16,59 @@ interface SeriesEpisodeCardProps {
   episode: EpisodeWithStats;
 }
 
-export const SeriesEpisodeCard = ({
-  show,
-  episode,
-}: SeriesEpisodeCardProps) => {
+export const SeriesEpisodeCard = ({ show, episode }: SeriesEpisodeCardProps) => {
+  const slug = generateShowSlug(show.name);
+  const code = episodeCode(episode.season, episode.episode_number);
+  const title = episode.title || `Episódio ${episode.episode_number ?? ""}`.trim();
+  const date = formatDatePt(episode.air_date || episode.lastExtraction);
+
   return (
     <Link
-      key={episode.id}
-      href={`/${generateShowSlug(show.name)}/s${episode.season
-        ?.toString()
-        .padStart(2, "0")}e${episode.episode_number
-        ?.toString()
-        .padStart(2, "0")}`}
-      className="bg-gray-50 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer border border-gray-200 hover:border-blue-300 block"
+      href={`/${slug}/${episodeSlugPart(episode.season, episode.episode_number)}`}
+      className="group block overflow-hidden rounded-[var(--radius-lg)] transition-all duration-200 hover:-translate-y-[3px]"
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 mb-2">
-            S{episode.season?.toString().padStart(2, "0")}E
-            {episode.episode_number?.toString().padStart(2, "0")}
-            {episode.title && `: ${episode.title}`}
-          </h3>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            {episode.lastExtraction && (
-              <span className="flex items-center space-x-1">
-                <Calendar className="w-3 h-3" />
-                <ClientDate dateString={episode.lastExtraction} />
-              </span>
-            )}
-          </div>
+      <div className="relative h-[108px]">
+        <PosterArt
+          name={show.name}
+          posterUrl={episode.episode_image || show.poster_url}
+          sizes="(max-width: 768px) 100vw, 320px"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.78))",
+          }}
+        />
+        <div className="font-display absolute left-[14px] top-[13px] text-[16px] tracking-[0.06em] text-white">
+          {code}
         </div>
-        <Play className="w-5 h-5 text-gray-400 hover:text-blue-600 transition-colors" />
+        <div
+          className="absolute right-3 top-3 grid h-[34px] w-[34px] place-items-center rounded-full opacity-95"
+          style={{
+            background: "var(--accent)",
+            boxShadow: "0 6px 16px -4px var(--accent)",
+          }}
+        >
+          <Play className="h-[14px] w-[14px] text-white" fill="currentColor" />
+        </div>
+        <div className="absolute inset-x-[14px] bottom-[11px] truncate text-[14.5px] font-bold text-white">
+          {title}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="text-center">
-          <div className="text-lg font-bold text-blue-600">
-            {episode.extractionCount}
-          </div>
-          <div className="text-xs text-gray-500">
-            {episode.extractionCount === 1 ? "Extraction" : "Extractions"}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-lg font-bold text-green-600">
-            {episode.totalPhrases}
-          </div>
-          <div className="text-xs text-gray-500">
-            {episode.totalPhrases === 1 ? "Phrase" : "Phrases"}
-          </div>
+      <div className="px-[15px] py-[13px]">
+        <div className="flex items-center justify-between">
+          <span
+            className="flex items-center gap-[6px] text-[11.5px]"
+            style={{ color: "var(--faint)" }}
+          >
+            <Calendar className="h-[13px] w-[13px]" />
+            {date}
+          </span>
+          <span className="text-[12px] font-extrabold" style={{ color: "var(--accent2)" }}>
+            {episode.totalPhrases} frases
+          </span>
         </div>
       </div>
     </Link>

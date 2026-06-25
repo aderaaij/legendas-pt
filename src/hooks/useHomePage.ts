@@ -1,23 +1,8 @@
 import { useState, useEffect } from "react";
-import { PhraseExtractionService } from "../lib/supabase";
-
-export interface ShowWithExtractions {
-  id: string;
-  name: string;
-  source: string;
-  extractionCount: number;
-  totalPhrases: number;
-  lastExtraction: string;
-  season?: number;
-  episodeNumber?: number;
-  network?: string;
-  rating?: number;
-  poster_url?: string;
-  tvdb_confidence?: number;
-}
+import { PhraseExtractionService, LibraryShow } from "../lib/supabase";
 
 interface UseShowsReturn {
-  shows: ShowWithExtractions[];
+  shows: LibraryShow[];
   loading: boolean;
   error: string;
   refetch: () => Promise<void>;
@@ -29,7 +14,7 @@ interface UseShowsReturn {
 }
 
 export function useHomePage(
-  initialShows: ShowWithExtractions[] = [],
+  initialShows: LibraryShow[] = [],
   initialStats?: {
     totalShows: number;
     totalExtractions: number;
@@ -37,7 +22,7 @@ export function useHomePage(
   },
   initialError?: string | null
 ): UseShowsReturn {
-  const [shows, setShows] = useState<ShowWithExtractions[]>(initialShows);
+  const [shows, setShows] = useState<LibraryShow[]>(initialShows);
   const [loading, setLoading] = useState(initialShows.length === 0);
   const [error, setError] = useState<string>(initialError || "");
 
@@ -46,10 +31,9 @@ export function useHomePage(
       setLoading(true);
       setError("");
 
-      const showsWithStats =
-        await PhraseExtractionService.getShowsWithExtractionStats();
+      const libraryShows = await PhraseExtractionService.getLibraryShows();
 
-      setShows(showsWithStats);
+      setShows(libraryShows);
     } catch (err) {
       setError(
         `Failed to load shows: ${

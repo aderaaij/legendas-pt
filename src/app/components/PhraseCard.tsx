@@ -1,7 +1,5 @@
 import { ExtractedPhrase } from "@/lib/supabase";
 import { FavoriteButton } from "./FavoriteButton";
-import { PhraseProgressBar } from "./PhraseProgressBar";
-import { formatTimestampRange } from "@/utils/timeUtils";
 
 interface PhraseCardProps {
   phrase: ExtractedPhrase;
@@ -11,133 +9,130 @@ interface PhraseCardProps {
   isFavorite: boolean;
   onToggleFavorite: (phraseId: string) => Promise<void>;
   progressPercentage?: number;
-  learningState?: 'New' | 'Learning' | 'Review' | 'Relearning';
+  learningState?: "New" | "Learning" | "Review" | "Relearning";
   isLearned?: boolean;
   showProgress?: boolean;
-  viewMode?: 'grid' | 'list';
+  viewMode?: "grid" | "list";
   showTimestamp?: boolean;
 }
 
-export const PhraseCard = ({ 
-  phrase, 
-  isSelected = false, 
-  onToggleSelection, 
+function stateMeta(
+  state: PhraseCardProps["learningState"],
+  isLearned: boolean
+): { label: string; color: string } {
+  if (isLearned) return { label: "Dominada", color: "var(--green)" };
+  switch (state) {
+    case "Learning":
+      return { label: "A aprender", color: "var(--amber)" };
+    case "Review":
+      return { label: "Revisão", color: "var(--green)" };
+    case "Relearning":
+      return { label: "Reaprender", color: "var(--accent2)" };
+    case "New":
+    default:
+      return { label: "Nova", color: "var(--blue)" };
+  }
+}
+
+export const PhraseCard = ({
+  phrase,
+  isSelected = false,
+  onToggleSelection,
   showSelection = false,
   isFavorite,
   onToggleFavorite,
   progressPercentage = 0,
-  learningState = 'New',
+  learningState = "New",
   isLearned = false,
   showProgress = false,
-  viewMode = 'grid',
-  showTimestamp = true
+  viewMode = "grid",
 }: PhraseCardProps) => {
-  const isListView = viewMode === 'list';
-  
+  const { label, color } = stateMeta(learningState, isLearned);
+  const pct = Math.round(progressPercentage);
+  const isListView = viewMode === "list";
+
+  const selectionBox = showSelection ? (
+    <input
+      type="checkbox"
+      checked={isSelected}
+      onChange={() => onToggleSelection?.(phrase.id)}
+      className="mt-1 h-4 w-4 shrink-0 accent-[var(--accent)]"
+    />
+  ) : null;
+
   if (isListView) {
     return (
-      <div className={`border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all bg-gray-50 ${
-        isSelected && showSelection ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-      }`}>
-        <div className="flex items-start gap-4">
-          {showSelection && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => onToggleSelection?.(phrase.id)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            </div>
-          )}
-          
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
-            <div className="space-y-1">
-              <div className="font-semibold text-gray-800 break-words">{phrase.phrase}</div>
-              {showTimestamp && (phrase.start_time || phrase.end_time) && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="bg-gray-200 px-2 py-1 rounded text-gray-700">
-                    ⏱️ {formatTimestampRange(phrase.start_time, phrase.end_time)}
-                  </span>
-                  {phrase.speaker && (
-                    <span className="bg-blue-100 px-2 py-1 rounded text-blue-700">
-                      🎭 {phrase.speaker}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="text-gray-600 break-words">{phrase.translation}</div>
+      <div
+        className="flex items-start gap-4 rounded-[var(--radius)] p-4"
+        style={{
+          background: "var(--surface)",
+          border: `1px solid ${isSelected && showSelection ? "var(--accent)" : "var(--border)"}`,
+        }}
+      >
+        {selectionBox}
+        <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-2">
+          <div className="text-[15px] font-bold leading-snug" style={{ color: "var(--text)" }}>
+            {phrase.phrase}
           </div>
-          
-          <div className="flex items-center gap-2">
-            <FavoriteButton 
-              phraseId={phrase.id} 
-              isFavorite={isFavorite}
-              onToggleFavorite={onToggleFavorite}
-            />
+          <div className="text-[13.5px] leading-snug" style={{ color: "var(--muted)" }}>
+            {phrase.translation}
           </div>
         </div>
-        
-        {showProgress && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <PhraseProgressBar
-              progressPercentage={progressPercentage}
-              state={learningState}
-              isLearned={isLearned}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Grid view (original layout)
-  return (
-    <div className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all bg-gray-50 flex flex-col h-full ${
-      isSelected && showSelection ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-    }`}>
-      <div className="flex items-start gap-3 flex-1">
-        {showSelection && (
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onToggleSelection?.(phrase.id)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-            />
-          </div>
-        )}
-        <div className="flex flex-col flex-1 min-h-0">
-          <div className="font-semibold text-gray-800 mb-2">{phrase.phrase}</div>
-          {showTimestamp && (phrase.start_time || phrase.end_time) && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <span className="bg-gray-200 px-2 py-1 rounded text-gray-700">
-                ⏱️ {formatTimestampRange(phrase.start_time, phrase.end_time)}
-              </span>
-              {phrase.speaker && (
-                <span className="bg-blue-100 px-2 py-1 rounded text-blue-700">
-                  🎭 {phrase.speaker}
-                </span>
-              )}
-            </div>
-          )}
-          <div className="text-sm text-gray-600 mb-3 flex-1">{phrase.translation}</div>
-          {showProgress && (
-            <PhraseProgressBar
-              progressPercentage={progressPercentage}
-              state={learningState}
-              isLearned={isLearned}
-              className="mt-auto"
-            />
-          )}
-        </div>
-        <FavoriteButton 
-          phraseId={phrase.id} 
+        <FavoriteButton
+          phraseId={phrase.id}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite}
         />
       </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex h-full flex-col rounded-[var(--radius-lg)] p-[18px] transition-all duration-200 hover:-translate-y-[2px]"
+      style={{
+        background: "var(--surface)",
+        border: `1px solid ${isSelected && showSelection ? "var(--accent)" : "var(--border)"}`,
+      }}
+    >
+      <div className="mb-[9px] flex justify-between gap-3">
+        <div className="flex items-start gap-3">
+          {selectionBox}
+          <div className="text-[15px] font-bold leading-[1.4]" style={{ color: "var(--text)" }}>
+            {phrase.phrase}
+          </div>
+        </div>
+        <div className="shrink-0">
+          <FavoriteButton
+            phraseId={phrase.id}
+            size={17}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+          />
+        </div>
+      </div>
+
+      <div className="mb-4 flex-1 text-[13.5px] leading-[1.45]" style={{ color: "var(--muted)" }}>
+        {phrase.translation}
+      </div>
+
+      {showProgress && (
+        <>
+          <div
+            className="mb-[9px] h-[5px] overflow-hidden rounded-full"
+            style={{ background: "rgba(255,255,255,.09)" }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${Math.max(pct, 6)}%`, background: color }}
+            />
+          </div>
+          <div className="flex justify-between text-[11.5px] font-bold">
+            <span style={{ color }}>{label}</span>
+            <span style={{ color: "var(--muted)" }}>{pct}%</span>
+          </div>
+        </>
+      )}
     </div>
   );
 };

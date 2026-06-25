@@ -214,32 +214,34 @@ export default function DuplicatePhraseManager({
             <Dialog.Portal>
               <Dialog.Overlay asChild>
                 <motion.div
-                  className="fixed inset-0 bg-black z-50"
+                  className="fixed inset-0 z-50"
+                  style={{ background: "rgba(4,4,6,.72)", backdropFilter: "blur(4px)" }}
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 />
               </Dialog.Overlay>
               <Dialog.Content asChild>
                 <motion.div
-                  className="fixed top-1/2 left-1/2 bg-white rounded-xl shadow-xl max-w-md w-full p-6 z-50"
+                  className="fixed top-1/2 left-1/2 rounded-xl max-w-md w-full p-6 z-50"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border2)" }}
                   initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
                   animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                   exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
                   transition={{ duration: 0.2 }}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <Dialog.Title className="text-xl font-bold text-gray-900">
+                    <Dialog.Title className="text-xl font-bold" style={{ color: "var(--text)" }}>
                       No Duplicates Found
                     </Dialog.Title>
-                    <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <Dialog.Close className="p-2 transition-colors" style={{ color: "var(--faint)" }}>
                       <X className="w-5 h-5" />
                     </Dialog.Close>
                   </div>
                   <div className="text-center py-8">
-                    <Check className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                    <p className="text-gray-600">
+                    <Check className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--green)" }} />
+                    <p style={{ color: "var(--muted)" }}>
                       Great! No duplicate phrases were found in this extraction.
                     </p>
                   </div>
@@ -259,44 +261,46 @@ export default function DuplicatePhraseManager({
           <Dialog.Portal>
             <Dialog.Overlay asChild>
               <motion.div
-                className="fixed inset-0 bg-black z-50"
+                className="fixed inset-0 z-50"
+                style={{ background: "rgba(4,4,6,.72)", backdropFilter: "blur(4px)" }}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               />
             </Dialog.Overlay>
             <Dialog.Content asChild>
               <motion.div
-                className="fixed top-1/2 left-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden z-50 m-4"
+                className="fixed top-1/2 left-1/2 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden z-50 m-4"
+                style={{ background: "var(--surface)", border: "1px solid var(--border2)" }}
                 initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
                 animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                 exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="p-6 border-b border-gray-200">
+                <div className="p-6" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <Dialog.Title className="text-2xl font-bold text-gray-900">
+                      <Dialog.Title className="text-2xl font-bold" style={{ color: "var(--text)" }}>
                         Manage Duplicate Phrases
                       </Dialog.Title>
-                      <p className="text-gray-600 mt-1">
+                      <p className="mt-1" style={{ color: "var(--muted)" }}>
                         Found {duplicateGroups.length} groups with{" "}
                         {totalDuplicates} duplicate phrases
                       </p>
                     </div>
-                    <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <Dialog.Close className="p-2 transition-colors" style={{ color: "var(--faint)" }}>
                       <X className="w-5 h-5" />
                     </Dialog.Close>
                   </div>
 
                   {/* Bulk Actions */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="rounded-lg p-4" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-blue-900">
+                      <h3 className="font-semibold" style={{ color: "var(--text)" }}>
                         Bulk Actions
                       </h3>
-                      <div className="text-sm text-blue-700">
+                      <div className="text-sm" style={{ color: "var(--muted)" }}>
                         {selectedGroups.size} of {duplicateGroups.length} groups
                         selected
                       </div>
@@ -309,7 +313,8 @@ export default function DuplicatePhraseManager({
                             ? deselectAllGroups
                             : selectAllGroups
                         }
-                        className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors"
+                        style={{ background: "var(--blue)", color: "#04122e" }}
                       >
                         {selectedGroups.size === duplicateGroups.length ? (
                           <>
@@ -326,7 +331,8 @@ export default function DuplicatePhraseManager({
 
                       <button
                         onClick={autoSelectBestOptions}
-                        className="flex items-center space-x-1 bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1 rounded text-sm transition-colors"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }}
                       >
                         <Zap className="w-3 h-3" />
                         <span>Auto-Select Best</span>
@@ -336,7 +342,8 @@ export default function DuplicatePhraseManager({
                         <button
                           onClick={handleBulkMerge}
                           disabled={bulkMerging}
-                          className="flex items-center space-x-1 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                          className="flex items-center space-x-1 px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                          style={{ background: "var(--green)", color: "#04210f" }}
                         >
                           <Merge className="w-3 h-3" />
                           <span>
@@ -350,10 +357,10 @@ export default function DuplicatePhraseManager({
                   </div>
 
                   {error && (
-                    <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="mt-4 rounded-lg p-3" style={{ background: "rgba(229,9,20,.12)", border: "1px solid rgba(229,9,20,.25)" }}>
                       <div className="flex items-center space-x-2">
-                        <AlertCircle className="w-4 h-4 text-red-600" />
-                        <p className="text-red-600 text-sm">{error}</p>
+                        <AlertCircle className="w-4 h-4" style={{ color: "var(--accent2)" }} />
+                        <p className="text-sm" style={{ color: "var(--accent2)" }}>{error}</p>
                       </div>
                     </div>
                   )}
@@ -373,14 +380,16 @@ export default function DuplicatePhraseManager({
                       return (
                         <div
                           key={group.normalizedPhrase}
-                          className="border border-gray-200 rounded-lg"
+                          className="rounded-lg"
+                          style={{ border: "1px solid var(--border)" }}
                         >
                           <div
-                            className={`p-4 ${
-                              isGroupSelected
-                                ? "bg-blue-50 border-blue-200"
-                                : "bg-gray-50"
-                            }`}
+                            className="p-4"
+                            style={{
+                              background: isGroupSelected
+                                ? "rgba(91,140,255,.12)"
+                                : "var(--surface2)",
+                            }}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
@@ -388,29 +397,30 @@ export default function DuplicatePhraseManager({
                                   onClick={() =>
                                     toggleGroupSelection(group.normalizedPhrase)
                                   }
-                                  className={`flex items-center justify-center w-5 h-5 border-2 rounded transition-colors ${
-                                    isGroupSelected
-                                      ? "bg-blue-600 border-blue-600 text-white"
-                                      : "border-gray-300 hover:border-blue-400"
-                                  }`}
+                                  className="flex items-center justify-center w-5 h-5 rounded transition-colors"
+                                  style={{
+                                    background: isGroupSelected ? "var(--accent)" : "transparent",
+                                    border: `2px solid ${isGroupSelected ? "var(--accent)" : "var(--border2)"}`,
+                                    color: "#fff",
+                                  }}
                                 >
                                   {isGroupSelected && (
                                     <CheckSquare className="w-3 h-3" />
                                   )}
                                 </button>
                                 <div>
-                                  <h3 className="font-semibold text-gray-900">
+                                  <h3 className="font-semibold" style={{ color: "var(--text)" }}>
                                     Similar to: &quot;{group.normalizedPhrase}
                                     &quot;
                                   </h3>
-                                  <p className="text-sm text-gray-600">
+                                  <p className="text-sm" style={{ color: "var(--muted)" }}>
                                     {group.phrases.length} variations found
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
                                 {selected && (
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ background: "rgba(61,220,132,.15)", color: "var(--green)" }}>
                                     Ready to merge
                                   </span>
                                 )}
@@ -420,7 +430,8 @@ export default function DuplicatePhraseManager({
                                       isExpanded ? null : group.normalizedPhrase
                                     )
                                   }
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  className="text-sm font-medium"
+                                  style={{ color: "var(--accent2)" }}
                                 >
                                   {isExpanded ? "Collapse" : "Review & Merge"}
                                 </button>
@@ -428,7 +439,8 @@ export default function DuplicatePhraseManager({
                                   <button
                                     onClick={() => handleMergeGroup(group)}
                                     disabled={isMerging}
-                                    className="flex items-center space-x-1 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                    className="flex items-center space-x-1 px-3 py-1 rounded text-sm disabled:opacity-50 transition-colors"
+                                    style={{ background: "var(--green)", color: "#04210f" }}
                                   >
                                     <Merge className="w-3 h-3" />
                                     <span>
@@ -442,7 +454,7 @@ export default function DuplicatePhraseManager({
 
                           {isExpanded && (
                             <div className="p-4 space-y-3">
-                              <p className="text-sm text-gray-600 mb-3">
+                              <p className="text-sm mb-3" style={{ color: "var(--muted)" }}>
                                 Select the best phrase and translation to keep.
                                 All other variations will be deleted.
                               </p>
@@ -456,18 +468,25 @@ export default function DuplicatePhraseManager({
                                 return (
                                   <div
                                     key={phrase.id}
-                                    className={`border rounded-lg p-3 transition-all ${
-                                      isSelectedPhrase && isSelectedTranslation
-                                        ? "border-green-500 bg-green-50"
-                                        : "border-gray-200 hover:border-gray-300"
-                                    }`}
+                                    className="rounded-lg p-3 transition-all"
+                                    style={{
+                                      background:
+                                        isSelectedPhrase && isSelectedTranslation
+                                          ? "rgba(61,220,132,.1)"
+                                          : "var(--bg2)",
+                                      border: `1px solid ${
+                                        isSelectedPhrase && isSelectedTranslation
+                                          ? "var(--green)"
+                                          : "var(--border)"
+                                      }`,
+                                    }}
                                   >
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1">
-                                        <div className="font-medium text-gray-900 mb-1">
+                                        <div className="font-medium mb-1" style={{ color: "var(--text)" }}>
                                           {phrase.phrase}
                                         </div>
-                                        <div className="text-gray-600 text-sm">
+                                        <div className="text-sm" style={{ color: "var(--muted)" }}>
                                           {phrase.translation}
                                         </div>
                                       </div>
@@ -480,12 +499,12 @@ export default function DuplicatePhraseManager({
                                               phrase.translation
                                             )
                                           }
-                                          className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
-                                            isSelectedPhrase &&
-                                            isSelectedTranslation
-                                              ? "bg-green-600 text-white"
-                                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                          }`}
+                                          className="flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors"
+                                          style={
+                                            isSelectedPhrase && isSelectedTranslation
+                                              ? { background: "var(--green)", color: "#04210f" }
+                                              : { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }
+                                          }
                                         >
                                           <Copy className="w-3 h-3" />
                                           <span>Keep This</span>
@@ -501,11 +520,12 @@ export default function DuplicatePhraseManager({
                                                 phrase.translation
                                               )
                                             }
-                                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
+                                            className="flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors"
+                                            style={
                                               isSelectedTranslation
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                            }`}
+                                                ? { background: "var(--blue)", color: "#04122e" }
+                                                : { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--muted)" }
+                                            }
                                           >
                                             <span>Keep Translation</span>
                                           </button>
@@ -517,14 +537,14 @@ export default function DuplicatePhraseManager({
                               })}
 
                               {selected && (
-                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                  <h4 className="font-medium text-blue-900 mb-2">
+                                <div className="mt-4 p-3 rounded-lg" style={{ background: "rgba(91,140,255,.1)", border: "1px solid rgba(91,140,255,.25)" }}>
+                                  <h4 className="font-medium mb-2" style={{ color: "var(--blue)" }}>
                                     Final Result:
                                   </h4>
-                                  <div className="font-medium text-gray-900">
+                                  <div className="font-medium" style={{ color: "var(--text)" }}>
                                     {selected.phrase}
                                   </div>
-                                  <div className="text-gray-600 text-sm">
+                                  <div className="text-sm" style={{ color: "var(--muted)" }}>
                                     {selected.translation}
                                   </div>
                                 </div>
@@ -537,22 +557,23 @@ export default function DuplicatePhraseManager({
                   </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="p-6" style={{ borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm" style={{ color: "var(--muted)" }}>
                         Merging duplicates will permanently delete the
                         unselected variations.
                       </p>
                       {selectedGroups.size > 0 && (
-                        <p className="text-sm text-blue-600 font-medium mt-1">
+                        <p className="text-sm font-medium mt-1" style={{ color: "var(--blue)" }}>
                           {selectedGroups.size} groups selected for bulk merge
                         </p>
                       )}
                     </div>
                     <button
                       onClick={onClose}
-                      className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                      className="px-4 py-2 rounded-md transition-colors"
+                      style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }}
                     >
                       Close
                     </button>

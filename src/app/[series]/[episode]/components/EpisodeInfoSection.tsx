@@ -1,12 +1,16 @@
 import Link from "next/link";
-import Image from "next/image";
-import { Settings, Calendar, Clock, Brain } from "lucide-react";
+import { Brain, Settings } from "lucide-react";
 
 import { Show, Episode, ExtractedPhrase } from "@/lib/supabase";
-import { generateShowSlug } from "@/utils/slugify";
+import {
+  generateShowSlug,
+  episodeCode,
+  episodeSlugPart,
+} from "@/utils/slugify";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDuration } from "@/utils/formatDuration";
-import { formatDateToLocale } from "@/utils/formatDate";
+import { formatDatePt } from "@/utils/formatDate";
+import { PosterArt } from "@/app/components/cena/PosterArt";
 
 interface EpisodeInfoSectionProps {
   show: Show;
@@ -22,99 +26,140 @@ export const EpisodeInfoSection = ({
   onStartStudy,
 }: EpisodeInfoSectionProps) => {
   const { isAdmin } = useAuth();
+  const slug = generateShowSlug(show.name);
+  const code = episodeCode(episode.season, episode.episode_number);
+  const channel = show.network || show.source;
+  const date = formatDatePt(episode.air_date);
+  const runtime = episode.duration_minutes ?? episode.runtime;
+
+  const tags = [
+    date,
+    runtime ? formatDuration(runtime) : "",
+    channel,
+  ].filter(Boolean);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Thumbnail */}
-        {show.poster_url && (
-          <div className="flex-shrink-0">
-            <Image
-              src={show.poster_url}
-              alt={`${show.name} poster`}
-              width={160}
-              height={240}
-              className="w-32 h-48 md:w-40 md:h-60 object-cover rounded-lg shadow-md"
-            />
-          </div>
-        )}
+    <section className="relative -mt-[68px] overflow-hidden px-5 pb-9 pt-[104px] md:px-10">
+      <div className="absolute inset-0">
+        <PosterArt
+          name={show.name}
+          posterUrl={episode.episode_image || show.poster_url}
+          priority
+          sizes="100vw"
+        />
+      </div>
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(8,8,10,.92) 0%, rgba(8,8,10,.6) 55%, rgba(8,8,10,.25) 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(0deg, var(--bg) 2%, transparent 70%)" }}
+      />
 
-        {/* Episode details */}
+      <div className="relative flex items-end gap-[26px]">
+        {/* Poster */}
+        <div
+          className="relative hidden w-[132px] shrink-0 overflow-hidden rounded-[var(--radius)] sm:block"
+          style={{
+            aspectRatio: "2 / 3",
+            border: "1px solid var(--border2)",
+            boxShadow: "var(--shadow)",
+          }}
+        >
+          <PosterArt name={show.name} posterUrl={show.poster_url} sizes="132px" />
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(0deg, rgba(0,0,0,.55), transparent 55%)" }}
+          />
+          <div className="font-display absolute inset-x-[11px] bottom-[11px] text-[15px] uppercase leading-[0.95]">
+            {show.name}
+          </div>
+        </div>
+
+        {/* Details */}
         <div className="flex-1">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {show.name}
-              </h1>
-              <p className="text-xl text-gray-700 mb-2">
-                Season {episode.season}, Episode {episode.episode_number}
-                {episode.title && ` - ${episode.title}`}
-              </p>
-              <p className="text-gray-600 mb-2">
-                {phrases.length} phrase{phrases.length !== 1 ? "s" : ""}{" "}
-                extracted
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              {phrases.length > 0 && (
-                <button
-                  onClick={onStartStudy}
-                  className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Brain className="w-4 h-4" />
-                  <span>Start Study</span>
-                </button>
-              )}
-              {isAdmin && (
-                <Link
-                  href={`/${generateShowSlug(show.name)}/s${episode.season
-                    ?.toString()
-                    .padStart(2, "0")}e${episode.episode_number
-                    ?.toString()
-                    .padStart(2, "0")}/edit`}
-                  className="inline-flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Edit Episode</span>
-                </Link>
-              )}
-            </div>
+          <div className="mb-3 text-[12.5px]" style={{ color: "var(--muted)" }}>
+            <Link href="/" style={{ color: "var(--accent2)" }}>
+              Biblioteca
+            </Link>
+            <span> / </span>
+            <Link href={`/${slug}`} style={{ color: "var(--muted)" }}>
+              {show.name}
+            </Link>
+            <span> / </span>
+            <span className="font-semibold" style={{ color: "var(--text)" }}>
+              {code}
+            </span>
           </div>
 
-          {/* Episode Description */}
-          {episode.description && (
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Description
-              </h3>
-              <p className="text-gray-700 leading-relaxed">
-                {episode.description}
-              </p>
+          <h1 className="font-display mb-2 text-[34px] uppercase leading-[0.95] md:text-[44px]">
+            {show.name}
+          </h1>
+
+          <div className="mb-[14px] text-[14.5px]" style={{ color: "#cfcfd8" }}>
+            Temporada {episode.season ?? 1}, Episódio {episode.episode_number ?? 1}
+            {episode.title ? ` — ${episode.title}` : ""} ·{" "}
+            <span className="font-bold" style={{ color: "var(--accent2)" }}>
+              {phrases.length} frases
+            </span>
+          </div>
+
+          {tags.length > 0 && (
+            <div className="mb-[18px] flex flex-wrap gap-[10px]">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-[7px] px-[11px] py-[5px] text-[11.5px] font-semibold"
+                  style={{
+                    background: "rgba(255,255,255,.08)",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           )}
 
-          {/* Additional info */}
-          <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-            {episode.air_date && (
-              <span className="bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {formatDateToLocale(episode.air_date)}
-              </span>
+          <div className="flex flex-wrap gap-3">
+            {phrases.length > 0 && (
+              <button
+                onClick={onStartStudy}
+                className="flex items-center gap-[9px] rounded-lg px-[26px] py-3 text-[14.5px] font-bold text-white"
+                style={{
+                  background: "var(--accent)",
+                  boxShadow: "0 10px 28px -8px var(--accent)",
+                }}
+              >
+                <Brain className="h-4 w-4" />
+                Iniciar estudo
+              </button>
             )}
-            {episode.duration_minutes && (
-              <span className="bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatDuration(episode.duration_minutes)}
-              </span>
-            )}
-            {show.network && (
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {show.network}
-              </span>
+            {isAdmin && (
+              <Link
+                href={`/${slug}/${episodeSlugPart(
+                  episode.season,
+                  episode.episode_number
+                )}/edit`}
+                className="flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold"
+                style={{
+                  border: "1px solid var(--border2)",
+                  background: "rgba(255,255,255,.06)",
+                  color: "var(--text)",
+                }}
+              >
+                <Settings className="h-[15px] w-[15px]" />
+                Editar episódio
+              </Link>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };

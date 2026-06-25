@@ -104,6 +104,29 @@ export interface ExtractionJob {
 }
 
 // Helper functions for database operations
+// A show enriched with both extraction stats and full show metadata, used by
+// the CENA library/home view (hero blurb, genres, year, etc).
+export interface LibraryShow {
+  id: string;
+  name: string;
+  source: string;
+  extractionCount: number;
+  totalPhrases: number;
+  lastExtraction: string;
+  network?: string;
+  rating?: number;
+  poster_url?: string;
+  tvdb_confidence?: number;
+  // enriched from the full show record
+  overview?: string;
+  description?: string;
+  first_aired?: string;
+  genre?: string;
+  genres?: string[];
+  status?: string;
+  watch_url?: string;
+}
+
 export class PhraseExtractionService {
   static async findOrCreateShow(
     name: string,
@@ -928,6 +951,56 @@ export class PhraseExtractionService {
       poster_url: show.poster_url,
       tvdb_confidence: show.tvdb_confidence,
     }));
+  }
+
+  // Get shows that have extractions, enriched with full show metadata.
+  // Used by the CENA library view which needs blurb/genres/year alongside
+  // the phrase/extraction counts.
+  static async getLibraryShows(): Promise<LibraryShow[]> {
+    const [stats, allShows] = await Promise.all([
+      this.getShowsWithExtractionStats(),
+      this.getAllShows(),
+    ]);
+
+    const byId = new Map(allShows.map((show) => [show.id, show]));
+
+    // getShowsWithExtractionStats() has an inferred `any` return; describe the
+    // element shape we rely on so the merge below stays type-safe.
+    type StatShow = {
+      id: string;
+      name: string;
+      source: string;
+      extractionCount: number;
+      totalPhrases: number;
+      lastExtraction: string;
+      network?: string;
+      rating?: number;
+      poster_url?: string;
+      tvdb_confidence?: number;
+    };
+
+    return (stats as StatShow[]).map((s) => {
+      const full = byId.get(s.id);
+      return {
+        id: s.id,
+        name: s.name,
+        source: s.source,
+        extractionCount: s.extractionCount,
+        totalPhrases: s.totalPhrases,
+        lastExtraction: s.lastExtraction,
+        network: s.network ?? full?.network,
+        rating: s.rating ?? full?.rating,
+        poster_url: s.poster_url ?? full?.poster_url,
+        tvdb_confidence: s.tvdb_confidence ?? full?.tvdb_confidence,
+        overview: full?.overview,
+        description: full?.description,
+        first_aired: full?.first_aired,
+        genre: full?.genre,
+        genres: full?.genres,
+        status: full?.status,
+        watch_url: full?.watch_url,
+      };
+    });
   }
 
   // Get episodes for a show with their extraction statistics

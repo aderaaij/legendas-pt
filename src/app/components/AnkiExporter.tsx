@@ -35,21 +35,13 @@ export default function AnkiExporter({
       `"${item.phrase}"`,
       `"${item.translation}"`,
     ]);
-
     return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
   };
 
-  const generateAnkiTSV = (): string => {
-    return phrases
-      .map((item) => [item.phrase, item.translation].join("\t"))
-      .join("\n");
-  };
+  const generateAnkiTSV = (): string =>
+    phrases.map((item) => [item.phrase, item.translation].join("\t")).join("\n");
 
-  const downloadFile = (
-    content: string,
-    filename: string,
-    mimeType: string
-  ) => {
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -61,111 +53,104 @@ export default function AnkiExporter({
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadCSV = () => {
-    const csv = generateAnkiCSV();
-    downloadFile(csv, "portuguese-phrases.csv", "text/csv");
-  };
+  const handleDownloadCSV = () =>
+    downloadFile(generateAnkiCSV(), "frases-portugues.csv", "text/csv");
 
-  const handleDownloadAnki = () => {
-    const ankiContent = generateAnkiTSV();
-    downloadFile(ankiContent, "portuguese-phrases-anki.txt", "text/plain");
-  };
+  const handleDownloadAnki = () =>
+    downloadFile(generateAnkiTSV(), "frases-portugues-anki.txt", "text/plain");
 
-  // Normal mode - just show export button
+  // Normal mode — toolbar button.
   if (!isExportMode) {
     return (
       <button
         onClick={onEnterExportMode}
-        className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        className="flex items-center gap-2 rounded-lg px-4 py-[9px] text-[13px] font-bold"
+        style={{
+          border: "1px solid var(--border2)",
+          background: "rgba(255,255,255,.05)",
+          color: "var(--text)",
+        }}
       >
-        <Download className="w-4 h-4" />
-        <span>Export Phrases</span>
+        <Download className="h-[14px] w-[14px]" />
+        Exportar Anki
       </button>
     );
   }
 
-  // Export mode - show selection controls and export options
+  // Export mode — selection + download panel.
   return (
-    <div className="space-y-4">
-      {/* Export Mode Header with Controls */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-blue-800">Export Phrases</h3>
+    <div
+      className="w-full rounded-[var(--radius-lg)] p-5"
+      style={{ background: "var(--surface)", border: "1px solid var(--border2)" }}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-[15px] font-extrabold">Exportar frases</h3>
+        <button
+          onClick={onExitExportMode}
+          style={{ color: "var(--muted)" }}
+          className="transition-colors hover:opacity-80"
+          aria-label="Fechar"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div
+        className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] p-3"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center gap-4">
+          <span className="text-sm" style={{ color: "var(--muted)" }}>
+            {selectedCount} de {totalCount} selecionadas
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={onSelectAll}
+              className="rounded-md px-3 py-1 text-xs font-semibold"
+              style={{ background: "rgba(229,9,20,.14)", color: "var(--accent2)" }}
+            >
+              Selecionar todas
+            </button>
+            <button
+              onClick={onDeselectAll}
+              className="rounded-md px-3 py-1 text-xs font-semibold"
+              style={{ background: "rgba(255,255,255,.06)", color: "var(--muted)" }}
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {phrases.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2">
           <button
-            onClick={onExitExportMode}
-            className="text-blue-600 hover:text-blue-800 transition-colors"
+            onClick={handleDownloadAnki}
+            className="flex items-center justify-center gap-2 rounded-lg px-4 py-[10px] text-sm font-bold text-white"
+            style={{ background: "var(--accent)" }}
           >
-            <X className="w-5 h-5" />
+            <Download className="h-4 w-4" />
+            Para Anki (.txt)
+          </button>
+          <button
+            onClick={handleDownloadCSV}
+            className="flex items-center justify-center gap-2 rounded-lg px-4 py-[10px] text-sm font-bold"
+            style={{
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Como CSV
           </button>
         </div>
-
-        {/* Selection Controls */}
-        <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-md border">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              {selectedCount} of {totalCount} phrases selected
-            </span>
-            <div className="flex space-x-2">
-              <button
-                onClick={onSelectAll}
-                className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200 transition-colors"
-              >
-                Select All
-              </button>
-              <button
-                onClick={onDeselectAll}
-                className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200 transition-colors"
-              >
-                Deselect All
-              </button>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            {selectedCount === 0 && "No phrases selected"}
-            {selectedCount > 0 && `${selectedCount} phrases ready for export`}
-          </div>
+      ) : (
+        <div className="py-4 text-center" style={{ color: "var(--faint)" }}>
+          <FileDown className="mx-auto mb-2 h-8 w-8" />
+          <p className="text-sm">Seleciona frases para exportar</p>
         </div>
-
-        {/* Export Buttons */}
-        {phrases.length > 0 ? (
-          <div className="space-y-2">
-            <button
-              onClick={handleDownloadAnki}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download for Anki (.txt)
-            </button>
-
-            <button
-              onClick={handleDownloadCSV}
-              className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download as CSV
-            </button>
-          </div>
-        ) : (
-          <div className="text-center py-4 text-gray-500">
-            <FileDown className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">Select phrases to enable export</p>
-          </div>
-        )}
-      </div>
-
-      {/* Instructions */}
-      <div className="bg-yellow-50 p-4 rounded-lg">
-        <h4 className="font-medium text-yellow-800 mb-2">
-          Anki Import Instructions
-        </h4>
-        <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
-          <li>Open Anki and select your Portuguese deck</li>
-          <li>Go to File → Import</li>
-          <li>Select the downloaded .txt file</li>
-          <li>Map fields: Front, Back</li>
-          <li>Click Import to add your vocabulary cards</li>
-        </ol>
-      </div>
+      )}
     </div>
   );
 }

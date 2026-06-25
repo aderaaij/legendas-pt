@@ -241,16 +241,16 @@ export default function RTPImporter() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "success":
-        return "text-green-600";
+        return "var(--green)";
       case "already_exists":
-        return "text-blue-600";
+        return "var(--blue)";
       case "no_subtitle":
-        return "text-yellow-600";
+        return "var(--gold)";
       case "error":
       case "extraction_failed":
-        return "text-red-600";
+        return "var(--accent2)";
       default:
-        return "text-gray-600";
+        return "var(--muted)";
     }
   };
 
@@ -275,11 +275,17 @@ export default function RTPImporter() {
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+        <div
+          className="rounded-lg p-6 text-center"
+          style={{
+            background: "rgba(247,181,0,.1)",
+            border: "1px solid rgba(247,181,0,.25)",
+          }}
+        >
+          <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--gold)" }}>
             Authentication Required
           </h3>
-          <p className="text-yellow-700">
+          <p style={{ color: "var(--muted)" }}>
             Please log in to use the RTP Series Importer.
           </p>
         </div>
@@ -290,11 +296,17 @@ export default function RTPImporter() {
   if (!isAdmin) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">
+        <div
+          className="rounded-lg p-6 text-center"
+          style={{
+            background: "rgba(229,9,20,.1)",
+            border: "1px solid rgba(229,9,20,.25)",
+          }}
+        >
+          <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--accent2)" }}>
             Admin Access Required
           </h3>
-          <p className="text-red-700">
+          <p style={{ color: "var(--muted)" }}>
             Only administrators can use the RTP Series Importer.
           </p>
         </div>
@@ -306,18 +318,27 @@ export default function RTPImporter() {
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <JobStatusBanner />
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div
+        className="rounded-lg p-6"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
         <h2 className="text-2xl font-bold mb-4">RTP Series Importer</h2>
-        <p className="text-gray-600 mb-6">
+        <p className="mb-6" style={{ color: "var(--muted)" }}>
           Import Portuguese subtitles and extract phrases from RTP Play series.
           Provide a series URL to automatically process all episodes.
         </p>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="font-medium text-blue-800 mb-2">
+        <div
+          className="rounded-lg p-4 mb-6"
+          style={{
+            background: "rgba(91,140,255,.08)",
+            border: "1px solid rgba(91,140,255,.25)",
+          }}
+        >
+          <h3 className="font-medium mb-2" style={{ color: "var(--blue)" }}>
             Background Processing
           </h3>
-          <p className="text-blue-700 text-sm">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
             Extraction jobs run in the background - you can safely navigate away
             from this page while processing continues. Use the job status panel
             above to track progress and return to check results later.
@@ -328,7 +349,8 @@ export default function RTPImporter() {
           <div>
             <label
               htmlFor="rtp-url"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium mb-2"
+              style={{ color: "var(--text)" }}
             >
               RTP Series URL
             </label>
@@ -338,7 +360,12 @@ export default function RTPImporter() {
               value={rtpUrl}
               onChange={(e) => setRtpUrl(e.target.value)}
               placeholder="https://www.rtp.pt/play/p14147/o-americano"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-md focus:outline-none"
+              style={{
+                background: "var(--bg2)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+              }}
               disabled={isScrapingPreview || isProcessing}
             />
           </div>
@@ -347,7 +374,8 @@ export default function RTPImporter() {
             <button
               onClick={handlePreview}
               disabled={isScrapingPreview || isProcessing}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ background: "var(--accent)", color: "#fff" }}
             >
               {isScrapingPreview ? "Loading Preview..." : "Preview Series"}
             </button>
@@ -355,14 +383,24 @@ export default function RTPImporter() {
         </div>
 
         {error && (
-          <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          <div
+            className="mt-4 p-4 rounded-md"
+            style={{
+              background: "rgba(229,9,20,.1)",
+              border: "1px solid rgba(229,9,20,.35)",
+              color: "var(--accent2)",
+            }}
+          >
             {error}
           </div>
         )}
       </div>
 
       {seriesPreview && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div
+          className="rounded-lg p-6"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
           <h3 className="text-xl font-semibold mb-4">Series Preview</h3>
           <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div>
@@ -382,29 +420,39 @@ export default function RTPImporter() {
               <div className="flex gap-2">
                 <button
                   onClick={selectAllEpisodes}
-                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  className="px-3 py-1 text-sm rounded transition-colors"
+                  style={{ background: "rgba(91,140,255,.15)", color: "var(--blue)" }}
                   disabled={isProcessing}
                 >
                   Select All
                 </button>
                 <button
                   onClick={deselectAllEpisodes}
-                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  className="px-3 py-1 text-sm rounded transition-colors"
+                  style={{
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border2)",
+                    color: "var(--text)",
+                  }}
                   disabled={isProcessing}
                 >
                   Deselect All
                 </button>
               </div>
             </div>
-            <div className="text-sm text-gray-600 mb-2">
+            <div className="text-sm mb-2" style={{ color: "var(--muted)" }}>
               {selectedEpisodes.size} of {seriesPreview.episodes.length}{" "}
               episodes selected
             </div>
-            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md">
+            <div
+              className="max-h-48 overflow-y-auto rounded-md"
+              style={{ border: "1px solid var(--border)" }}
+            >
               {seriesPreview.episodes.map((episode) => (
                 <label
                   key={episode.id}
-                  className="flex items-center p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                  className="flex items-center p-3 last:border-b-0 cursor-pointer transition-colors"
+                  style={{ borderBottom: "1px solid var(--border)" }}
                 >
                   <input
                     type="checkbox"
@@ -413,6 +461,7 @@ export default function RTPImporter() {
                       toggleEpisodeSelection(episode.episodeNumber)
                     }
                     className="mr-3 rounded"
+                    style={{ accentColor: "var(--accent)" }}
                     disabled={isProcessing}
                   />
                   <div className="flex justify-between items-start flex-1">
@@ -420,11 +469,11 @@ export default function RTPImporter() {
                       <span className="font-medium">
                         Ep. {episode.episodeNumber}
                       </span>
-                      <span className="ml-2 text-gray-600">
+                      <span className="ml-2" style={{ color: "var(--muted)" }}>
                         {episode.title}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm" style={{ color: "var(--faint)" }}>
                       {episode.airDate}
                     </span>
                   </div>
@@ -436,17 +485,24 @@ export default function RTPImporter() {
           <div className="space-y-4">
             {/* Show Selection Status */}
             {selectedShow && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-medium text-green-800 mb-2">
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  background: "rgba(61,220,132,.1)",
+                  border: "1px solid rgba(61,220,132,.25)",
+                }}
+              >
+                <h4 className="font-medium mb-2" style={{ color: "var(--green)" }}>
                   Show Selected
                 </h4>
-                <p className="text-green-700">
+                <p style={{ color: "var(--text)" }}>
                   Episodes will be mapped to:{" "}
                   <span className="font-medium">{selectedShow.name}</span>
                 </p>
                 <button
                   onClick={() => setSelectedShow(null)}
-                  className="mt-2 text-sm text-green-600 hover:text-green-700 underline"
+                  className="mt-2 text-sm underline transition-colors hover:opacity-80"
+                  style={{ color: "var(--green)" }}
                   disabled={isProcessing}
                 >
                   Change show selection
@@ -461,6 +517,7 @@ export default function RTPImporter() {
                   checked={saveToDatabase}
                   onChange={(e) => setSaveToDatabase(e.target.checked)}
                   className="mr-2"
+                  style={{ accentColor: "var(--accent)" }}
                   disabled={isProcessing}
                 />
                 Save to database
@@ -471,6 +528,7 @@ export default function RTPImporter() {
                   checked={forceReExtraction}
                   onChange={(e) => setForceReExtraction(e.target.checked)}
                   className="mr-2"
+                  style={{ accentColor: "var(--accent)" }}
                   disabled={isProcessing}
                 />
                 Force re-extraction (even if content exists)
@@ -480,7 +538,8 @@ export default function RTPImporter() {
             <button
               onClick={handleProcess}
               disabled={isProcessing}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ background: "var(--green)", color: "#04210f" }}
             >
               {isProcessing
                 ? "Processing Episodes..."
@@ -493,40 +552,43 @@ export default function RTPImporter() {
       )}
 
       {(results.length > 0 || summary) && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div
+          className="rounded-lg p-6"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
           <h3 className="text-xl font-semibold mb-4">Processing Results</h3>
 
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-800">
+                <div className="text-2xl font-bold" style={{ color: "var(--text)" }}>
                   {summary.total}
                 </div>
-                <div className="text-sm text-gray-600">Total</div>
+                <div className="text-sm" style={{ color: "var(--muted)" }}>Total</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold" style={{ color: "var(--green)" }}>
                   {summary.successful}
                 </div>
-                <div className="text-sm text-gray-600">Success</div>
+                <div className="text-sm" style={{ color: "var(--muted)" }}>Success</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold" style={{ color: "var(--blue)" }}>
                   {summary.alreadyExists}
                 </div>
-                <div className="text-sm text-gray-600">Existing</div>
+                <div className="text-sm" style={{ color: "var(--muted)" }}>Existing</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-2xl font-bold" style={{ color: "var(--gold)" }}>
                   {summary.noSubtitle}
                 </div>
-                <div className="text-sm text-gray-600">No Subtitle</div>
+                <div className="text-sm" style={{ color: "var(--muted)" }}>No Subtitle</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold" style={{ color: "var(--accent2)" }}>
                   {summary.failed}
                 </div>
-                <div className="text-sm text-gray-600">Failed</div>
+                <div className="text-sm" style={{ color: "var(--muted)" }}>Failed</div>
               </div>
             </div>
           )}
@@ -535,25 +597,27 @@ export default function RTPImporter() {
             {results.map((result, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center p-3 border border-gray-200 rounded-md"
+                className="flex justify-between items-center p-3 rounded-md"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
               >
                 <div>
                   <span className="font-medium">Ep. {result.episode}</span>
-                  <span className="ml-2 text-gray-600">{result.title}</span>
+                  <span className="ml-2" style={{ color: "var(--muted)" }}>{result.title}</span>
                   {result.phraseCount && (
-                    <span className="ml-2 text-sm text-green-600">
+                    <span className="ml-2 text-sm" style={{ color: "var(--green)" }}>
                       ({result.phraseCount} phrases)
                     </span>
                   )}
                 </div>
                 <div className="text-right">
                   <span
-                    className={`font-medium ${getStatusColor(result.status)}`}
+                    className="font-medium"
+                    style={{ color: getStatusColor(result.status) }}
                   >
                     {getStatusText(result.status)}
                   </span>
                   {result.error && (
-                    <div className="text-sm text-red-600 mt-1">
+                    <div className="text-sm mt-1" style={{ color: "var(--accent2)" }}>
                       {result.error}
                     </div>
                   )}
@@ -565,9 +629,15 @@ export default function RTPImporter() {
       )}
 
       {isProcessing && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div
+          className="rounded-lg p-6"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
           <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <div
+              className="animate-spin rounded-full h-6 w-6 border-b-2"
+              style={{ borderColor: "var(--accent)", borderBottomColor: "var(--accent)" }}
+            ></div>
             <span>Processing episodes... This may take several minutes.</span>
           </div>
         </div>

@@ -46,26 +46,38 @@ export default function SubtitleUploader({
     <div className="space-y-4">
       {/* Show Selection Modal */}
       {showMetadataForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">
+        <div
+          className="rounded-lg p-6"
+          style={{
+            background: "rgba(91,140,255,.08)",
+            border: "1px solid rgba(91,140,255,.25)",
+          }}
+        >
+          <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--blue)" }}>
             Select Show and Episode
           </h3>
-          <p className="text-sm text-blue-700 mb-4">
+          <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>
             Choose an existing show or add a new one from TVDB:
           </p>
 
           <ShowSelector onShowSelected={handleShowSelected} />
 
           {selectedShow && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <h4 className="font-medium text-green-800 mb-2">Current Selection:</h4>
-              <p className="text-sm text-green-700">
+            <div
+              className="mt-4 p-4 rounded-lg"
+              style={{
+                background: "rgba(61,220,132,.1)",
+                border: "1px solid rgba(61,220,132,.25)",
+              }}
+            >
+              <h4 className="font-medium mb-2" style={{ color: "var(--green)" }}>Current Selection:</h4>
+              <p className="text-sm" style={{ color: "var(--text)" }}>
                 <strong>{selectedShow.name}</strong>
                 {selectedEpisode && (
                   <span> - Season {selectedEpisode.season}, Episode {selectedEpisode.episode_number}</span>
                 )}
               </p>
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                 You can select a different show or episode above if needed.
               </p>
             </div>
@@ -74,7 +86,12 @@ export default function SubtitleUploader({
           <div className="flex items-center justify-between mt-6">
             <button
               onClick={handleCancelClick}
-              className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 rounded-md transition-colors"
+              style={{
+                background: "var(--surface2)",
+                border: "1px solid var(--border2)",
+                color: "var(--text)",
+              }}
             >
               Cancel
             </button>
@@ -82,11 +99,11 @@ export default function SubtitleUploader({
         </div>
       )}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          isDragging
-            ? "border-blue-400 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
-        }`}
+        className="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+        style={{
+          borderColor: isDragging ? "var(--accent)" : "var(--border2)",
+          background: isDragging ? "rgba(229,9,20,.08)" : "var(--surface2)",
+        }}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={() => setIsDragging(true)}
@@ -102,22 +119,26 @@ export default function SubtitleUploader({
 
         {isLoading ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600">Processing subtitle file...</p>
+            <div
+              className="animate-spin rounded-full h-8 w-8 border-b-2"
+              style={{ borderColor: "var(--accent)", borderBottomColor: "var(--accent)" }}
+            ></div>
+            <p style={{ color: "var(--muted)" }}>Processing subtitle file...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <Upload className="w-12 h-12 text-gray-400" />
+            <Upload className="w-12 h-12" style={{ color: "var(--faint)" }} />
             <div>
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <p className="text-lg font-medium mb-2" style={{ color: "var(--text)" }}>
                 Upload Subtitle File
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>
                 Drag and drop your .vtt or .srt file here, or click to browse
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 rounded-lg transition-colors"
+                style={{ background: "var(--accent)", color: "#fff" }}
               >
                 Choose File
               </button>
@@ -127,7 +148,10 @@ export default function SubtitleUploader({
       </div>
 
       {fileName && (
-        <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">
+        <div
+          className="flex items-center gap-2 p-3 rounded-lg"
+          style={{ background: "rgba(61,220,132,.1)", color: "var(--green)" }}
+        >
           <FileText className="w-4 h-4" />
           <span className="text-sm font-medium">Loaded: {fileName}</span>
         </div>
@@ -135,11 +159,17 @@ export default function SubtitleUploader({
 
       {/* Show current selection and allow editing */}
       {selectedShow && !showMetadataForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div
+          className="rounded-lg p-4"
+          style={{
+            background: "rgba(91,140,255,.08)",
+            border: "1px solid rgba(91,140,255,.25)",
+          }}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-blue-800 mb-1">Selected for Extraction:</h4>
-              <p className="text-sm text-blue-700">
+              <h4 className="font-medium mb-1" style={{ color: "var(--blue)" }}>Selected for Extraction:</h4>
+              <p className="text-sm" style={{ color: "var(--text)" }}>
                 <strong>{selectedShow.name}</strong>
                 {selectedEpisode && (
                   <span> - Season {selectedEpisode.season}, Episode {selectedEpisode.episode_number}</span>
@@ -151,7 +181,8 @@ export default function SubtitleUploader({
             </div>
             <button
               onClick={() => setShowMetadataForm(true)}
-              className="text-sm text-blue-600 hover:text-blue-700 underline"
+              className="text-sm underline transition-colors hover:opacity-80"
+              style={{ color: "var(--blue)" }}
             >
               Change Selection
             </button>
@@ -160,7 +191,10 @@ export default function SubtitleUploader({
       )}
 
       {error && (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
+        <div
+          className="flex items-center gap-2 p-3 rounded-lg"
+          style={{ background: "rgba(229,9,20,.1)", color: "var(--accent2)" }}
+        >
           <AlertCircle className="w-4 h-4" />
           <span className="text-sm">{error}</span>
         </div>

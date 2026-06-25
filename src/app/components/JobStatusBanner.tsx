@@ -5,14 +5,14 @@ import { useExtractionJobs } from '@/hooks/useExtractionJobs';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ExtractionJob } from '@/lib/supabase';
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string): React.CSSProperties => {
   switch (status) {
-    case 'pending': return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-    case 'running': return 'bg-blue-50 border-blue-200 text-blue-800';
-    case 'completed': return 'bg-green-50 border-green-200 text-green-800';
-    case 'failed': return 'bg-red-50 border-red-200 text-red-800';
-    case 'cancelled': return 'bg-gray-50 border-gray-200 text-gray-800';
-    default: return 'bg-gray-50 border-gray-200 text-gray-800';
+    case 'pending': return { background: 'rgba(245,197,24,.1)', border: '1px solid rgba(245,197,24,.3)', color: 'var(--gold)' };
+    case 'running': return { background: 'rgba(59,130,246,.1)', border: '1px solid rgba(59,130,246,.3)', color: 'var(--blue)' };
+    case 'completed': return { background: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.3)', color: 'var(--green)' };
+    case 'failed': return { background: 'rgba(229,9,20,.1)', border: '1px solid rgba(229,9,20,.3)', color: 'var(--accent2)' };
+    case 'cancelled': return { background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--muted)' };
+    default: return { background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--muted)' };
   }
 };
 
@@ -51,7 +51,7 @@ function JobCard({ job, onCancel, isExpanded, onToggle }: JobCardProps) {
   const canCancel = ['pending', 'running'].includes(job.status);
 
   return (
-    <div className={`border rounded-lg p-4 ${getStatusColor(job.status)}`}>
+    <div className="rounded-lg p-4" style={getStatusColor(job.status)}>
       <div className="flex items-center justify-between cursor-pointer" onClick={onToggle}>
         <div className="flex items-center space-x-3">
           <span className="text-lg">{getStatusIcon(job.status)}</span>
@@ -79,7 +79,8 @@ function JobCard({ job, onCancel, isExpanded, onToggle }: JobCardProps) {
                 handleCancel();
               }}
               disabled={cancelling}
-              className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              className="px-3 py-1 text-sm rounded disabled:opacity-50"
+              style={{ background: 'var(--accent)', color: '#fff' }}
             >
               {cancelling ? 'Cancelling...' : 'Cancel'}
             </button>
@@ -112,7 +113,7 @@ function JobCard({ job, onCancel, isExpanded, onToggle }: JobCardProps) {
           </div>
 
           {job.error_message && (
-            <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-800 text-sm">
+            <div className="mt-2 p-2 rounded text-sm" style={{ background: 'rgba(229,9,20,.1)', border: '1px solid rgba(229,9,20,.3)', color: 'var(--accent2)' }}>
               <strong>Error:</strong> {job.error_message}
             </div>
           )}
@@ -163,8 +164,8 @@ export default function JobStatusBanner() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-        <div className="text-red-800">
+      <div className="rounded-lg p-4 mb-6" style={{ background: 'rgba(229,9,20,.1)', border: '1px solid rgba(229,9,20,.3)' }}>
+        <div style={{ color: 'var(--accent2)' }}>
           <strong>Error loading jobs:</strong> {error}
         </div>
       </div>
@@ -178,17 +179,18 @@ export default function JobStatusBanner() {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
           {showAll ? 'Extraction Jobs' : 'Active Extractions'}
           {activeJobs.length > 0 && !showAll && (
-            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+            <span className="ml-2 px-2 py-1 rounded-full text-sm" style={{ background: 'rgba(59,130,246,.15)', color: 'var(--blue)' }}>
               {activeJobs.length} active
             </span>
           )}
         </h2>
         <button
           onClick={() => setShowAll(!showAll)}
-          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+          className="px-3 py-1 text-sm rounded transition-opacity hover:opacity-80"
+          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
         >
           {showAll ? 'Show Active Only' : 'Show All Jobs'}
         </button>
@@ -207,7 +209,7 @@ export default function JobStatusBanner() {
       </div>
 
       {showAll && allJobs.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center py-8" style={{ color: 'var(--muted)' }}>
           No extraction jobs found.
         </div>
       )}

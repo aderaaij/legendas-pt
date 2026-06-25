@@ -79,91 +79,75 @@ export default function UploadPage() {
     }
   };
 
+  const tabs = [
+    { id: "upload" as const, icon: Upload, label: "Manual Upload" },
+    { id: "rtp" as const, icon: Globe, label: "RTP Series Import" },
+    { id: "merge" as const, icon: Merge, label: "Merge Shows" },
+  ];
+
   return (
     <AdminRoute redirectTo="/">
-      <div className="min-h-screen bg-gradient-to-tr from-red-200 to-green-500">
-        <div className="container mx-auto px-4 py-8">
-          <header className="mb-12">
-            <div className="flex flex-col space-x-3 mb-6 gap-4">
+      <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
+        <div className="container mx-auto px-5 py-10 md:px-10">
+          <header className="mb-10">
+            <div className="mb-6 flex flex-col gap-4">
               <Link
                 href="/"
-                className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-1 transition-colors hover:opacity-80"
+                style={{ color: "var(--muted)" }}
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="h-4 w-4" />
                 <span>Back to Library</span>
               </Link>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                  <Languages className="text-blue-600" />
-                  Upload New Subtitles
-                </h1>
-              </div>
+              <h1 className="font-display flex items-center gap-3 text-[40px] uppercase leading-none">
+                <Languages style={{ color: "var(--accent)" }} />
+                Upload New Subtitles
+              </h1>
             </div>
-            <p className="text-lg text-gray-600 max-w-2xl">
+            <p className="max-w-2xl text-lg" style={{ color: "var(--muted)" }}>
               Upload Portuguese subtitle files to extract meaningful phrases for
               language learning
             </p>
           </header>
 
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="mx-auto max-w-6xl">
+            <div
+              className="overflow-hidden rounded-[var(--radius-lg)]"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
               {/* Tab Navigation */}
-              <div className="border-b border-gray-200">
-                <nav className="flex space-x-8" aria-label="Tabs">
-                  <button
-                    onClick={() => setActiveTab("upload")}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === "upload"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 px-4">
-                      <Upload className="w-4 h-4" />
-                      Manual Upload
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("rtp")}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === "rtp"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 px-4">
-                      <Globe className="w-4 h-4" />
-                      RTP Series Import
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("merge")}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === "merge"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 px-4">
-                      <Merge className="w-4 h-4" />
-                      Merge Shows
-                    </div>
-                  </button>
+              <div style={{ borderBottom: "1px solid var(--border)" }}>
+                <nav className="flex gap-2 px-4" aria-label="Tabs">
+                  {tabs.map(({ id, icon: Icon, label }) => {
+                    const active = activeTab === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setActiveTab(id)}
+                        className="flex items-center gap-2 px-4 py-4 text-sm font-semibold transition-colors"
+                        style={{
+                          borderBottom: `2px solid ${active ? "var(--accent)" : "transparent"}`,
+                          color: active ? "var(--text)" : "var(--muted)",
+                        }}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    );
+                  })}
                 </nav>
               </div>
 
-              <div className="p-8">
+              <div className="p-6 md:p-8">
                 {activeTab === "upload" && (
                   <div className="space-y-8">
                     {/* Upload Section */}
                     <div>
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <Upload className="w-5 h-5 text-blue-600" />
+                      <div className="mb-6 flex items-center gap-3">
+                        <div className="rounded-full p-2" style={{ background: "rgba(91,140,255,.15)" }}>
+                          <Upload className="h-5 w-5" style={{ color: "var(--blue)" }} />
                         </div>
-                        <h2 className="text-xl font-semibold text-gray-800">
-                          Upload Subtitles
-                        </h2>
+                        <h2 className="text-xl font-extrabold">Upload Subtitles</h2>
                       </div>
                       <SubtitleUploader
                         onSubtitleLoad={handleSubtitleLoad}
@@ -173,14 +157,12 @@ export default function UploadPage() {
 
                     {/* Extraction Section - only show when subtitle is loaded */}
                     {subtitleContent && (
-                      <div className="border-t pt-8">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="bg-green-100 p-2 rounded-full">
-                            <BookOpen className="w-5 h-5 text-green-600" />
+                      <div className="pt-8" style={{ borderTop: "1px solid var(--border)" }}>
+                        <div className="mb-6 flex items-center gap-3">
+                          <div className="rounded-full p-2" style={{ background: "rgba(61,220,132,.15)" }}>
+                            <BookOpen className="h-5 w-5" style={{ color: "var(--green)" }} />
                           </div>
-                          <h2 className="text-xl font-semibold text-gray-800">
-                            Extract Phrases
-                          </h2>
+                          <h2 className="text-xl font-extrabold">Extract Phrases</h2>
                         </div>
                         <PhraseExtractor
                           subtitleContent={subtitleContent}
@@ -195,13 +177,11 @@ export default function UploadPage() {
 
                 {activeTab === "rtp" && (
                   <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-green-100 p-2 rounded-full">
-                        <Globe className="w-5 h-5 text-green-600" />
+                    <div className="mb-6 flex items-center gap-3">
+                      <div className="rounded-full p-2" style={{ background: "rgba(61,220,132,.15)" }}>
+                        <Globe className="h-5 w-5" style={{ color: "var(--green)" }} />
                       </div>
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        Import from RTP Series
-                      </h2>
+                      <h2 className="text-xl font-extrabold">Import from RTP Series</h2>
                     </div>
                     <RTPImporter />
                   </div>
@@ -209,13 +189,11 @@ export default function UploadPage() {
 
                 {activeTab === "merge" && (
                   <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-purple-100 p-2 rounded-full">
-                        <Merge className="w-5 h-5 text-purple-600" />
+                    <div className="mb-6 flex items-center gap-3">
+                      <div className="rounded-full p-2" style={{ background: "rgba(229,9,20,.15)" }}>
+                        <Merge className="h-5 w-5" style={{ color: "var(--accent2)" }} />
                       </div>
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        Merge Duplicate Shows
-                      </h2>
+                      <h2 className="text-xl font-extrabold">Merge Duplicate Shows</h2>
                     </div>
                     <ShowMerger />
                   </div>
@@ -226,14 +204,18 @@ export default function UploadPage() {
 
           {/* Redirect Loading State */}
           {isRedirecting && (
-            <div className="mt-12 bg-white rounded-xl shadow-lg p-8">
+            <div
+              className="mt-12 rounded-[var(--radius-lg)] p-8"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
               <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+                <div
+                  className="h-12 w-12 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+                />
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    Extraction Complete!
-                  </h3>
-                  <p className="text-gray-600">
+                  <h3 className="mb-2 text-lg font-bold">Extraction Complete!</h3>
+                  <p style={{ color: "var(--muted)" }}>
                     Redirecting to the editing interface...
                   </p>
                 </div>
