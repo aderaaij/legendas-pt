@@ -1,4 +1,4 @@
-import TVDBService from "@/lib/tvdb";
+import TVDBService, { TVDBShow } from "@/lib/tvdb";
 import { supabase } from "@/lib/supabase-client";
 import { normalizeShowName } from "@/utils/slugify";
 import { Show } from "@/types/database";
@@ -174,7 +174,7 @@ export async function showHasPhraseExtractions(
   return (data?.length || 0) > 0;
 }
 
-export async function createShowFromTVDB(tvdbShow: any): Promise<Show> {
+export async function createShowFromTVDB(tvdbShow: TVDBShow): Promise<Show> {
   const { data, error } = await supabase
     .from("shows")
     .insert({

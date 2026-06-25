@@ -55,7 +55,7 @@ export interface PhraseExtraction {
   max_phrases: number;
   total_phrases_found: number;
   was_truncated: boolean;
-  extraction_params?: Record<string, any>;
+  extraction_params?: Record<string, unknown>;
   processing_time_ms?: number;
   api_cost_estimate?: number;
   created_at: string;
@@ -90,7 +90,16 @@ export interface ExtractionJob {
   series_url?: string;
   current_episode?: string;
   error_message?: string;
-  results?: any;
+  results?: {
+    summary?: {
+      total?: number;
+      successful?: number;
+      failed?: number;
+      alreadyExists?: number;
+      noSubtitle?: number;
+    };
+    [key: string]: unknown;
+  };
   created_at: string;
   updated_at: string;
   completed_at?: string;

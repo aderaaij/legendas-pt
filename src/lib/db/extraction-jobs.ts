@@ -1,3 +1,5 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+
 import { supabase } from "@/lib/supabase-client";
 import { ExtractionJob } from "@/types/database";
 
@@ -7,7 +9,7 @@ export async function createExtractionJob(
   seriesTitle?: string,
   seriesUrl?: string,
   totalEpisodes: number = 0,
-  authenticatedSupabase?: any
+  authenticatedSupabase?: SupabaseClient
 ): Promise<ExtractionJob> {
   const client = authenticatedSupabase || supabase;
   const { data, error } = await client
@@ -53,7 +55,7 @@ export async function updateExtractionJob(
       | "completed_at"
     >
   >,
-  authenticatedSupabase?: any
+  authenticatedSupabase?: SupabaseClient
 ): Promise<ExtractionJob> {
   const client = authenticatedSupabase || supabase;
   const updateData = {
@@ -77,7 +79,7 @@ export async function updateExtractionJob(
 
 export async function getExtractionJob(
   jobId: string,
-  authenticatedSupabase?: any
+  authenticatedSupabase?: SupabaseClient
 ): Promise<ExtractionJob | null> {
   const client = authenticatedSupabase || supabase;
   const { data, error } = await client

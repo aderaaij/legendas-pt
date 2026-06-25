@@ -86,9 +86,7 @@ class RTPScraperService {
       /<article[^>]*class="[^"]*episode-article[^"]*"[^>]*>([\s\S]*?)<\/article>/g;
 
     let articleMatch;
-    let articleCount = 0;
     while ((articleMatch = episodeArticleRegex.exec(html)) !== null) {
-      articleCount++;
       const articleContent = articleMatch[1];
 
       // Extract episode ID and URL from the <a> tag - use more flexible pattern

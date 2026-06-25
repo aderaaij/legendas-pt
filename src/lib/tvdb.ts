@@ -1,4 +1,4 @@
-interface TVDBShow {
+export interface TVDBShow {
   id: number;
   name: string;
   slug: string;
