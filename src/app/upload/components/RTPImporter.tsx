@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RTPScraperService from "@/lib/rtp-scraper";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthedFetch } from "@/hooks/useAuthedFetch";
 import { useExtractionJob } from "@/hooks/useExtractionJobs";
 import JobStatusBanner from "@/app/components/JobStatusBanner";
 import ShowMapper from "./ShowMapper";
@@ -35,7 +36,8 @@ interface ScrapingSummary {
 }
 
 export default function RTPImporter() {
-  const { user, getAccessToken, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const authedFetch = useAuthedFetch();
   const [rtpUrl, setRtpUrl] = useState("");
   const [isScrapingPreview, setIsScrapingPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,16 +107,10 @@ export default function RTPImporter() {
     setSeriesPreview(null);
 
     try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error("Failed to get access token");
-      }
-
-      const response = await fetch("/api/preview-rtp", {
+      const response = await authedFetch("/api/preview-rtp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           rtpUrl,
@@ -173,16 +169,10 @@ export default function RTPImporter() {
     setSummary(null);
 
     try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error("Failed to get access token");
-      }
-
-      const response = await fetch("/api/scrape-rtp", {
+      const response = await authedFetch("/api/scrape-rtp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           rtpUrl,

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthedFetch } from '@/hooks/useAuthedFetch';
 import type { ExtractionJob } from '@/lib/supabase';
 
 interface UseExtractionJobsReturn {
@@ -13,7 +14,8 @@ interface UseExtractionJobsReturn {
 }
 
 export function useExtractionJobs(): UseExtractionJobsReturn {
-  const { getAccessToken, user } = useAuth();
+  const { user } = useAuth();
+  const authedFetch = useAuthedFetch();
   const [activeJobs, setActiveJobs] = useState<ExtractionJob[]>([]);
   const [allJobs, setAllJobs] = useState<ExtractionJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,17 +35,8 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
       setLoading(true);
       setError(null);
 
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
-
       // Fetch active jobs
-      const activeResponse = await fetch('/api/extraction-jobs?activeOnly=true', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const activeResponse = await authedFetch('/api/extraction-jobs?activeOnly=true');
 
       if (!activeResponse.ok) {
         throw new Error('Failed to fetch active jobs');
@@ -53,11 +46,7 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
       setActiveJobs(activeData.jobs || []);
 
       // Fetch all jobs
-      const allResponse = await fetch('/api/extraction-jobs', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const allResponse = await authedFetch('/api/extraction-jobs');
 
       if (!allResponse.ok) {
         throw new Error('Failed to fetch all jobs');
@@ -70,20 +59,14 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
     } finally {
       setLoading(false);
     }
-  }, [getAccessToken, user]);
+  }, [authedFetch, user]);
 
   const cancelJob = useCallback(async (jobId: string) => {
     try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
-
-      const response = await fetch('/api/extraction-jobs', {
+      const response = await authedFetch('/api/extraction-jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           action: 'cancel',
@@ -102,20 +85,11 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
       setError(err instanceof Error ? err.message : 'Failed to cancel job');
       throw err;
     }
-  }, [getAccessToken, refreshJobs]);
+  }, [authedFetch, refreshJobs]);
 
   const getJob = useCallback(async (jobId: string): Promise<ExtractionJob | null> => {
     try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
-
-      const response = await fetch(`/api/extraction-jobs?jobId=${jobId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const response = await authedFetch(`/api/extraction-jobs?jobId=${jobId}`);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -130,7 +104,7 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
       console.error('Error fetching job:', err);
       return null;
     }
-  }, [getAccessToken]);
+  }, [authedFetch]);
 
   // Auto-refresh active jobs every 5 seconds
   useEffect(() => {
@@ -160,7 +134,8 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
 }
 
 export function useExtractionJob(jobId: string | null) {
-  const { getAccessToken, user } = useAuth();
+  const { user } = useAuth();
+  const authedFetch = useAuthedFetch();
   const [job, setJob] = useState<ExtractionJob | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,16 +147,7 @@ export function useExtractionJob(jobId: string | null) {
       setLoading(true);
       setError(null);
 
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
-
-      const response = await fetch(`/api/extraction-jobs?jobId=${jobId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const response = await authedFetch(`/api/extraction-jobs?jobId=${jobId}`);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -198,7 +164,7 @@ export function useExtractionJob(jobId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [jobId, getAccessToken, user]);
+  }, [jobId, authedFetch, user]);
 
   // Auto-refresh if job is active
   useEffect(() => {
