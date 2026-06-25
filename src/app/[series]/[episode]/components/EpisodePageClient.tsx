@@ -6,17 +6,17 @@ import { motion, AnimatePresence } from "motion/react";
 
 import { ExtractedPhrase, Show, Episode } from "@/lib/supabase";
 import { episodeCode } from "@/utils/slugify";
-import AnkiExporter from "@/app/components/AnkiExporter";
+import AnkiExporter from "@/app/components/phrase/AnkiExporter";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCardProgress } from "@/hooks/useCardProgress";
-import { PhraseCard } from "@/app/components/PhraseCard";
+import { PhraseCard } from "@/app/components/phrase/PhraseCard";
 import {
   PhraseSortAndFilter,
   SortOption,
   FilterOption,
-} from "@/app/components/PhraseSortAndFilter";
-import { SpacedRepetitionGame } from "@/app/components/SpacedRepetitionGame";
+} from "@/app/components/phrase/PhraseSortAndFilter";
+import { SpacedRepetitionGame } from "@/app/components/study/SpacedRepetitionGame";
 import { EpisodeInfoSection } from "./EpisodeInfoSection";
 
 interface EpisodePageClientProps {

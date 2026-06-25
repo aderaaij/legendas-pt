@@ -1,6 +1,6 @@
 "use client";
 
-import JobStatusBanner from "@/app/components/JobStatusBanner";
+import JobStatusBanner from "@/app/components/common/JobStatusBanner";
 
 import ShowMapper from "../ShowMapper";
 import ShowTVDBCreator from "../ShowTVDBCreator";

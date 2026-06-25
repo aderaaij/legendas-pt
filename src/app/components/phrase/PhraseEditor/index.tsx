@@ -1,7 +1,7 @@
 "use client";
 
-import MetadataEditor from "@/app/components/MetadataEditor";
-import DuplicatePhraseManager from "@/app/components/DuplicatePhraseManager";
+import MetadataEditor from "@/app/components/phrase/MetadataEditor";
+import DuplicatePhraseManager from "@/app/components/phrase/DuplicatePhraseManager";
 
 import AddPhraseForm from "./AddPhraseForm";
 import PhraseEditorHeader from "./PhraseEditorHeader";

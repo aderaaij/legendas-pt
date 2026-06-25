@@ -5,9 +5,9 @@ import { Film } from "lucide-react";
 import { useHomePage } from "@/hooks/useHomePage";
 import { LibraryShow } from "@/lib/supabase";
 import { buildLibraryRows, pickFeaturedShow } from "@/utils/libraryRows";
-import { HeroSection } from "./cena/HeroSection";
-import { ShowRail } from "./cena/ShowRail";
-import JobStatusBanner from "./JobStatusBanner";
+import { HeroSection } from "./HeroSection";
+import { ShowRail } from "./ShowRail";
+import JobStatusBanner from "../common/JobStatusBanner";
 
 interface HomePageProps {
   initialShows: LibraryShow[];

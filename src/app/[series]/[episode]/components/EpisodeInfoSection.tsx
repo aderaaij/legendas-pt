@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { formatDuration } from "@/utils/formatDuration";
 import { formatDatePt } from "@/utils/formatDate";
-import { PosterArt } from "@/app/components/cena/PosterArt";
+import { PosterArt } from "@/app/components/home/PosterArt";
 
 interface EpisodeInfoSectionProps {
   show: Show;

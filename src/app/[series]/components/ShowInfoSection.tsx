@@ -8,7 +8,7 @@ import {
 } from "@/utils/slugify";
 import { yearFrom } from "@/utils/posterGradient";
 import { useAuth } from "@/contexts/AuthContext";
-import { PosterArt } from "@/app/components/cena/PosterArt";
+import { PosterArt } from "@/app/components/home/PosterArt";
 import { EpisodeWithStats } from "./SeriesPageClient";
 
 interface ShowInfoSectionProps {

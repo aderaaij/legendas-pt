@@ -1,5 +1,5 @@
 import { ExtractedPhrase } from "@/lib/supabase";
-import { FavoriteButton } from "./FavoriteButton";
+import { FavoriteButton } from "../common/FavoriteButton";
 
 interface PhraseCardProps {
   phrase: ExtractedPhrase;

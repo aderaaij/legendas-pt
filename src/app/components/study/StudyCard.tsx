@@ -7,7 +7,7 @@ import {
   StudyRating,
   StudyDirection,
 } from "@/types/spaced-repetition";
-import { FavoriteButton } from "./FavoriteButton";
+import { FavoriteButton } from "../common/FavoriteButton";
 
 interface StudyCardProps {
   card: StudyCardType;

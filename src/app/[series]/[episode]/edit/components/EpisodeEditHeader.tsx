@@ -2,7 +2,7 @@
 
 import { Show, Episode } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
-import Breadcrumb from "@/app/components/Breadcrumb";
+import Breadcrumb from "@/app/components/common/Breadcrumb";
 
 interface EpisodeEditHeaderProps {
   show: Show | null;

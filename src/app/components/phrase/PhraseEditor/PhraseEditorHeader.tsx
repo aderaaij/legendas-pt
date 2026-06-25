@@ -3,7 +3,7 @@
 import { ArrowLeft, Plus, Settings, Copy } from "lucide-react";
 
 import { Show, Episode } from "@/lib/supabase";
-import AnkiExporter from "@/app/components/AnkiExporter";
+import AnkiExporter from "@/app/components/phrase/AnkiExporter";
 import type { PhraseItem } from "@/types/phrase";
 
 interface PhraseEditorHeaderProps {

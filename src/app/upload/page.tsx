@@ -13,7 +13,7 @@ import {
   Merge,
 } from "lucide-react";
 
-import { AdminRoute } from "@/app/components/ProtectedRoute";
+import { AdminRoute } from "@/app/components/common/ProtectedRoute";
 import { generateShowSlug } from "@/utils/slugify";
 
 import SubtitleUploader from "./components/SubtitleUploader";

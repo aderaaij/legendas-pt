@@ -6,7 +6,7 @@ import { Upload } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "./AuthModal";
-import { UserDropdown } from "./UserDropdown";
+import { UserDropdown } from "../common/UserDropdown";
 
 type Theme = "noir" | "warm";
 

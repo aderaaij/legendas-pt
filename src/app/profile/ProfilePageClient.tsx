@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import { ProfileStats } from '@/app/components/ProfileStats'
+import { ProfileStats } from '@/app/components/common/ProfileStats'
 
 export default function ProfilePageClient() {
   const { user, loading } = useAuth()
