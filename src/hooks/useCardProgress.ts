@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { CardStudy } from '@/types/spaced-repetition';
@@ -11,13 +11,27 @@ interface CardProgressData {
   isLearned: boolean;
 }
 
+const EMPTY_PROGRESS: Map<string, CardProgressData> = new Map();
+
 export function useCardProgress(phraseIds: string[]) {
-  const [progressData, setProgressData] = useState<Map<string, CardProgressData>>(new Map());
+  const [storedProgressData, setStoredProgressData] = useState<
+    Map<string, CardProgressData>
+  >(new Map());
   const [loading, setLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
   // Create a stable string representation for dependency checking
   const phraseIdsString = phraseIds.join(',');
+
+  // Progress only applies to a signed-in user with phrases; derive the empty
+  // map otherwise instead of clearing state synchronously in the effect.
+  const progressData = useMemo(
+    () =>
+      isAuthenticated && user && phraseIds.length > 0
+        ? storedProgressData
+        : EMPTY_PROGRESS,
+    [isAuthenticated, user, phraseIds.length, storedProgressData]
+  );
 
   const calculateProgressPercentage = useCallback((cardStudy: CardStudy | null): number => {
     if (!cardStudy) return 0;
@@ -57,7 +71,6 @@ export function useCardProgress(phraseIds: string[]) {
 
   useEffect(() => {
     if (!isAuthenticated || !user || phraseIds.length === 0) {
-      setProgressData(new Map());
       return;
     }
 
@@ -93,7 +106,7 @@ export function useCardProgress(phraseIds: string[]) {
           });
         });
         
-        setProgressData(progressMap);
+        setStoredProgressData(progressMap);
       } catch (error) {
         console.error('Error in fetchProgressData:', error);
       } finally {
@@ -101,7 +114,9 @@ export function useCardProgress(phraseIds: string[]) {
       }
     };
 
-    fetchProgressData();
+    (async () => {
+      await fetchProgressData();
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user, phraseIdsString]);
 

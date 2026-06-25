@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Play, Settings } from "lucide-react";
 import { usePhraseExtraction } from "@/hooks/usePhraseExtraction";
 import { SubtitleMetadata } from "../page";
-import { parseShowInfo } from "@/utils/extractPhrasesUitls";
+import { parseShowInfo } from "@/utils/extractPhrasesUtils";
 
 interface PhraseExtractorProps {
   subtitleContent: string;

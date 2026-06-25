@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { generateContentHash } from "@/utils/extractPhrasesUitls";
+import { generateContentHash } from "@/utils/extractPhrasesUtils";
 import { parseVTTWithTimestamps, parseSRTWithTimestamps, matchPhrasesToTimestamps, SubtitleBlock } from "@/utils/subtitleUtils";
 
 interface PhraseExtractionRequest {

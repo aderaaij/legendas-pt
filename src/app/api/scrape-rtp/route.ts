@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import RTPScraperService from "@/lib/rtp-scraper";
 import TVDBService from "@/lib/tvdb";
-import { generateContentHash } from "@/utils/extractPhrasesUitls";
+import { generateContentHash } from "@/utils/extractPhrasesUtils";
 import { PhraseExtractionService } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {

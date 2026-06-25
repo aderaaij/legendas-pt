@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Anton, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Navigation } from "@/app/components/Navigation";
-import Footer from "@/app/components/Footer";
+import { Navigation } from "@/app/components/layout/Navigation";
+import Footer from "@/app/components/layout/Footer";
 
 const hankenGrotesk = Hanken_Grotesk({
   variable: "--font-hanken",

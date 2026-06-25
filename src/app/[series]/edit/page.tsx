@@ -11,10 +11,10 @@ import Link from "next/link";
 
 import { generateShowSlug } from "@/utils/slugify";
 import { formatDate } from "@/utils/formatDate";
-import MetadataEditor from "@/app/components/MetadataEditor";
-import PhraseEditor from "@/app/components/PhraseEditor";
-import { AdminRoute } from "@/app/components/ProtectedRoute";
-import Breadcrumb from "@/app/components/Breadcrumb";
+import MetadataEditor from "@/app/components/phrase/MetadataEditor";
+import PhraseEditor from "@/app/components/phrase/PhraseEditor";
+import { AdminRoute } from "@/app/components/common/ProtectedRoute";
+import Breadcrumb from "@/app/components/common/Breadcrumb";
 import { useShowEdit } from "@/hooks/useShowEdit";
 
 export default function ShowEditPage() {

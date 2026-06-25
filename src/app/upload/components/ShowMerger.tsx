@@ -34,7 +34,9 @@ export default function ShowMerger() {
   }, []);
 
   useEffect(() => {
-    loadDuplicateShows();
+    (async () => {
+      await loadDuplicateShows();
+    })();
   }, [loadDuplicateShows]);
 
   const handleMerge = async (
@@ -62,7 +64,7 @@ export default function ShowMerger() {
       } else {
         setMessage({ type: "error", text: result.message });
       }
-    } catch (_error) {
+    } catch {
       setMessage({ type: "error", text: "Merge operation failed" });
     } finally {
       setMerging(null);

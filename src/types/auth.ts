@@ -1,4 +1,4 @@
-import { User } from '@supabase/supabase-js'
+import { User, AuthError } from '@supabase/supabase-js'
 
 export type UserRole = 'user' | 'admin'
 
@@ -18,8 +18,8 @@ export interface AuthContextType {
   user: AuthUser | null
   profile: UserProfile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   getAccessToken: () => Promise<string | null>
   isAdmin: boolean

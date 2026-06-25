@@ -124,7 +124,9 @@ export function useShowEdit(series: string): UseShowEditReturn {
   }, [series]);
 
   useEffect(() => {
-    loadShowData();
+    (async () => {
+      await loadShowData();
+    })();
   }, [loadShowData]);
 
   const handleEditExtraction = (

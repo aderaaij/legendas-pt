@@ -1,4 +1,4 @@
-import { PhraseItem } from "@/app/components/AnkiExporter";
+import { PhraseItem } from "@/types/phrase";
 
 export const callPhraseExtractionAPI = async (
   content: string
@@ -22,7 +22,11 @@ export const callPhraseExtractionAPI = async (
   }
 
   return result.phrases.map(
-    (item: any): PhraseItem => ({
+    (item: {
+      phrase: string;
+      translation: string;
+      frequency?: number;
+    }): PhraseItem => ({
       phrase: item.phrase,
       translation: item.translation,
       frequency: item.frequency || 1,

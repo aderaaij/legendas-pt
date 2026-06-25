@@ -8,7 +8,7 @@ import {
   episodeSlugPart,
 } from "@/utils/slugify";
 import { formatDatePt } from "@/utils/formatDate";
-import { PosterArt } from "@/app/components/cena/PosterArt";
+import { PosterArt } from "@/app/components/home/PosterArt";
 import { EpisodeWithStats } from "./SeriesPageClient";
 
 interface SeriesEpisodeCardProps {

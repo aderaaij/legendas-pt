@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
           },
           { timeout: 5000 }
         );
-      } catch (e) {
+      } catch {
         console.log("No loading indicators found or timeout reached");
       }
 
@@ -328,7 +328,6 @@ export async function POST(request: NextRequest) {
         }
 
         const episodeId = linkMatch[1];
-        const linkTitle = linkMatch[2] || "";
         console.log(`Found episode ID: ${episodeId}`);
 
         const episodeNumberMatch = articleContent.match(
