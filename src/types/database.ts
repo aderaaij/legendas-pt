@@ -47,6 +47,9 @@ export interface PhraseExtraction {
   content_hash: string;
   content_preview?: string;
   content_length: number;
+  // Full raw subtitle text (with timestamps), kept so extractions can be re-run
+  // without re-scraping. Nullable: rows created before this column / preview-only.
+  content_full?: string;
   show_id?: string;
   episode_id?: string;
   source: string;

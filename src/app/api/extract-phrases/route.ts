@@ -406,6 +406,7 @@ ${contentForAI}`;
         const extractionData = {
           content_hash: contentHash,
           content_preview: content.substring(0, 500),
+          content_full: content,
           content_length: content.length,
           show_id: showId || null,
           episode_id: episodeId || null,

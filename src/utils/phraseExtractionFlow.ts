@@ -60,6 +60,7 @@ async function saveExtractionToDatabase(
   phrases: PhraseItem[],
   contentHash: string,
   cleanContent: string,
+  rawContent: string,
   processingTime: number,
   ctx: PhraseExtractionContext,
   existingExtraction?: PhraseExtraction | null
@@ -123,6 +124,7 @@ async function saveExtractionToDatabase(
     const extractionData = {
       content_hash: contentHash,
       content_preview: cleanContent.slice(0, 200),
+      content_full: rawContent,
       content_length: cleanContent.length,
       show_id: show.id,
       episode_id: episode?.id,
@@ -204,6 +206,7 @@ export async function extractPhrasesFlow(
         const extractionData = {
           content_hash: contentHash,
           content_preview: cleanContent.slice(0, 200),
+          content_full: subtitleContent,
           content_length: cleanContent.length,
           show_id: show.id,
           episode_id: episode.id,
@@ -259,6 +262,7 @@ export async function extractPhrasesFlow(
       settings.forceReExtraction ? newPhrases : finalPhrases,
       contentHash,
       cleanContent,
+      subtitleContent,
       processingTime,
       ctx,
       existingExtraction

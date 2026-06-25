@@ -6,6 +6,12 @@ import {
   Show,
 } from "@/types/database";
 
+// Every phrase_extractions column except the large `content_full` body. Used for
+// lookups/metadata reads so we don't transfer the full subtitle (only needed
+// when actually re-running an extraction).
+const EXTRACTION_COLUMNS =
+  "id, content_hash, content_preview, content_length, show_id, episode_id, source, capture_timestamp, language, max_phrases, total_phrases_found, was_truncated, extraction_params, processing_time_ms, api_cost_estimate, created_at, updated_at";
+
 export async function findExistingExtraction(
   contentHash: string
 ): Promise<PhraseExtraction | null> {
@@ -13,7 +19,7 @@ export async function findExistingExtraction(
     .from("phrase_extractions")
     .select(
       `
-      *,
+      ${EXTRACTION_COLUMNS},
       show:shows(*),
       episode:episodes(*)
     `
@@ -139,7 +145,7 @@ export async function getExtractionWithMetadata(
     .from("phrase_extractions")
     .select(
       `
-      *,
+      ${EXTRACTION_COLUMNS},
       show:shows(*),
       episode:episodes(*)
     `
@@ -151,5 +157,10 @@ export async function getExtractionWithMetadata(
     throw new Error(`Failed to get extraction: ${error.message}`);
   }
 
-  return data;
+  // shows/episodes are to-one FKs (single objects at runtime); supabase-js types
+  // embeds as arrays, so cast to the declared single-object shape.
+  return data as unknown as PhraseExtraction & {
+    show?: Show;
+    episode?: Episode;
+  };
 }
