@@ -184,11 +184,27 @@ The application includes an advanced spaced repetition system for optimal langua
 ## Environment Variables Required
 
 ```bash
-OPENAI_API_KEY=          # OpenAI API key for phrase extraction
+# LLM providers — at least the one used as the default must be set.
+OPENAI_API_KEY=               # OpenAI key (phrase extraction; default provider)
+ANTHROPIC_API_KEY=            # Anthropic Claude key (optional provider)
+GOOGLE_GENERATIVE_AI_API_KEY= # Google Gemini key (optional provider)
+LLM_PROVIDER=                 # Optional deploy-wide default: openai | anthropic | google (default: openai)
+LLM_MODEL=                    # Optional model override for the default provider (blank → provider's default)
+
 NEXT_PUBLIC_SUPABASE_URL= # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY= # Supabase anonymous key
+SUPABASE_SECRET_KEY=      # Service-role key (server-only). Required for RTP imports:
+                          # the import authorizes the admin once, then does all
+                          # server work with a service-role client so the long
+                          # episode loop doesn't depend on the user's JWT. Helper:
+                          # src/lib/supabase-admin.ts. Never expose to the client.
 NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
 ```
+
+The active provider/model is chosen per extraction in the upload UI (admin), or
+falls back to `LLM_PROVIDER`/`LLM_MODEL`, then the built-in defaults in
+`src/lib/llm/types.ts`. Selection resolution + model construction live in
+`src/lib/llm/providers.ts`.
 
 ## File Structure Notes
 
@@ -220,6 +236,14 @@ NEXT_PUBLIC_TVDB_API_KEY= # The TVDB API key for show metadata
   from per-domain modules in `/src/lib/db/*` (shows, episodes, extractions,
   phrases, extraction-jobs, stats, dedup). Also `tvdb.ts`, `rtp-scraper.ts`,
   `study-service.ts`.
+- `/src/lib/llm/` - Provider-agnostic LLM layer (Vercel AI SDK). `types.ts`
+  (UI-safe: `Provider`, `DEFAULT_MODELS`, `LlmSelection`), `providers.ts`
+  (`resolveSelection` = per-request override → `LLM_PROVIDER`/`LLM_MODEL` env →
+  default; `getModel` builds the OpenAI/Anthropic/Google model — the only place
+  providers are constructed), and `extract-phrases.ts` (first consumer:
+  `generateObject` + Zod). Keep this layer **pure** (no Supabase/Next imports) so
+  a future subtitle-translation consumer can reuse `providers.ts` unchanged. The
+  chosen provider/model is persisted per extraction in `extraction_params`.
 - `/src/types/` - TypeScript type definitions (auth.ts, database.ts, phrase.ts)
 - `/src/utils/` - Utility functions for content processing and API interactions
 

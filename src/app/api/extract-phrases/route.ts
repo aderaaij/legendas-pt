@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateContentHash } from "@/utils/extractPhrasesUtils";
 import { parseVTTWithTimestamps, parseSRTWithTimestamps, matchPhrasesToTimestamps, SubtitleBlock } from "@/utils/subtitleUtils";
+import { extractPhrases } from "@/lib/llm/extract-phrases";
+import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
+import type { Provider } from "@/lib/llm/types";
+import { resolveSaveAuth } from "@/lib/supabase-admin";
 
 interface PhraseExtractionRequest {
   content: string;
@@ -16,34 +20,9 @@ interface PhraseExtractionRequest {
   showId?: string;
   episodeId?: string;
   fileType?: 'vtt' | 'srt' | 'txt';
+  provider?: Provider;
+  model?: string;
 }
-
-// Define the JSON schema for structured outputs
-const phraseExtractionSchema = {
-  type: "object",
-  properties: {
-    phrases: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          phrase: {
-            type: "string",
-            description: "The exact Portuguese phrase",
-          },
-          translation: {
-            type: "string",
-            description: "Natural English translation",
-          },
-        },
-        required: ["phrase", "translation"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["phrases"],
-  additionalProperties: false,
-} as const;
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,41 +39,25 @@ export async function POST(request: NextRequest) {
       showId,
       episodeId,
       fileType,
+      provider,
+      model,
     }: PhraseExtractionRequest = await request.json();
 
-    // If saveToDatabase is true, we need authentication
+    // Database writes require authorization. A normal request carries the user's
+    // JWT; a trusted server-to-server call (e.g. the RTP importer) carries the
+    // service key. Resolve the client once and reuse it for every write below —
+    // this avoids a per-request auth-server round-trip and short-lived-token
+    // expiry on long imports.
+    let saveClient: SupabaseClient | null = null;
     if (saveToDatabase) {
-      const authHeader = request.headers.get("authorization");
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      const auth = await resolveSaveAuth(request.headers.get("authorization"));
+      if ("error" in auth) {
         return NextResponse.json(
-          { error: "Authentication required for database operations" },
-          { status: 401 }
+          { error: auth.error.message },
+          { status: auth.error.status }
         );
       }
-
-      const token = authHeader.substring(7);
-      
-      // Create authenticated Supabase client for database operations
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      );
-
-      // Verify authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: "Invalid authentication" },
-          { status: 401 }
-        );
-      }
+      saveClient = auth.client;
     }
 
     if (!content || content.trim().length === 0) {
@@ -124,181 +87,43 @@ export async function POST(request: NextRequest) {
       contentForAI = content;
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 }
-      );
-    }
-
-    const prompt = `You are a Portuguese language learning expert. Analyze the following Portuguese subtitle content and extract ALL useful phrases for language learners. Be extremely comprehensive and thorough - extract as many valuable learning phrases as possible.
-
-For each phrase, provide:
-1. The exact Portuguese phrase (preserve original capitalization and structure)
-2. A natural English translation
-
-Extract EVERYTHING useful including:
-- Complete sentences and meaningful phrases
-- Common expressions, idioms, and sayings
-- Conversational phrases and responses
-- Colloquialisms and everyday language
-- Question forms, exclamations, and responses
-- Emotional expressions and reactions
-- Transitional phrases and connectors
-- Commands, requests, and suggestions
-- Time expressions and descriptive phrases
-- Short but meaningful phrases (3+ words)
-- Interjections and common Portuguese exclamations
-- Verb phrases and common constructions
-- Adjective phrases that are commonly used
-- Any phrase pattern that would help someone learning Portuguese
-
-Only avoid:
-- Isolated single words (unless they're meaningful interjections like "Nossa!" or "Puxa!")
-- Incomplete fragments that don't make grammatical sense
-- Highly technical jargon
-- Proper nouns unless they're part of common expressions
-- Extremely common basic phrases that beginners already know: "boa noite", "bom dia", "boa tarde", "obrigado", "obrigada", "por favor", "desculpa", "com licença", "olá", "tchau", "sim", "não"
-
-CRITICAL REQUIREMENTS:
-- NEVER include duplicate phrases - each phrase should appear only once in your response
-- Skip overly basic greetings and common courtesy phrases that every beginner knows
-- Focus on phrases that provide real learning value beyond basic politeness
-
-IMPORTANT: Be extremely thorough. Extract hundreds of phrases if they exist in the content. This is for dedicated language learners who want maximum exposure to authentic Portuguese. Don't hold back - extract everything that could be useful for learning.
-
-Content:
-${contentForAI}`;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini", // use 4.1 mini
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful Portuguese language learning assistant. Extract useful phrases from the provided content according to the specified criteria.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-
-        temperature: 0.3,
-        max_tokens: 32000, // Maximum for GPT-4.1-mini (128k context, 32k output)
-        // Use structured outputs instead of manual JSON parsing
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "phrase_extraction_response",
-            strict: true,
-            schema: phraseExtractionSchema,
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("OpenAI API error:", errorData);
-      return NextResponse.json(
-        { error: "Failed to process with OpenAI API" },
-        { status: 500 }
-      );
-    }
-
-    const data = await response.json();
-
-    // Check for refusal (safety mechanism)
-    if (data.choices?.[0]?.message?.refusal) {
-      console.error(
-        "OpenAI refused the request:",
-        data.choices[0].message.refusal
-      );
-      return NextResponse.json(
-        { error: "Request was refused by OpenAI for safety reasons" },
-        { status: 400 }
-      );
-    }
-
-    // Check if the response was truncated due to max_tokens limit
-    const finishReason = data.choices?.[0]?.finish_reason;
-    if (finishReason === "length") {
-      console.warn("Response was truncated due to token limit");
-      // We'll still try to parse what we got, but log this for monitoring
-    }
-
-    const content_text = data.choices?.[0]?.message?.content;
-
-    if (!content_text) {
-      return NextResponse.json(
-        { error: "No response from OpenAI" },
-        { status: 500 }
-      );
-    }
-
-    // With structured outputs, we can directly parse the JSON without cleaning
-    let parsedResponse;
+    // Run the extraction through the provider-agnostic LLM layer. The effective
+    // provider/model is the per-request override, else the LLM_PROVIDER /
+    // LLM_MODEL env default, else the built-in default. Structured output and
+    // truncation handling live in the LLM layer now.
+    let extraction;
     try {
-      parsedResponse = JSON.parse(content_text);
-    } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", content_text);
-      console.error("Parse error:", parseError);
-
-      // If parsing fails due to truncation, try to handle it gracefully
-      if (finishReason === "length") {
-        // Try to find the last complete phrase entry
-        const lastCompleteEntry = content_text.lastIndexOf('{"phrase":');
-        if (lastCompleteEntry > 0) {
-          // Find the closing of the phrases array before the truncation
-          const beforeLastEntry = content_text.substring(0, lastCompleteEntry);
-          const lastComma = beforeLastEntry.lastIndexOf(",");
-
-          if (lastComma > 0) {
-            // Reconstruct valid JSON by closing the array and object
-            const repairedJson = beforeLastEntry.substring(0, lastComma) + "]}";
-            try {
-              parsedResponse = JSON.parse(repairedJson);
-            } catch (repairError) {
-              console.error("Failed to repair truncated JSON:", repairError);
-            }
-          }
-        }
-      }
-
-      if (!parsedResponse) {
+      extraction = await extractPhrases(contentForAI, { provider, model });
+    } catch (llmError) {
+      if (llmError instanceof MissingApiKeyError) {
         return NextResponse.json(
-          {
-            error: "Failed to parse OpenAI response",
-            truncated: finishReason === "length",
-            suggestion:
-              finishReason === "length"
-                ? "Try reducing maxPhrases or content size"
-                : undefined,
-          },
+          { error: `API key for ${llmError.provider} not configured` },
           { status: 500 }
         );
       }
-    }
-
-    // Validate the response structure (should always be valid with structured outputs)
-    if (!parsedResponse.phrases || !Array.isArray(parsedResponse.phrases)) {
+      if (llmError instanceof UnknownProviderError) {
+        return NextResponse.json(
+          { error: `Unknown LLM provider: ${llmError.value}` },
+          { status: 400 }
+        );
+      }
+      console.error("LLM extraction failed:", llmError);
       return NextResponse.json(
-        { error: "Invalid response structure from AI" },
+        { error: "Failed to process with the selected LLM provider" },
         { status: 500 }
       );
     }
 
-    // Filter and validate phrases (extra safety, though structured outputs should ensure this)
-    const validPhrases = parsedResponse.phrases.filter(
-      (phrase: any) =>
+    const truncated = extraction.truncated;
+    const resolvedSelection = extraction.resolved;
+    if (truncated) {
+      console.warn("Response was truncated due to token limit");
+    }
+
+    // Filter and validate phrases (the schema guarantees the shape; this drops
+    // empty or too-short entries).
+    const validPhrases = extraction.phrases.filter(
+      (phrase) =>
         phrase.phrase &&
         phrase.translation &&
         typeof phrase.phrase === "string" &&
@@ -310,21 +135,9 @@ ${contentForAI}`;
     let extractionId: string | undefined;
     if (saveToDatabase) {
       try {
-        // Get the authentication token and create authenticated client
-        const authHeader = request.headers.get("authorization");
-        const token = authHeader?.substring(7);
-        
-        const authenticatedSupabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          }
-        );
+        // Reuse the client resolved during the auth check above (user-scoped, or
+        // service-role for trusted internal calls).
+        const authenticatedSupabase = saveClient!;
 
         // Generate content hash
         const baseContentHash = generateContentHash(content);
@@ -368,7 +181,9 @@ ${contentForAI}`;
           return NextResponse.json({
             phrases: validPhrases,
             total: validPhrases.length,
-            truncated: finishReason === "length",
+            truncated,
+            provider: resolvedSelection.provider,
+            model: resolvedSelection.model,
             extractionId: existingExtraction.id,
             alreadyExists: true,
             message: episodeId 
@@ -415,13 +230,15 @@ ${contentForAI}`;
           language,
           max_phrases: 1000, // Based on our extensive extraction
           total_phrases_found: validPhrases.length,
-          was_truncated: finishReason === "length",
+          was_truncated: truncated,
           extraction_params: {
             filename,
             showTitle,
             episodeTitle,
             seasonNumber,
             episodeNumber,
+            provider: resolvedSelection.provider,
+            model: resolvedSelection.model,
           },
         };
 
@@ -483,12 +300,13 @@ ${contentForAI}`;
     return NextResponse.json({
       phrases: validPhrases,
       total: validPhrases.length,
-      truncated: finishReason === "length",
+      truncated,
+      provider: resolvedSelection.provider,
+      model: resolvedSelection.model,
       extractionId,
-      message:
-        finishReason === "length"
-          ? "Response was truncated. Consider reducing maxPhrases or content size for complete results."
-          : undefined,
+      message: truncated
+        ? "Response was truncated. Consider reducing maxPhrases or content size for complete results."
+        : undefined,
     });
   } catch (error) {
     console.error("Error in extract-phrases API:", error);

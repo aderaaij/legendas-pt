@@ -11,6 +11,10 @@ import {
 import { PhraseItem } from "@/types/phrase";
 import { ExtractionSettings } from "@/app/upload/components/PhraseExtractor";
 import { SubtitleMetadata } from "@/app/upload/page";
+import type { Provider } from "@/lib/llm/types";
+
+/** Provider + model actually used for an extraction, stored in extraction_params. */
+type ResolvedLlm = { provider?: Provider; model?: string };
 
 export interface PhraseExtractionContext {
   settings: ExtractionSettings;
@@ -63,7 +67,8 @@ async function saveExtractionToDatabase(
   rawContent: string,
   processingTime: number,
   ctx: PhraseExtractionContext,
-  existingExtraction?: PhraseExtraction | null
+  existingExtraction?: PhraseExtraction | null,
+  resolvedLlm?: ResolvedLlm
 ): Promise<void> {
   const { settings, fileName, metadata } = ctx;
 
@@ -134,7 +139,10 @@ async function saveExtractionToDatabase(
       max_phrases: phrases.length, // Use actual number extracted
       total_phrases_found: phrases.length,
       was_truncated: false,
-      extraction_params: {},
+      extraction_params: {
+        provider: resolvedLlm?.provider,
+        model: resolvedLlm?.model,
+      },
       processing_time_ms: processingTime,
     };
 
@@ -216,7 +224,8 @@ export async function extractPhrasesFlow(
           max_phrases: existingPhrases.length,
           total_phrases_found: existingPhrases.length,
           was_truncated: false,
-          extraction_params: {},
+          // Reusing phrases from the source extraction — preserve its provenance.
+          extraction_params: existingExtraction.extraction_params ?? {},
           processing_time_ms: 0, // Reusing existing extraction
         };
 
@@ -243,7 +252,15 @@ export async function extractPhrasesFlow(
     }
 
     // Call the API for a fresh extraction.
-    const newPhrases = await callPhraseExtractionAPI(cleanContent);
+    const apiResult = await callPhraseExtractionAPI(cleanContent, {
+      provider: settings.provider,
+      model: settings.model,
+    });
+    const newPhrases = apiResult.phrases;
+    const resolvedLlm: ResolvedLlm = {
+      provider: apiResult.provider,
+      model: apiResult.model,
+    };
     const processingTime = Date.now() - startTime;
 
     // When force re-extracting, merge de-duplicated new phrases with existing.
@@ -265,7 +282,8 @@ export async function extractPhrasesFlow(
       subtitleContent,
       processingTime,
       ctx,
-      existingExtraction
+      existingExtraction,
+      resolvedLlm
     );
 
     return finalPhrases;
