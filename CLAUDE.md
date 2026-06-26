@@ -20,9 +20,58 @@ npm start
 
 # Run linting
 npm run lint
+
+# Run the data-plane worker (all scraping + LLM extraction; see below)
+npm run worker          # one-off; npm run worker:watch to auto-reload
 ```
 
 Development server runs on http://localhost:3000
+
+## Worker / Data Plane Architecture
+
+All heavy work (subtitle scraping + LLM phrase extraction) runs in a **persistent
+worker**, not on Vercel. The Next.js app is the **control plane**: it handles UI,
+auth, reads, and **enqueues jobs**; it holds **no LLM keys** and does no LLM work.
+The two planes communicate only through Supabase.
+
+```
+Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀──claim+process──  Worker
+   UI · auth · reads                  DB · Auth · Realtime              scrape + extract + persist
+```
+
+- **`worker/`** — the orchestrator (a Node/TypeScript process run via `tsx`; the
+  `@/*` alias resolves from `tsconfig.json`, no build step). Outbound-only, no
+  exposed ports. Claims jobs, runs the pipeline, owns **all** job-state writes.
+  Reuses the shared, framework-free libs: `@/lib/extractor` (subtitle → phrases,
+  the pure LLM core), `@/lib/rtp-scraper`, `@/lib/db/extractions`
+  (`persistExtraction`). See `worker/README.md`.
+- **Job types** (`extraction_jobs.job_type`): `rtp_series` (worker scrapes each
+  episode) and `manual_upload` (browser POSTs the file content to
+  `/api/manual-upload/start`, which embeds it in the job; the worker extracts it —
+  no scraper). Both enqueue with `status='queued'`; the worker claims
+  `queued → running`.
+- **Robustness:** atomic claim (safe to run multiple workers), a per-job
+  heartbeat + stale-reclaim (a crashed worker's job auto-resumes; dedup makes
+  re-processing safe), per-unit retries with backoff, graceful shutdown, and a
+  `worker_status` liveness row surfaced as a "worker online" badge on `/upload`.
+- **Progress** reaches the UI via **Supabase Realtime** on `extraction_jobs`
+  (`useExtractionJobs` subscribes; a slow poll is the backstop).
+- **Enqueue endpoints:** `POST /api/rtp-import/start`, `POST /api/manual-upload/start`
+  (both admin-only, enqueue-only). There is **no** `/api/extract-phrases` route
+  anymore — extraction is the worker's job.
+
+**Run it:** `cp .env.worker.example .env.worker` (fill in Supabase + LLM keys,
+`chmod 600`), then `npm run worker` — or `docker compose up -d --build` (the
+worker-only `docker-compose.yml`). The worker needs `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, and at least one LLM key.
+
+**Required DB migrations** (in `database/`, idempotent — apply with `psql`):
+`extraction_jobs_table.sql`, `add_queued_status.sql`, `worker_status_table.sql`,
+`enable_realtime_extraction_jobs.sql`.
+
+After this split, the LLM keys (`OPENAI_API_KEY`, etc.) live **only** on the
+worker and should be **removed from the Vercel env**; the `ai`/`@ai-sdk/*` SDK no
+longer ships in the Vercel bundle.
 
 ## Admin Setup
 
@@ -183,8 +232,13 @@ The application includes an advanced spaced repetition system for optimal langua
 
 ## Environment Variables Required
 
+> **Note:** the LLM keys below now belong to the **worker** (`.env.worker`), not
+> Vercel — see "Worker / Data Plane Architecture" above. The Next app does no LLM
+> work, so remove them from the Vercel env. The variables below describe the full
+> set across both planes.
+
 ```bash
-# LLM providers — at least the one used as the default must be set.
+# LLM providers — at least the one used as the default must be set (WORKER only).
 OPENAI_API_KEY=               # OpenAI key (phrase extraction; default provider)
 ANTHROPIC_API_KEY=            # Anthropic Claude key (optional provider)
 GOOGLE_GENERATIVE_AI_API_KEY= # Google Gemini key (optional provider)
