@@ -137,10 +137,13 @@ export async function POST(request: NextRequest) {
       },
     };
 
+    // Enqueue only: mark the job 'queued' and return. The persistent worker
+    // claims it ('queued' → 'running') and runs the per-episode pipeline. Vercel
+    // does no scraping/LLM work and never drives the loop.
     await PhraseExtractionService.updateExtractionJob(
       job.id,
       {
-        status: "running",
+        status: "queued",
         progress: 0,
         results: results as unknown as ExtractionJob["results"],
       },

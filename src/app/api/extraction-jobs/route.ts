@@ -133,8 +133,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Only allow cancelling pending or running jobs
-      if (!['pending', 'running'].includes(job.status)) {
+      // Only allow cancelling jobs that haven't reached a terminal state.
+      if (!['queued', 'pending', 'running'].includes(job.status)) {
         return NextResponse.json(
           { error: 'Cannot cancel job with status: ' + job.status },
           { status: 400 }

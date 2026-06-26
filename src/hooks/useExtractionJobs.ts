@@ -170,7 +170,7 @@ export function useExtractionJob(jobId: string | null) {
 
   // Auto-refresh if job is active
   useEffect(() => {
-    if (!job || !['pending', 'running'].includes(job.status)) return;
+    if (!job || !['queued', 'pending', 'running'].includes(job.status)) return;
 
     const interval = setInterval(refreshJob, 3000);
     return () => clearInterval(interval);

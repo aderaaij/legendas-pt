@@ -84,7 +84,7 @@ export interface ExtractionJob {
   id: string;
   user_id: string;
   job_type: "rtp_series" | "manual_upload";
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  status: "queued" | "pending" | "running" | "completed" | "failed" | "cancelled";
   progress: number; // 0-100
   total_episodes: number;
   completed_episodes: number;
