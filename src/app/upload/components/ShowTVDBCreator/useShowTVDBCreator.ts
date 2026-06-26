@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useAuthedFetch } from "@/hooks/useAuthedFetch";
 import { Show } from "@/lib/supabase";
 import TVDBService, { TVDBSearchResult } from "@/lib/tvdb";
 
@@ -34,6 +35,7 @@ export function useShowTVDBCreator({
   seriesTitle,
   onShowCreated,
 }: UseShowTVDBCreatorParams) {
+  const authedFetch = useAuthedFetch();
   const [searchQuery, setSearchQuery] = useState(seriesTitle);
   const [searchResults, setSearchResults] = useState<TVDBSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -157,7 +159,7 @@ export function useShowTVDBCreator({
       }
 
       // Call API to create show
-      const response = await fetch("/api/shows", {
+      const response = await authedFetch("/api/shows", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
