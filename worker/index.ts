@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase-admin";
 import { getExtractionJob } from "@/lib/db/extraction-jobs";
 import type { ExtractionJob } from "@/types/database";
 import { processRtpSeriesJob } from "./process-rtp-series";
+import { processManualUploadJob } from "./process-manual-upload";
 
 /**
  * The orchestrator (worker / data plane). A single persistent process that polls
@@ -47,7 +48,7 @@ async function claimNextJob(
   const { data, error } = await supabase
     .from("extraction_jobs")
     .select("*")
-    .eq("job_type", "rtp_series")
+    .in("job_type", ["rtp_series", "manual_upload"])
     .eq("status", "queued")
     .order("created_at", { ascending: true })
     .limit(1);
@@ -92,11 +93,16 @@ async function tick(supabase: SupabaseClient): Promise<boolean> {
   if (!job) return false;
 
   try {
-    await processRtpSeriesJob(supabase, job, {
+    const hooks = {
       log,
       isCancelled: () => isJobCancelled(supabase, job.id),
       shouldStop: () => shuttingDown,
-    });
+    };
+    if (job.job_type === "manual_upload") {
+      await processManualUploadJob(supabase, job, hooks);
+    } else {
+      await processRtpSeriesJob(supabase, job, hooks);
+    }
   } catch (err) {
     // Leave the job 'running' so it resumes on the next poll / restart (dedup
     // makes re-processing safe). A persistently failing job will retry — Phase 3
@@ -121,7 +127,9 @@ function installShutdown() {
 async function main() {
   const supabase = createServiceClient();
   installShutdown();
-  log(`started — polling every ${workerEnv.pollIntervalMs}ms (rtp_series)`);
+  log(
+    `started — polling every ${workerEnv.pollIntervalMs}ms (rtp_series, manual_upload)`
+  );
 
   while (!shuttingDown) {
     try {

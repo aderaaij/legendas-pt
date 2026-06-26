@@ -55,8 +55,8 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 
 ## Behaviour & scope (Phase 1)
 
-- Handles `rtp_series` jobs, one job at a time per worker (single internal
-  concurrency).
+- Handles `rtp_series` and `manual_upload` jobs, one job at a time per worker
+  (single internal concurrency).
 - Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
   'queued'`), so running **multiple workers is safe** — each job goes to exactly
   one worker, no double-processing. (One worker is plenty for this workload; the
@@ -67,6 +67,6 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 - Honors cancellation (`status = 'cancelled'`) and graceful shutdown
   (SIGTERM/SIGINT) between episodes; an interrupted job stays resumable.
 
-Not yet (later phases): `manual_upload` jobs, a bounded per-worker concurrency
-pool + rate limiting, bounded retries/backoff, **stale-reclaim of orphaned
-`running` jobs** (with a heartbeat row), and Supabase Realtime progress.
+Not yet (later phases): a bounded per-worker concurrency pool + rate limiting,
+bounded retries/backoff, **stale-reclaim of orphaned `running` jobs** (with a
+heartbeat row), and Supabase Realtime progress.
