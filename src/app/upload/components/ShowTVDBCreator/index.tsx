@@ -11,6 +11,7 @@ import { useShowTVDBCreator, type EpisodePreview } from "./useShowTVDBCreator";
 interface ShowTVDBCreatorProps {
   seriesTitle: string;
   episodes: EpisodePreview[];
+  season: number;
   onShowCreated: (show: Show) => void;
   onCancel: () => void;
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface ShowTVDBCreatorProps {
 export default function ShowTVDBCreator({
   seriesTitle,
   episodes,
+  season,
   onShowCreated,
   onCancel,
   isOpen,
@@ -69,7 +71,8 @@ export default function ShowTVDBCreator({
                 RTP Series: <span className="font-medium">{seriesTitle}</span>
               </p>
               <p className="text-sm" style={{ color: "var(--faint)" }}>
-                {episodes.length} episodes • Link to TVDB data or create manually
+                {episodes.length} episodes • Season {season} • Link to TVDB data
+                or create manually
               </p>
             </div>
             <button
@@ -114,6 +117,7 @@ export default function ShowTVDBCreator({
                 onChange={updateShowData}
                 selectedTVDBShow={selectedTVDBShow}
                 episodes={episodes}
+                season={season}
               />
 
               {/* Action Buttons */}

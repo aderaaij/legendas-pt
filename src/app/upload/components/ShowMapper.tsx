@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Check, X, Tv2 } from 'lucide-react';
+import { Search, ChevronRight, X, Tv2 } from 'lucide-react';
 import { Show } from '@/lib/supabase';
 import { useShowSelector } from '@/hooks/useShowSelector';
 
@@ -13,6 +13,7 @@ interface ShowMapperProps {
     airDate: string;
     id: string;
   }>;
+  season: number;
   onShowSelected: (show: Show) => void;
   onCreateNewShow: () => void;
   onCancel: () => void;
@@ -22,6 +23,7 @@ interface ShowMapperProps {
 export default function ShowMapper({
   seriesTitle,
   episodes,
+  season,
   onShowSelected,
   onCreateNewShow,
   onCancel,
@@ -42,8 +44,11 @@ export default function ShowMapper({
 
   const [showEpisodePreview, setShowEpisodePreview] = useState(false);
 
-  const handleShowSelect = async (show: Show) => {
-    await handleSelectExistingShow(show);
+  const handleShowSelect = (show: Show) => {
+    // Advance to the preview immediately for instant feedback. `selectedShow` is
+    // set synchronously inside handleSelectExistingShow; the episode list loads
+    // in the background and the preview shows its own `isLoadingEpisodes` state.
+    void handleSelectExistingShow(show);
     setShowEpisodePreview(true);
   };
 
@@ -70,7 +75,7 @@ export default function ShowMapper({
                 Found series: <span className="font-medium">{seriesTitle}</span>
               </p>
               <p className="text-sm" style={{ color: "var(--faint)" }}>
-                {episodes.length} episodes • Choose an existing show to map episodes to
+                {episodes.length} episodes • Season {season} • Choose an existing show to map episodes to
               </p>
             </div>
             <button
@@ -144,10 +149,10 @@ export default function ShowMapper({
                       <div
                         key={show.id}
                         onClick={() => handleShowSelect(show)}
-                        className="p-4 last:border-b-0 cursor-pointer transition-colors"
+                        className="p-4 last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--surface2)]"
                         style={{ borderBottom: "1px solid var(--border)" }}
                       >
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-center gap-3">
                           <div>
                             <h4 className="font-medium" style={{ color: "var(--text)" }}>{show.name}</h4>
                             <p className="text-sm" style={{ color: "var(--muted)" }}>Source: {show.source}</p>
@@ -160,9 +165,9 @@ export default function ShowMapper({
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center" style={{ color: "var(--blue)" }}>
-                            <span className="text-sm mr-2">Select</span>
-                            <Check className="w-4 h-4" />
+                          <div className="flex items-center shrink-0" style={{ color: "var(--muted)" }}>
+                            <span className="text-sm mr-1">Select</span>
+                            <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
                       </div>
@@ -201,7 +206,7 @@ export default function ShowMapper({
                   <div className="grid gap-2">
                     {episodes.map((episode) => (
                       <div key={episode.id} className="text-sm">
-                        <span className="font-medium">Ep. {episode.episodeNumber}</span>
+                        <span className="font-medium">S{season}E{episode.episodeNumber}</span>
                         <span className="mx-2" style={{ color: "var(--muted)" }}>{episode.title}</span>
                         <span style={{ color: "var(--faint)" }}>{episode.airDate}</span>
                       </div>
@@ -269,7 +274,7 @@ export default function ShowMapper({
                         className="p-3 last:border-b-0 text-sm"
                         style={{ borderBottom: "1px solid var(--border)" }}
                       >
-                        <span className="font-medium">Ep. {episode.episodeNumber}</span>
+                        <span className="font-medium">S{season}E{episode.episodeNumber}</span>
                         <span className="mx-2" style={{ color: "var(--muted)" }}>{episode.title}</span>
                         <span style={{ color: "var(--faint)" }}>{episode.airDate}</span>
                       </div>

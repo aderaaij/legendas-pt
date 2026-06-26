@@ -6,11 +6,13 @@ import type { EpisodePreview } from "./useShowTVDBCreator";
 
 interface EpisodesPreviewListProps {
   episodes: EpisodePreview[];
+  season: number;
 }
 
 /** Read-only list of the episodes that will be imported with the new show. */
 export default function EpisodesPreviewList({
   episodes,
+  season,
 }: EpisodesPreviewListProps) {
   return (
     <div>
@@ -30,7 +32,9 @@ export default function EpisodesPreviewList({
           >
             <div className="flex justify-between items-start">
               <div>
-                <span className="font-medium">Ep. {episode.episodeNumber}</span>
+                <span className="font-medium">
+                  S{season}E{episode.episodeNumber}
+                </span>
                 <span className="ml-2" style={{ color: "var(--muted)" }}>
                   {episode.title}
                 </span>
