@@ -4,6 +4,7 @@ import { Play, ExternalLink } from "lucide-react";
 import { LibraryShow } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
 import { yearFrom } from "@/utils/posterGradient";
+import { resolveRtpLinks } from "@/utils/rtpLinks";
 import { PosterArt } from "./PosterArt";
 
 interface HeroSectionProps {
@@ -15,6 +16,7 @@ export function HeroSection({ show }: HeroSectionProps) {
   const channel = show.network || show.source;
   const year = yearFrom(show.first_aired);
   const blurb = show.overview || show.description;
+  const rtpLinks = resolveRtpLinks(show.rtp_links);
 
   return (
     <section className="relative flex min-h-[540px] items-end overflow-hidden px-5 pb-13 md:px-10">
@@ -81,22 +83,40 @@ export function HeroSection({ show }: HeroSectionProps) {
             Estudar agora
           </Link>
 
-          {show.watch_url && (
-            <a
-              href={show.watch_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-[9px] rounded-lg px-6 py-[13px] text-[15px] font-semibold backdrop-blur-sm"
-              style={{
-                border: "1px solid var(--border2)",
-                background: "rgba(255,255,255,.07)",
-                color: "var(--text)",
-              }}
-            >
-              <ExternalLink className="h-4 w-4" />
-              Ver original
-            </a>
-          )}
+          {rtpLinks.length > 0
+            ? rtpLinks.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-[9px] rounded-lg px-6 py-[13px] text-[15px] font-semibold backdrop-blur-sm"
+                  style={{
+                    border: "1px solid var(--border2)",
+                    background: "rgba(255,255,255,.07)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {link.label}
+                </a>
+              ))
+            : show.watch_url && (
+                <a
+                  href={show.watch_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-[9px] rounded-lg px-6 py-[13px] text-[15px] font-semibold backdrop-blur-sm"
+                  style={{
+                    border: "1px solid var(--border2)",
+                    background: "rgba(255,255,255,.07)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Ver original
+                </a>
+              )}
 
           <div className="ml-2 flex gap-[22px]">
             <div>

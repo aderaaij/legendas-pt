@@ -195,6 +195,7 @@ export async function getLibraryShows(): Promise<LibraryShow[]> {
       genres: full?.genres,
       status: full?.status,
       watch_url: full?.watch_url,
+      rtp_links: full?.rtp_links,
     };
   });
 }

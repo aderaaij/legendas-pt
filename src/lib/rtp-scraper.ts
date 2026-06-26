@@ -396,6 +396,25 @@ class RTPScraperService {
     return { isValid: false };
   }
 
+  /**
+   * Reduce any RTP /play URL (series or episode) to its canonical *series*
+   * program page — `https://www.rtp.pt/play/{programId}/{slug}` — dropping any
+   * episode segment, query string, or hash. Returns null if it isn't a /play URL.
+   * Used to store a stable per-show RTP link.
+   */
+  static canonicalSeriesUrl(
+    url: string
+  ): { programId: string; slug: string; url: string } | null {
+    const match = url.match(/\/play\/(p\d+)\/(?:e\d+\/)?([^/?#]+)/);
+    if (!match) return null;
+    const [, programId, slug] = match;
+    return {
+      programId,
+      slug,
+      url: `${this.BASE_URL}/play/${programId}/${slug}`,
+    };
+  }
+
   static normalizeSeriesName(rtpTitle: string): string {
     // Clean up RTP title for TVDB matching
     return rtpTitle

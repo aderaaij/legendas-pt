@@ -1,5 +1,13 @@
 // Database schema types for Supabase tables.
 
+// One RTP "programa" page for a show. A show can have several (one per season),
+// because RTP often gives each season its own program id. `season` is optional:
+// import-derived links carry it (for "· T1 / · T2" labels), a fallback link may not.
+export interface RtpLink {
+  url: string;
+  season?: number;
+}
+
 export interface Show {
   id: string;
   name: string;
@@ -8,6 +16,8 @@ export interface Show {
   genre?: string;
   language?: string;
   watch_url?: string;
+  // Per-season RTP program links (see database/add_rtp_links.sql).
+  rtp_links?: RtpLink[];
   // TVDB fields
   tvdb_id?: number;
   tvdb_slug?: string;
@@ -129,4 +139,5 @@ export interface LibraryShow {
   genres?: string[];
   status?: string;
   watch_url?: string;
+  rtp_links?: RtpLink[];
 }

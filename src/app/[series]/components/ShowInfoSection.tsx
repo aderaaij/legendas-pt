@@ -7,6 +7,7 @@ import {
   episodeSlugPart,
 } from "@/utils/slugify";
 import { yearFrom } from "@/utils/posterGradient";
+import { resolveRtpLinks } from "@/utils/rtpLinks";
 import { useAuth } from "@/contexts/AuthContext";
 import { PosterArt } from "@/app/components/home/PosterArt";
 import { EpisodeWithStats } from "./SeriesPageClient";
@@ -23,6 +24,7 @@ export const ShowInfoSection = ({ show, episodes }: ShowInfoSectionProps) => {
   const genre =
     show.genres && show.genres.length ? show.genres.join(", ") : show.genre;
   const blurb = show.overview || show.description;
+  const rtpLinks = resolveRtpLinks(show.rtp_links);
 
   const firstEpisode = [...episodes].sort(
     (a, b) =>
@@ -146,17 +148,30 @@ export const ShowInfoSection = ({ show, episodes }: ShowInfoSectionProps) => {
               </Link>
             )}
 
-            {show.watch_url && (
-              <a
-                href={show.watch_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-[7px] px-1 py-3 text-sm font-semibold"
-                style={{ color: "var(--muted)" }}
-              >
-                Ver original →
-              </a>
-            )}
+            {rtpLinks.length > 0
+              ? rtpLinks.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[7px] px-1 py-3 text-sm font-semibold"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {link.label} →
+                  </a>
+                ))
+              : show.watch_url && (
+                  <a
+                    href={show.watch_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[7px] px-1 py-3 text-sm font-semibold"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Ver original →
+                  </a>
+                )}
           </div>
         </div>
       </div>

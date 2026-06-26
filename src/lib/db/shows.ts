@@ -1,9 +1,48 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import TVDBService, { TVDBShow } from "@/lib/tvdb";
 import { supabase } from "@/lib/supabase-client";
 import { normalizeShowName } from "@/utils/slugify";
-import { Show } from "@/types/database";
+import { Show, RtpLink } from "@/types/database";
 
 import { deleteExtraction } from "./extractions";
+
+/**
+ * Record (or update) the RTP program link for one season of a show. Idempotent:
+ * an existing entry for the same season is replaced, otherwise the link is added;
+ * the array stays sorted by season. Takes an explicit client because the only
+ * caller (the RTP import) runs server-side with a service-role client.
+ */
+export async function upsertShowRtpLink(
+  client: SupabaseClient,
+  showId: string,
+  link: RtpLink
+): Promise<void> {
+  const { data, error } = await client
+    .from("shows")
+    .select("rtp_links")
+    .eq("id", showId)
+    .single();
+  if (error) {
+    throw new Error(`Failed to read rtp_links: ${error.message}`);
+  }
+
+  const existing: RtpLink[] = Array.isArray(data?.rtp_links)
+    ? data.rtp_links
+    : [];
+  const next = [
+    ...existing.filter((l) => l.season !== link.season),
+    link,
+  ].sort((a, b) => (a.season ?? 0) - (b.season ?? 0));
+
+  const { error: updateError } = await client
+    .from("shows")
+    .update({ rtp_links: next })
+    .eq("id", showId);
+  if (updateError) {
+    throw new Error(`Failed to update rtp_links: ${updateError.message}`);
+  }
+}
 
 export async function findOrCreateShow(
   name: string,

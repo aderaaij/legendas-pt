@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import RTPScraperService from "@/lib/rtp-scraper";
 import { PhraseExtractionService } from "@/lib/supabase";
 import type { ExtractionJob } from "@/lib/supabase";
+import { upsertShowRtpLink } from "@/lib/db/shows";
 import { createServiceClient, requireAdmin } from "@/lib/supabase-admin";
 import type { Provider } from "@/lib/llm/types";
 import type {
@@ -149,6 +150,21 @@ export async function POST(request: NextRequest) {
       },
       supabase
     );
+
+    // Record the RTP program link for this show/season so the show page can link
+    // back to RTP. One entry per season (a show can span several program pages).
+    // Best-effort: a failure here must not fail the import.
+    if (selectedShowId) {
+      try {
+        const canonical = RTPScraperService.canonicalSeriesUrl(rtpUrl);
+        await upsertShowRtpLink(supabase, selectedShowId, {
+          url: canonical?.url ?? rtpUrl,
+          season: resolvedSeason,
+        });
+      } catch (linkError) {
+        console.error("Failed to record RTP link for show:", linkError);
+      }
+    }
 
     return NextResponse.json({
       jobId: job.id,
