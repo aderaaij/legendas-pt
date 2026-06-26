@@ -26,8 +26,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let shuttingDown = false;
 
 /**
- * Claim the next `queued` job (oldest first) and move it to `running`. Single
- * worker, so no atomic claim is needed; multi-worker would require one.
+ * Claim the next `queued` job (oldest first) and move it to `running`.
+ *
+ * The claim is ATOMIC: the UPDATE is guarded by `status = 'queued'`, which
+ * compiles to `UPDATE ... WHERE id = ? AND status = 'queued'`. Postgres row
+ * locking serializes concurrent claims, so with multiple workers exactly one
+ * wins; the losers match zero rows and poll again. This makes running N workers
+ * safe (no double-processing) — though for this workload one is plenty; the real
+ * benefit is surviving overlap, e.g. the Docker worker plus a local `npm run
+ * worker`.
  *
  * Phase 1 deliberately does NOT reclaim orphaned `running` jobs: doing that
  * safely needs a staleness/heartbeat guard (otherwise a fresh worker would grab
@@ -49,19 +56,26 @@ async function claimNextJob(
     throw new Error(`Failed to poll jobs: ${error.message}`);
   }
 
-  const job = (data?.[0] as ExtractionJob | undefined) ?? null;
-  if (!job) return null;
+  const candidate = (data?.[0] as ExtractionJob | undefined) ?? null;
+  if (!candidate) return null;
 
-  const { error: claimError } = await supabase
+  const { data: claimed, error: claimError } = await supabase
     .from("extraction_jobs")
     .update({ status: "running", updated_at: new Date().toISOString() })
-    .eq("id", job.id);
+    .eq("id", candidate.id)
+    .eq("status", "queued") // atomic guard — only the winner matches a row
+    .select();
   if (claimError) {
-    throw new Error(`Failed to claim job ${job.id}: ${claimError.message}`);
+    throw new Error(`Failed to claim job ${candidate.id}: ${claimError.message}`);
   }
-  log(`claimed job ${job.id} (${job.series_title ?? "untitled"})`);
+  if (!claimed || claimed.length === 0) {
+    // Another worker claimed it first; try again on the next poll.
+    return null;
+  }
 
-  return { ...job, status: "running" };
+  const job = claimed[0] as ExtractionJob;
+  log(`claimed job ${job.id} (${job.series_title ?? "untitled"})`);
+  return job;
 }
 
 async function isJobCancelled(

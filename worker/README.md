@@ -55,14 +55,18 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 
 ## Behaviour & scope (Phase 1)
 
-- Handles `rtp_series` jobs, **single concurrency**, one job at a time.
-- Claims `queued` jobs only. (It does **not** reclaim orphaned `running` jobs yet —
-  see Phase 3 — to avoid grabbing long-abandoned rows on startup.)
+- Handles `rtp_series` jobs, one job at a time per worker (single internal
+  concurrency).
+- Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
+  'queued'`), so running **multiple workers is safe** — each job goes to exactly
+  one worker, no double-processing. (One worker is plenty for this workload; the
+  value is surviving overlap, e.g. the Docker worker plus a local `npm run
+  worker`.)
+- Does **not** reclaim orphaned `running` jobs yet (see Phase 3) — avoids
+  grabbing long-abandoned rows on startup.
 - Honors cancellation (`status = 'cancelled'`) and graceful shutdown
   (SIGTERM/SIGINT) between episodes; an interrupted job stays resumable.
 
-Not yet (later phases): `manual_upload` jobs, a bounded concurrency pool + rate
-limiting, bounded retries/backoff, **stale-reclaim of orphaned `running` jobs**
-(with a heartbeat row), and Supabase Realtime progress. Single-worker only —
-running multiple workers would need an atomic claim (the current claim is not
-atomic).
+Not yet (later phases): `manual_upload` jobs, a bounded per-worker concurrency
+pool + rate limiting, bounded retries/backoff, **stale-reclaim of orphaned
+`running` jobs** (with a heartbeat row), and Supabase Realtime progress.
