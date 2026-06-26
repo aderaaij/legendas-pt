@@ -1,6 +1,8 @@
 # Legendas-PT worker (data plane). Outbound-only, no exposed ports.
 # Build context is the repo root: `docker build -f worker/Dockerfile .`
-FROM node:20-slim
+# Node 22+ is required: @supabase/supabase-js builds a Realtime client on init,
+# which needs native global WebSocket (only present in Node >= 22).
+FROM node:22-slim
 
 WORKDIR /app
 
