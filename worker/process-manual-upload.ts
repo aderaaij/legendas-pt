@@ -17,6 +17,7 @@ import { normalizeShowName } from "@/utils/slugify";
 import type { ExtractionJob } from "@/types/database";
 import type { ManualUploadResults } from "@/lib/manual-upload/types";
 import type { ProcessJobHooks } from "./process-rtp-series";
+import { sleep, backoffDelay } from "./util";
 
 type Results = ExtractionJob["results"];
 
@@ -162,28 +163,44 @@ export async function processManualUploadJob(
         : null;
 
     await writeStage("Extracting phrases", "extracting");
-    let extraction;
-    try {
-      extraction = await extractFromSubtitle({
-        content: plan.content,
-        filename: plan.filename,
-        fileType: plan.fileType,
-        provider: plan.provider,
-        model: plan.model,
-      });
-    } catch (extractError) {
-      if (
-        extractError instanceof MissingApiKeyError ||
-        extractError instanceof UnknownProviderError
-      ) {
-        return await fail("extraction_failed", extractError.message);
+    let extraction: Awaited<ReturnType<typeof extractFromSubtitle>>;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        extraction = await extractFromSubtitle({
+          content: plan.content,
+          filename: plan.filename,
+          fileType: plan.fileType,
+          provider: plan.provider,
+          model: plan.model,
+        });
+        break;
+      } catch (extractError) {
+        // Missing key / unknown provider are permanent — don't retry.
+        if (
+          extractError instanceof MissingApiKeyError ||
+          extractError instanceof UnknownProviderError
+        ) {
+          return await fail("extraction_failed", extractError.message);
+        }
+        const message =
+          extractError instanceof Error
+            ? extractError.message
+            : "Failed to extract phrases";
+        if (
+          attempt >= hooks.maxRetries ||
+          shouldStop() ||
+          (await isCancelled())
+        ) {
+          return await fail("extraction_failed", message);
+        }
+        const delay = backoffDelay(attempt, hooks.retryBaseMs);
+        log(
+          `job ${job.id}: extract failed — retry ${attempt + 1}/${
+            hooks.maxRetries
+          } in ${delay}ms (${message})`
+        );
+        await sleep(delay);
       }
-      return await fail(
-        "extraction_failed",
-        extractError instanceof Error
-          ? extractError.message
-          : "Failed to extract phrases"
-      );
     }
 
     await writeStage("Saving", "saving");

@@ -62,11 +62,21 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
   one worker, no double-processing. (One worker is plenty for this workload; the
   value is surviving overlap, e.g. the Docker worker plus a local `npm run
   worker`.)
-- Does **not** reclaim orphaned `running` jobs yet (see Phase 3) — avoids
-  grabbing long-abandoned rows on startup.
+- **Reclaims orphaned `running` jobs**: while processing, a worker bumps the
+  job's `updated_at` every `WORKER_HEARTBEAT_MS`; a `running` job idle longer
+  than `WORKER_STALE_MS` is treated as abandoned (its worker died) and reclaimed
+  atomically. So "kill the worker mid-job → restart → it resumes" holds, and a
+  live worker's job is never stolen. Resuming is safe (terminal units skipped,
+  persistence dedups).
+- **Retries** a transiently-failing unit (`error`/`extraction_failed`) up to
+  `WORKER_MAX_RETRIES` with exponential backoff + jitter, then accepts the
+  failure and moves on (the job still completes).
 - Honors cancellation (`status = 'cancelled'`) and graceful shutdown
-  (SIGTERM/SIGINT) between episodes; an interrupted job stays resumable.
+  (SIGTERM/SIGINT) between units; an interrupted job stays resumable.
+
+Tuning (all optional, see `.env.worker.example`): `WORKER_POLL_INTERVAL_MS`,
+`WORKER_HEARTBEAT_MS`, `WORKER_STALE_MS`, `WORKER_MAX_RETRIES`,
+`WORKER_RETRY_BASE_MS`.
 
 Not yet (later phases): a bounded per-worker concurrency pool + rate limiting,
-bounded retries/backoff, **stale-reclaim of orphaned `running` jobs** (with a
-heartbeat row), and Supabase Realtime progress.
+a "worker online" status row for the UI, and Supabase Realtime progress.

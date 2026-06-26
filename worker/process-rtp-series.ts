@@ -19,6 +19,7 @@ import {
   type ImportResults,
   type ImportSummary,
 } from "@/lib/rtp-import/types";
+import { sleep, backoffDelay } from "./util";
 
 const STEP_LABELS: Record<EpisodeStep, string> = {
   scraping: "Scraping subtitle",
@@ -50,6 +51,15 @@ export interface ProcessJobHooks {
   isCancelled: () => Promise<boolean>;
   /** True if the worker is shutting down (checkpoint and leave the job resumable). */
   shouldStop: () => boolean;
+  /** Max retries for a transient per-unit failure. */
+  maxRetries: number;
+  /** Base backoff (ms) between unit retries. */
+  retryBaseMs: number;
+}
+
+/** Outcomes worth retrying — transient (network/LLM/DB), not "no subtitle" etc. */
+function isRetryable(status: string): boolean {
+  return status === "error" || status === "extraction_failed";
 }
 
 export async function processRtpSeriesJob(
@@ -112,18 +122,40 @@ export async function processRtpSeriesJob(
       );
     };
 
-    const outcome = await processEpisode({
-      supabase,
-      episode: ep,
-      showId: plan.showId,
-      season: plan.season,
-      seriesTitle: plan.seriesTitle,
-      saveToDatabase: plan.saveToDatabase,
-      forceReExtraction: plan.forceReExtraction,
-      provider: plan.provider,
-      model: plan.model,
-      onStep: writeStep,
-    });
+    const runEpisode = () =>
+      processEpisode({
+        supabase,
+        episode: ep,
+        showId: plan.showId,
+        season: plan.season,
+        seriesTitle: plan.seriesTitle,
+        saveToDatabase: plan.saveToDatabase,
+        forceReExtraction: plan.forceReExtraction,
+        provider: plan.provider,
+        model: plan.model,
+        onStep: writeStep,
+      });
+
+    // Retry a transiently-failing episode with backoff, then accept the failure
+    // and move on (the job still completes; this unit is marked failed).
+    let outcome = await runEpisode();
+    for (
+      let attempt = 0;
+      isRetryable(outcome.status) &&
+      attempt < hooks.maxRetries &&
+      !shouldStop() &&
+      !(await isCancelled());
+      attempt++
+    ) {
+      const delay = backoffDelay(attempt, hooks.retryBaseMs);
+      log(
+        `job ${job.id}: ep ${ep.episodeNumber} ${outcome.status} — retry ${
+          attempt + 1
+        }/${hooks.maxRetries} in ${delay}ms`
+      );
+      await sleep(delay);
+      outcome = await runEpisode();
+    }
 
     episodes[key] = {
       episodeNumber: ep.episodeNumber,
