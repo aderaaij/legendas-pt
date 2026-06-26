@@ -1,284 +1,327 @@
 # Worker / Data-Plane Hand-off Briefing
 
-> **Audience:** a Claude instance running on an always-on local server (optionally
-> in Docker) that has been pointed at this repository. You have the code but **not**
-> the conversation that produced this brief — everything you need is here.
+> **Audience:** a Claude instance on an always-on local server (optionally Docker) that has
+> been pointed at this repository. You have the code but **not** the conversation that
+> produced this brief — everything you need is here.
 >
-> **Goal:** build a robust, persistent **worker** that processes RTP→phrase-extraction
-> jobs out-of-band from the Next.js web app, so imports no longer race a serverless
-> timeout or depend on a browser tab staying open.
+> **Goal:** move *all* heavy/LLM work off Vercel into a persistent **worker** that is the
+> single extraction engine for the app, structured as decoupled pieces that can later be
+> run (and offered) as separate services.
 
 ---
 
 ## 0. Read these first (in order)
 
 1. `CLAUDE.md` — project overview, conventions, schema summary, env vars.
-2. This file (all of it).
-3. The current import implementation you're replacing/reusing:
-   - `src/lib/rtp-import/types.ts` — the job "plan" + per-episode status model.
-   - `src/lib/rtp-import/process-episode.ts` — the per-episode pipeline (the heart).
-   - `src/app/api/rtp-import/step/route.ts` — exact progress-write semantics to mirror.
-   - `src/app/api/rtp-import/start/route.ts` — how a job + plan is created.
-   - `src/app/api/extract-phrases/route.ts` — the phrase-save logic to extract (see §4).
-   - `src/lib/llm/` — the provider-agnostic LLM layer.
-   - `src/lib/supabase-admin.ts`, `src/lib/db/extraction-jobs.ts` — DB access.
-
-**Before writing code, confirm the deferred decisions with the user (see §9).**
-
----
-
-## 1. Why this exists (context not obvious from the code)
-
-- The web app deploys on **Vercel (serverless)**. A full RTP series import is long
-  (N episodes × ~10–60s each: scrape + LLM extraction + DB writes), which exceeds
-  Vercel's function timeout (~60–300s).
-- The **current production design is a workaround**: the import is chunked into
-  one-episode-per-request, and a **browser-side driver** (`RTPImportProvider`) loops
-  calling `POST /api/rtp-import/step` until done. It works, but: it only runs while a
-  tab is open, can't do real concurrency, and still races the per-episode timeout on
-  Vercel Hobby.
-- **The target architecture is a control-plane / data-plane split:**
-
-  | Plane | Runs on | Job |
-  |---|---|---|
-  | Control plane | Next.js on Vercel | Admin UI, auth, reads, **enqueue** jobs. No heavy work. |
-  | **Data plane (YOU)** | This always-on machine | Claim jobs, scrape, extract, write progress. No timeout. |
-  | Shared spine | Supabase | DB + auth + Realtime. |
-
-- **The two planes never call each other directly — only through Supabase.** The
-  worker needs **outbound only** (Supabase, RTP, the LLM APIs). No inbound ports, no
-  tunnels, no public IP. That's what makes a local/Docker worker clean.
+2. This file (all of it). **Before writing code, confirm the §14 decisions with the user.**
+3. The code you'll reuse / refactor:
+   - `src/lib/llm/` — provider-agnostic LLM layer (the extractor's engine).
+   - `src/lib/rtp-scraper.ts` — the RTP scraper (the scraper).
+   - `src/lib/rtp-import/process-episode.ts` + `src/app/api/rtp-import/step/route.ts` — the
+     current per-episode pipeline + exact progress-write semantics to mirror.
+   - `src/app/api/extract-phrases/route.ts` — LLM + save logic to split (see §6).
+   - `src/utils/subtitleUtils.ts`, `src/utils/extractPhrasesUtils.ts` — subtitle/content utils.
+   - `src/lib/supabase-admin.ts`, `src/lib/db/extraction-jobs.ts`, `src/lib/db/extractions.ts` — DB.
+   - The manual-upload flow: `src/app/upload/` + `src/utils/phraseExtractionFlow.ts` + `src/utils/phraseExtractionApi.ts`.
 
 ---
 
-## 2. Project facts you'd otherwise have to discover
+## 1. Target architecture
 
-- **Stack:** Next.js 16 (App Router) + React 19 + TypeScript + Supabase (Postgres,
-  Auth, RLS). Tailwind 4. The app is "CENA", a Portuguese-learning app that extracts
-  useful phrases from TV subtitles and translates them via an LLM.
-- **LLM layer is provider-agnostic** (already built): OpenAI / Anthropic / Google via
-  the **Vercel AI SDK v7** (`ai` ^7, `@ai-sdk/openai|anthropic|google` ^4, `zod` ^4).
-  Entry point: `extractPhrases(content, override?)` in `src/lib/llm/extract-phrases.ts`
-  → `{ phrases, truncated, resolved }`. Provider/model resolution
-  (`src/lib/llm/providers.ts` `resolveSelection`): per-request override → `LLM_PROVIDER`
-  / `LLM_MODEL` env → built-in defaults (`src/lib/llm/types.ts` `DEFAULT_MODELS`:
-  openai `gpt-4.1-mini`, anthropic `claude-sonnet-4-6`, google `gemini-2.5-flash`).
-- **RTP scraping** (`src/lib/rtp-scraper.ts`, `RTPScraperService`): `scrapeSeries(url)`,
-  `scrapeEpisodeSubtitle(rtpEpisode)`, `parseRTPUrl(url)`, `normalizeSeriesName(name)`.
-  Node-compatible (HTTP fetch + HTML parsing). **Known surface:** subtitle + episode
-  scraping needs **no auth**; RTP's JSON API is auth-walled; **catalog enumeration
-  (discovering all shows/episodes) is an open gap** — relevant for the §8 cron.
-- **Subtitle handling:** `src/utils/subtitleUtils.ts` (`parseVTTWithTimestamps`,
-  `parseSRTWithTimestamps`, `matchPhrasesToTimestamps`, `cleanSubtitleContent`).
-  Full raw subtitle is stored per extraction in `phrase_extractions.content_full`.
-- **Service-role DB access:** `src/lib/supabase-admin.ts` `createServiceClient()` uses
-  `SUPABASE_SECRET_KEY` and **bypasses RLS**. The worker uses this for ALL DB access.
-  (The anon key cannot write.) There is no `psql` dependency — everything goes through
-  `@supabase/supabase-js`.
-- **Deduplication is built in:** phrases are content-hashed (`generateContentHash` in
-  `src/utils/extractPhrasesUtils.ts`); re-processing an episode resolves to
-  `already_exists`. **This makes the worker safely idempotent** — crashes/retries don't
-  duplicate work.
-
----
-
-## 3. The data model you'll drive (no schema changes needed to start)
-
-Job tracking already exists. Tables: `extraction_jobs` (job + progress),
-`phrase_extractions`, `extracted_phrases`, `episodes`, `shows`.
-
-`ExtractionJob` (`src/types/database.ts`): `id, user_id, job_type:'rtp_series'|'manual_upload',
-status:'pending'|'running'|'completed'|'failed'|'cancelled', progress, total_episodes,
-completed_episodes, failed_episodes, current_episode?, error_message?, results?(jsonb),
-created_at, updated_at, completed_at?`.
-
-The `results` jsonb holds the whole import state (shapes in `src/lib/rtp-import/types.ts`):
-
-```ts
-{
-  plan: { showId, season, seriesTitle, seriesUrl, saveToDatabase, forceReExtraction,
-          provider, model, episodes: [{ episodeNumber, rtpId, title, url, airDate }] },
-  episodes: { [episodeNumber]: { status, episodeNumber, title, phraseCount?, extractionId?, error?, updatedAt } },
-  summary: { total, successful, failed, alreadyExists, noSubtitle }
-}
+```
+            ┌──────────────────────────────┐
+  Vercel →  │  CONTROL PLANE (Next.js)      │   UI · auth · reads · ENQUEUE jobs.
+            │  No LLM. No scraping.         │   Holds NO LLM keys.
+            └───────────────┬──────────────┘
+                            │  (jobs + content + progress)
+                       ┌────▼─────┐
+                       │ SUPABASE │   DB · Auth · Realtime.  The only thing both planes touch.
+                       └────▲─────┘
+                            │
+            ┌───────────────┴──────────────┐   DATA PLANE (this machine).
+  Worker →  │  ORCHESTRATOR                 │   Claims jobs, owns lifecycle + all Supabase writes.
+            │   ├── SCRAPER     (pure)      │   Source → subtitle text.   Holds no secrets.
+            │   └── EXTRACTOR   (pure)      │   Subtitle text → phrases.  Holds the LLM keys.
+            └──────────────────────────────┘   Outbound-only: Supabase, RTP, LLM APIs.
 ```
 
+Principles:
+- **The two planes never call each other directly — only through Supabase.** The worker is
+  **outbound-only** (no inbound ports, no tunnels, no public IP). That's what lets it run on a
+  local box or a Docker container with zero networking setup.
+- **The worker is the single extraction engine for *all* job types** — both `rtp_series`
+  imports and `manual_upload` single files (the `manual_upload` job type already exists in the
+  schema but is currently unused). After this work, **Vercel does zero LLM work.**
+- **Three pieces, designed to decouple** (see §2). Run them as **one worker process now**;
+  the boundaries are clean enough to split into separate services later with config + a deploy,
+  not a rewrite.
+
+---
+
+## 2. The three pieces + the contract
+
+| Piece | Responsibility | State? | Reusable / offerable? |
+|---|---|---|---|
+| **Scraper** | A source adapter: source ref → subtitle content + metadata. RTP today; a `SubtitleSource` interface so other sources slot in. | **Pure** — no DB, no job model, no Next. Outbound HTTP only. | Yes (source-adapter lib) |
+| **Extractor / Translator** | The LLM engine: subtitle text → phrases (extract+translate). Later a second mode: text → translated cues (the planned full-subtitle-translation feature). Provider-agnostic. | **Pure** — no DB, no Next. Holds LLM keys at runtime. | **Yes — this is the valuable, offerable core** |
+| **Orchestrator** (the worker) | Owns the job lifecycle + **all Supabase reads/writes**: claim job → (scrape) → extract → persist → write progress. The stateful glue. | Stateful (Supabase). | No — app-specific |
+
+**The rule that makes the two packages reusable: keep *all* Supabase / job-state in the
+orchestrator.** Scraper and extractor take inputs and return outputs — nothing else. (This is
+the existing "keep `src/lib/` framework-free" discipline, applied at the service seam.)
+
+**The contract** between scraper and extractor is just **subtitle text + small metadata** —
+serializable, so the seam works unchanged whether it's a function call (one process), a queue
+message (two services), or an HTTP request (extractor offered standalone). Design to it now.
+
+**Decoupling spectrum** (you start at level 1; the user decides when/if to climb):
+1. **Two packages, one worker process** ← start here. Orchestrator imports both.
+2. **Two services + a queue.** Scraper emits "subtitle ready"; extractor consumes. Different
+   scaling/rate-limit profiles (RTP-politeness vs LLM-rate-limit), independent failure.
+3. **Extractor as a standalone HTTP service** — the "offer it decoupled" surface, for other
+   apps/users to use the extraction/translation engine without your scraper or DB.
+
+---
+
+## 3. Why this exists (context not obvious from the code)
+
+- The web app deploys on **Vercel (serverless)**: functions die at a timeout (~60–300s) and
+  freeze after responding. Any multi-minute or even single-large-file LLM job is at risk there.
+- The current production import is a **browser-driven chunked workaround** (`RTPImportProvider`
+  loops `POST /api/rtp-import/step`). It works but only while a tab is open, can't do real
+  concurrency, and still races the per-episode timeout on Hobby. Manual upload
+  (`/api/extract-phrases`) has the same single-call timeout exposure.
+- Decision: move all heavy work to a persistent worker, and structure it as scraper + extractor
+  + orchestrator so the generic extractor can later be offered/scaled on its own.
+
+---
+
+## 4. Building blocks already in the repo
+
+- **LLM engine (the extractor's core), already provider-agnostic & pure:** `src/lib/llm/`.
+  - `extract-phrases.ts` → `extractPhrases(content, override?)` returns `{ phrases, truncated, resolved }`.
+  - `providers.ts` → `resolveSelection` (per-call override → `LLM_PROVIDER`/`LLM_MODEL` env →
+    defaults), `getModel`, `MissingApiKeyError`, `UnknownProviderError`.
+  - `types.ts` → `Provider`, `DEFAULT_MODELS` (openai `gpt-4.1-mini`, anthropic
+    `claude-sonnet-4-6`, google `gemini-2.5-flash`), `API_KEY_ENV`, `LlmSelection`.
+  - Stack: **Vercel AI SDK v7** (`ai` ^7, `@ai-sdk/openai|anthropic|google` ^4, `zod` ^4). Node-compatible.
+- **Scraper:** `src/lib/rtp-scraper.ts` `RTPScraperService` — `scrapeSeries(url)`,
+  `scrapeEpisodeSubtitle(rtpEpisode)`, `parseRTPUrl`, `normalizeSeriesName`. HTTP + HTML parse,
+  no DB. Known surface: subtitle/episode scraping needs **no auth**; RTP's JSON API is auth-walled;
+  **catalog enumeration is an open gap** (relevant only if you build the §later discovery cron).
+- **Subtitle/content utils (pure):** `src/utils/subtitleUtils.ts` (`parseVTTWithTimestamps`,
+  `parseSRTWithTimestamps`, `matchPhrasesToTimestamps`, `cleanSubtitleContent`),
+  `src/utils/extractPhrasesUtils.ts` (`generateContentHash`, `parseShowInfo`).
+- **DB / persistence:** `src/lib/supabase-admin.ts` `createServiceClient()` (uses
+  `SUPABASE_SECRET_KEY`, **bypasses RLS** — the worker uses this for everything). Job helpers in
+  `src/lib/db/extraction-jobs.ts`; phrase-save primitive in `src/lib/db/extractions.ts`
+  (`saveExtraction`). The anon key cannot write; there is no `psql` dependency.
+- **Idempotency is built in:** phrases are content-hashed (`generateContentHash`); re-processing
+  resolves to `already_exists` (dedup on `content_hash` + episode find/create). **The worker is
+  therefore safely retry-able** — crashes don't duplicate work.
+
+---
+
+## 5. Data model (no schema change needed to start)
+
+Tables: `extraction_jobs` (job + progress), `phrase_extractions`, `extracted_phrases`,
+`episodes`, `shows`. `ExtractionJob` (`src/types/database.ts`): `id, user_id,
+job_type:'rtp_series'|'manual_upload', status:'pending'|'running'|'completed'|'failed'|'cancelled',
+progress, total_episodes, completed_episodes, failed_episodes, current_episode?, error_message?,
+results?(jsonb), created_at, updated_at, completed_at?`.
+
+`results` jsonb carries the whole job state (shapes in `src/lib/rtp-import/types.ts`): `plan`
+(import config + episode list), `episodes` (per-episode live status keyed by number), `summary`.
 `EpisodeStatus` = `pending | scraping | extracting | saving | success | already_exists |
-no_subtitle | extraction_failed | error`. `TERMINAL_STATUSES` (exported) = the last five.
-Top-level `progress`/`completed_episodes`/`failed_episodes`/`current_episode` are also
-updated each step. **`src/app/api/rtp-import/step/route.ts` is your reference for the exact
-write cadence — mirror it.**
+no_subtitle | extraction_failed | error`; `TERMINAL_STATUSES` = the last five.
+**`src/app/api/rtp-import/step/route.ts` is the reference for the exact write cadence — mirror it.**
 
-DB helpers: `src/lib/db/extraction-jobs.ts` (`createExtractionJob`, `updateExtractionJob`,
-`getExtractionJob`, `getActiveExtractionJobs`, `cancelExtractionJob`). They take an optional
-client arg — **pass a service client**, or have the worker read/write `extraction_jobs`
-directly via `@supabase/supabase-js`.
+**Both job types use this table.** For `manual_upload`, the plan carries the uploaded subtitle
+**content** (the browser sends it to Vercel, which embeds it in the job — see §6c) plus
+`{ showId?, episodeId?, language, fileType, provider?, model? }`; there's a single "episode"
+(the file). For `rtp_series`, the plan carries the RTP episode list and the worker scrapes each.
 
 ---
 
-## 4. Required refactor FIRST (Phase 0) — makes the worker clean
+## 6. Phase 0 — the refactors that create the seams (do first, keep the app working)
 
-`processEpisode` (`src/lib/rtp-import/process-episode.ts`) currently extracts+saves by
-doing an HTTP `fetch` to the Next route `/api/extract-phrases` (authorized with the
-service key). **A worker must not depend on the Next server being reachable.**
+These are pure-refactor steps that establish the scraper/extractor/orchestrator boundaries
+**without** building the worker yet, so `main` keeps working at each step.
 
-The real extract+save pipeline lives **inline inside** `src/app/api/extract-phrases/route.ts`:
-timestamp parsing (`subtitleUtils`), `extractPhrases()` call, phrase validation, dedup,
-episode handling, and inserts into `phrase_extractions` + `extracted_phrases` (storing
-`provider`/`model` in `extraction_params`).
+**(a) Split `extract-phrases/route.ts` into extractor + persistence.** Today the route does it
+all inline: clean content → `extractPhrases` (LLM) → validate → timestamp-match → dedup → write
+`phrase_extractions` + `extracted_phrases` (+ `provider`/`model` in `extraction_params`). Pull it
+into two pure libs:
+   - **Extractor** (`src/lib/extractor/…`, or grow `src/lib/llm`): `content (+ lang, provider/model)
+     → { phrases, truncated }`, including the subtitle parsing/timestamp-matching (`subtitleUtils`).
+     **No DB.** This is the offerable core.
+   - **Persistence** (`src/lib/db/extractions.ts` already has `saveExtraction` — consolidate here):
+     `{ phrases, content, showId, episodeId, … , supabase } → { extractionId }`. **DB only.**
+   The Next `extract-phrases` route becomes a thin caller of both (keep it working — it's still
+   used by the manual flow until §6c lands).
 
-**Extract that into a pure lib function**, e.g. `src/lib/phrase-extraction/save-extraction.ts`:
-`saveExtraction({ content, fileType, filename, showId, episodeId, language, provider, model,
-saveToDatabase, forceReExtraction, supabase }) → { phrases, total, truncated, extractionId, provider, model }`.
-Then:
-- The Next route `extract-phrases/route.ts` calls it (keep the route working — it's still
-  used by the manual `/upload` single-file flow and must stay backward-compatible).
-- `processEpisode` calls it **directly** instead of `fetch`ing the route.
+**(b) Make `processEpisode` orchestration, not a tangle.** `src/lib/rtp-import/process-episode.ts`
+currently `fetch`es the Next route `/api/extract-phrases` (a hidden coupling to the web server).
+Rewrite it to call the **scraper** then the **extractor** then **persistence** directly:
+`const sub = await scraper.fetchSubtitle(ep); const { phrases } = await extractor.extract(sub.content, …); await persist.save({ phrases, … })`. No HTTP hop — this is what frees the worker from needing Vercel reachable.
 
-This is the "second consumer" extraction the team has been deferring. **Keep it pure:** no
-Next imports, no `next/server`, deps injected (`supabase` passed in) — so the worker can
-import it. (`src/lib/` is intentionally framework-free; preserve that.)
-
----
-
-## 5. What to build (the worker)
-
-A standalone Node/TypeScript process that:
-
-1. **Claims** a pending `rtp_series` job (see §6 for queue options).
-2. For that job, walks `results.plan.episodes`, and for each non-terminal episode runs the
-   core pipeline: `RTPScraperService.scrapeEpisodeSubtitle` → find/create `episodes` row →
-   `saveExtraction(...)` (from §4). This is exactly what `processEpisode` does today — reuse it.
-3. Writes **incremental progress** each episode (and ideally each sub-stage:
-   `scraping`/`extracting`): `current_episode`, `results.episodes[n]`, counts, `progress` —
-   mirror `step/route.ts`. **Don't over-write** (Realtime/polling reads this; a write per
-   sub-stage is fine, a write per token is not).
-4. **Concurrency + rate limiting:** process several episodes in parallel with a bounded pool
-   + a polite limiter for RTP and the LLM provider's rate limits. (The old serial loop used a
-   crude 2s sleep; you can do a real token bucket. Start conservative — e.g. 2–3 concurrent.)
-5. **Retries** per episode with backoff; after N failures mark `extraction_failed` and move on
-   (don't fail the whole job).
-6. **Cancellation:** check `job.status === 'cancelled'` between episodes and stop.
-7. **Finalize:** when no non-terminal episodes remain, write `summary` + `status`
-   (`completed`/`failed`) + `completed_at`.
-8. **Stale reclaim on startup:** find jobs left `running` with non-terminal episodes whose
-   `updatedAt` is old (a previous worker died) and resume them. This is the durability story.
-9. **Graceful shutdown** (SIGTERM/SIGINT): finish or checkpoint the in-flight episode and exit;
-   the job stays resumable.
+**(c) Turn manual upload into a `manual_upload` job.** Today: browser → `/api/extract-phrases`
+(LLM on Vercel) → `src/utils/phraseExtractionFlow.ts` saves via `PhraseExtractionService.saveExtraction`.
+New: browser POSTs the file **content** to a Vercel enqueue endpoint → it creates a `manual_upload`
+job (content embedded in `results.plan`; subtitle files are small — jsonb is fine, or Supabase
+Storage for outliers) → returns jobId. The **worker** processes it (extractor + persistence; no
+scraper). Results surface via polling/Realtime; the admin reviews/edits the saved phrases in the
+existing editor. Retire the client-side `phraseExtractionFlow` LLM call.
 
 ---
 
-## 6. Queue design (start simple; confirm with user)
+## 7. The orchestrator / worker
 
-- **Tier 1 — reuse `extraction_jobs` as the queue (recommended start).** Add a `queued`
-  status: the web app sets `queued` on enqueue; the worker claims `queued → running`. For a
-  **single worker** this can be a plain poll (every few seconds) + `getActiveExtractionJobs`.
-  If you ever run **multiple workers**, make the claim **atomic** (`UPDATE … WHERE status='queued'
-  RETURNING …`, or a `claimed_by`/`claimed_at` heartbeat column) to prevent double-processing.
-- **Tier 2 — pgmq (Postgres Message Queue, available on Supabase)** if you want
-  visibility-timeout + retries + dead-letter for free, staying on Supabase.
-- **Web-side change:** `POST /api/rtp-import/start` should now **only create the job + plan and
-  set status `queued`** (or `pending`), then return — it must **stop driving**. The worker drains.
-
----
-
-## 7. Progress delivery: swap polling → Supabase Realtime (web-side, but coordinate)
-
-Today the UI polls `/api/extraction-jobs` every 3–5s (`src/hooks/useExtractionJobs.ts`).
-The better design once a worker writes the rows: enable **Supabase Realtime** on
-`extraction_jobs` and subscribe client-side (`postgres_changes`, filtered by `user_id`/job id).
-The worker just writes; Realtime pushes to the admin UI and the series-page
-`ImportProgressPanel` (`src/app/[series]/components/ImportProgressPanel.tsx` + `useShowImportJob`)
-instantly. The **worker itself doesn't need Realtime** — it only writes. (No realtime is used
-anywhere in the repo today; you'd add it.) This is a nice-to-have; polling keeps working in the
-meantime.
+A persistent Node/TypeScript process that:
+1. **Claims** a pending job (`rtp_series` or `manual_upload`) — see §8.
+2. **Runs the right pipeline:**
+   - `rtp_series`: for each non-terminal plan episode → scraper.fetchSubtitle → extractor.extract
+     → persistence.save → write per-episode progress.
+   - `manual_upload`: read embedded content → extractor.extract → persistence.save → progress.
+   Reuse the exact progress-write semantics from `step/route.ts` (current_episode, sub-stage,
+   `results.episodes[n]`, counts, `progress`). Don't over-write (Realtime/polling reads it).
+3. **Concurrency + rate limiting** — a bounded pool (start 2–3) with polite limiters for RTP and
+   the LLM provider. (The old loop used a crude 2s sleep; do a real limiter.)
+4. **Retries** per unit with backoff; mark `extraction_failed` after N and continue the job.
+5. **Cancellation** — honor `status === 'cancelled'` between units.
+6. **Finalize** — write `summary` + `completed`/`failed` + `completed_at`.
+7. **Stale reclaim on startup** — resume jobs left `running` with old `updatedAt` (a prior worker died).
+8. **Graceful shutdown** (SIGTERM/SIGINT) — checkpoint the in-flight unit; the job stays resumable.
 
 ---
 
-## 8. Optional Phase: catalog auto-discovery cron
+## 8. Queue design (start simple; confirm with user)
 
-Run a scheduler inside the worker (e.g. `node-cron`) that periodically enumerates RTP and
-**enqueues imports for new shows/episodes** — turning the library from "admin manually imports"
-into self-updating. This is the open "catalog enumeration gap" (RTP's JSON catalog API is
-auth-walled; you'll need to solve discovery — scraping listing pages, sitemaps, etc.).
-TVDB enrichment for new shows is available via `src/lib/tvdb.ts` (`TVDBService`). Treat this as
-a later phase after the core worker is solid.
-
----
-
-## 9. Decisions to confirm with the user before building
-
-1. **Code layout:** (a) add a `worker/` dir in THIS repo importing from `src/lib/*` (fastest;
-   note the `@/*` tsconfig path alias needs resolving in a non-Next process — use `tsx` +
-   tsconfig paths, `vite-node`, or a small `tsc`/`esbuild` build), or (b) restructure into a
-   monorepo (`packages/core`, `apps/web`, `apps/worker`) — cleaner long-term, more upfront work.
-2. **Docker or bare process?** (user mentioned maybe Docker.)
-3. **Queue tier:** jobs-table (Tier 1) vs pgmq (Tier 2).
-4. **Concurrency level** and rate limits (depends on their LLM plan + politeness to RTP).
-5. **Single worker or several?** (decides whether atomic claim is mandatory.)
-6. **Realtime now or later?**
+- **Tier 1 (start): `extraction_jobs` as the queue.** Add a `queued` status (Vercel sets it on
+  enqueue; worker claims `queued → running`). A single worker can just poll every few seconds.
+  Multiple workers ⇒ make the claim **atomic** (`UPDATE … WHERE status='queued' RETURNING …`, or a
+  `claimed_by`/`claimed_at` heartbeat) to avoid double-processing.
+- **Tier 2 (later): pgmq / Supabase Queues** for visibility-timeout + retries + DLQ, staying on Supabase.
+- If/when scraper and extractor become **separate services**, the seam between them is a second
+  queue topic ("subtitle ready") or an HTTP call — same serializable contract from §2.
 
 ---
 
-## 10. Env / secrets the worker needs (names from `.env.local`)
+## 9. Progress: switch polling → Supabase Realtime (web-side)
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SECRET_KEY` — **service role; full DB access, bypasses RLS.** The worker is fully
-  trusted; keep it off any public surface.
-- `OPENAI_API_KEY` (default provider), optionally `ANTHROPIC_API_KEY`,
-  `GOOGLE_GENERATIVE_AI_API_KEY`, and `LLM_PROVIDER` / `LLM_MODEL` to change the default.
-- `NEXT_PUBLIC_TVDB_API_KEY` — only if you build the discovery/enrichment cron.
-- Do **not** use the anon key for writes. Node 20+ recommended (the AI SDK v7 + `fetch`).
+Today the UI polls `/api/extraction-jobs` every 3–5s (`src/hooks/useExtractionJobs.ts`). Better:
+enable **Realtime** on `extraction_jobs` and subscribe client-side (`postgres_changes`, filtered
+by `user_id`/job id); the worker's writes push to the admin UI and the series-page
+`ImportProgressPanel` instantly. The worker only writes — it needs no Realtime. No Realtime is
+used anywhere today; this is additive. Polling keeps working until you switch.
 
 ---
 
-## 11. What to retire once the worker is live
+## 10. Strip LLM from Vercel (the payoff)
 
-- `src/contexts/RTPImportContext.tsx` (`RTPImportProvider`) and its mount in `src/app/layout.tsx`.
-- `src/app/api/rtp-import/step/route.ts` (the worker does stepping now).
-- The resume-on-mount logic in the provider.
-- Change `start/route.ts` to enqueue-only (don't drive).
-
-**Keep:** the `extraction_jobs` model, `process-episode.ts` core, `save-extraction.ts` (new),
-`ImportProgressPanel` + `useShowImportJob` (switch polling → Realtime), `JobStatusBanner`,
-and the existing cancel endpoint `POST /api/extraction-jobs {action:'cancel'}`.
+Once §6 + the worker land: the Next app calls **no** LLM. You can **remove** `OPENAI_API_KEY` /
+`ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` from Vercel env, and the `ai` / `@ai-sdk/*`
+deps stop shipping in the Vercel bundle (they move to the worker package). LLM keys live **only**
+on the worker. Smaller surface, simpler rotation.
 
 ---
 
-## 12. Suggested phasing
+## 11. Code organization (confirm with user — §14)
 
-- **Phase 0:** extract `saveExtraction` into a pure lib; `processEpisode` calls it directly
-  (no HTTP). Verify the Next `/upload` single-file flow and the `extract-phrases` route still work.
-- **Phase 1 (MVP):** worker, single concurrency, polls `extraction_jobs`, drains one job, writes
-  progress. Change `/start` to enqueue-only. Retire the client driver.
-- **Phase 2 (robust):** concurrency + rate limit, retries/backoff, stale-job reclaim, graceful
-  shutdown, a heartbeat (e.g. a `worker_status` row or `last_heartbeat`) so the UI can show
-  "worker online."
-- **Phase 3:** Realtime progress (web-side).
-- **Phase 4:** catalog auto-discovery cron.
+- **Lightest:** a `worker/` dir in this repo importing the shared `src/lib/*`. Fastest, one repo.
+  **Gotcha:** the `@/*` tsconfig path alias must resolve in a non-Next process — use `tsx` +
+  tsconfig-paths, `vite-node`, or a small `tsc`/`esbuild` build.
+- **Cleaner long-term:** a **monorepo** — `packages/scraper`, `packages/extractor` (the pure,
+  offerable cores), `packages/persistence` (or fold into orchestrator), `apps/web` (Next),
+  `apps/worker` (orchestrator). This is the structure that makes "split into two services later"
+  trivial. More upfront work.
+- **One process now, two services later:** whichever layout, the orchestrator imports scraper +
+  extractor and runs them in-process initially. Don't stand up two deployables until there's a
+  reason (offering the extractor; independent scaling/availability).
+- **Docker:** the worker image needs Node 20+, the env vars (§12), outbound network. **No exposed ports.**
 
 ---
 
-## 13. Verification
+## 12. Env / secrets
 
-Run the worker locally against the same Supabase project. From the web admin UI (`/upload`,
-admin login required), enqueue an import (it should now just create a `queued` job and return).
-Then confirm the **worker** does the work:
+Worker needs: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` (**service role — full DB access,
+keep off any public surface**), and the **LLM keys** (`OPENAI_API_KEY`, optionally
+`ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, plus `LLM_PROVIDER`/`LLM_MODEL`).
+`NEXT_PUBLIC_TVDB_API_KEY` only if you build discovery/enrichment. Names are in `.env.local`.
+After §10, the LLM keys are **removed from Vercel** and live only here. Node 20+. Don't use the
+anon key for writes.
+
+---
+
+## 13. What to retire once the worker is live
+
+- `src/contexts/RTPImportContext.tsx` (`RTPImportProvider`) + its mount in `src/app/layout.tsx`.
+- `src/app/api/rtp-import/step/route.ts` (the worker steps now).
+- The client-side LLM call in `src/utils/phraseExtractionFlow.ts` / `phraseExtractionApi.ts`
+  (manual upload is a job now).
+- Change `src/app/api/rtp-import/start/route.ts` → enqueue-only (`queued`), don't drive; add the
+  manual-upload enqueue endpoint.
+- After §10, delete LLM usage from `src/app/api/extract-phrases/route.ts` (or remove the route).
+
+**Keep:** the `extraction_jobs` model, the extractor/scraper/persistence libs, `ImportProgressPanel`
++ `useShowImportJob` (switch polling→Realtime), `JobStatusBanner`, the cancel endpoint
+`POST /api/extraction-jobs {action:'cancel'}`, and the season-tab series UI.
+
+---
+
+## 14. Decisions to confirm with the user before building
+
+1. **Code layout:** `worker/` dir in this repo vs monorepo with `packages/{scraper,extractor}`.
+2. **Docker or bare process.**
+3. **Queue tier:** jobs-table vs pgmq.
+4. **Concurrency + rate limits** (depends on their LLM plan + RTP politeness).
+5. **Single or multiple workers** (decides atomic-claim requirement).
+6. **Realtime now or later.**
+7. **Manual-upload UX:** async-only via worker, or keep a synchronous fallback when the worker is off
+   (two paths — only if they miss the instant flow).
+8. **How far to split deployment now:** one process (recommended) vs already two services.
+
+---
+
+## 15. Suggested phasing
+
+- **Phase 0 (refactor seams):** §6a extractor+persistence split; §6b `processEpisode` → orchestration
+  (no HTTP); verify the Next flows still work.
+- **Phase 1 (worker MVP):** orchestrator process, single concurrency, polls `extraction_jobs`,
+  handles `rtp_series`; `/start` → enqueue-only; retire the client driver.
+- **Phase 2 (manual upload as a job):** §6c enqueue endpoint + worker handling of `manual_upload`;
+  remove LLM from Vercel (§10).
+- **Phase 3 (robust):** concurrency + rate limits, retries/backoff, stale reclaim, graceful
+  shutdown, a heartbeat (`worker_status` row) so the UI can show "worker online."
+- **Phase 4:** Realtime progress.
+- **Phase 5 (optional):** catalog auto-discovery cron (closes the RTP enumeration gap; `src/lib/tvdb.ts`
+  for enrichment). And/or split scraper+extractor into two deployed services if a reason appears.
+
+---
+
+## 16. Verification
+
+Run the worker locally against the same Supabase. From the web admin UI, (a) enqueue an RTP import
+and (b) upload a single subtitle — both should now just **create a job and return**. Confirm the
+**worker** does the work:
 - `extraction_jobs.results` fills in **incrementally** (plan → per-episode `episodes` → summary);
 - per-episode rows appear in `phrase_extractions` / `extracted_phrases` / `episodes`;
-- `progress`/counts climb; the series-page `ImportProgressPanel` reflects it (admin only);
-- **cancel** from the UI stops it;
-- **kill the worker mid-job and restart** → it reclaims and resumes (already-done episodes skip via dedup).
+- progress/counts climb; the series-page `ImportProgressPanel` reflects it (admin only);
+- **cancel** stops it; **kill the worker mid-job and restart** → it reclaims and resumes (dedup skips done work);
+- after §10, Vercel has **no** LLM keys and imports/uploads still complete.
 
-Tip: the exact per-episode write semantics to copy are in `src/app/api/rtp-import/step/route.ts`
-and `src/lib/rtp-import/process-episode.ts`. Read them before writing the worker loop.
+The exact per-episode write semantics to copy live in `src/app/api/rtp-import/step/route.ts` and
+`src/lib/rtp-import/process-episode.ts`. Read them before writing the worker loop.
 
 ---
 
-## 14. Guardrails
+## 17. Guardrails
 
-- Keep `src/lib/` framework-free (no Next imports) so it's shareable with the worker.
-- The worker holds the service key — it is fully privileged; never expose it on a network surface.
-- Idempotency is your friend: rely on the existing dedup; design every step to be safely re-runnable.
-- Don't silently cap work — if you bound concurrency or skip episodes, log it.
-- This is an admin/personal tool with infrequent imports; favor robustness + clarity over scale.
+- **Keep scraper & extractor pure** (no Supabase, no Next) — that purity is what makes them
+  reusable and lets you split into separate services later. All state lives in the orchestrator.
+- Design the scraper↔extractor seam as a **serializable contract** (subtitle text + metadata) even
+  while it's an in-process call.
+- The worker holds the service key + LLM keys — it is fully privileged; never expose it on a network surface.
+- Lean on the existing **dedup** so every step is safely re-runnable.
+- Don't silently cap work — if you bound concurrency or skip units, log it.
+- This is an admin/personal tool with infrequent jobs: favor robustness + clarity over scale.
