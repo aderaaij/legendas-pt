@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
 
     const outcome = await processEpisode({
       supabase,
-      origin: request.nextUrl.origin,
       episode: next,
       showId: plan.showId,
       season: plan.season,
