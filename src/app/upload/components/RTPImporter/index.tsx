@@ -7,6 +7,7 @@ import ShowTVDBCreator from "../ShowTVDBCreator";
 import ProcessingResults from "./ProcessingResults";
 import RTPUrlForm from "./RTPUrlForm";
 import SeriesPreviewCard from "./SeriesPreviewCard";
+import SeriesPreviewSkeleton from "./SeriesPreviewSkeleton";
 import { useRTPImporter } from "./useRTPImporter";
 
 export default function RTPImporter() {
@@ -109,7 +110,9 @@ export default function RTPImporter() {
         error={error}
       />
 
-      {seriesPreview && (
+      {isScrapingPreview && <SeriesPreviewSkeleton />}
+
+      {seriesPreview && !isScrapingPreview && (
         <SeriesPreviewCard
           seriesPreview={seriesPreview}
           selectedEpisodes={selectedEpisodes}

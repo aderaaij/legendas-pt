@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronRight, X, Tv2 } from 'lucide-react';
+import { Search, ChevronRight, X, Tv2, Plus } from 'lucide-react';
 import { Show } from '@/lib/supabase';
 import { useShowSelector } from '@/hooks/useShowSelector';
 
@@ -70,12 +70,12 @@ export default function ShowMapper({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Map to Existing Show</h2>
+              <h2 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Select a Show</h2>
               <p className="mt-1" style={{ color: "var(--muted)" }}>
-                Found series: <span className="font-medium">{seriesTitle}</span>
+                RTP series: <span className="font-medium">{seriesTitle}</span>
               </p>
               <p className="text-sm" style={{ color: "var(--faint)" }}>
-                {episodes.length} episodes • Season {season} • Choose an existing show to map episodes to
+                {episodes.length} episodes • Season {season} • Map to an existing show or create a new one
               </p>
             </div>
             <button
@@ -110,6 +110,34 @@ export default function ShowMapper({
 
           {!showEpisodePreview ? (
             <>
+              {/* Create-new path — always available, not gated behind an empty
+                  search. Lets the user choose up front: new show or map existing. */}
+              <div
+                className="mb-6 flex items-center justify-between gap-4 rounded-lg p-4"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+              >
+                <div>
+                  <h3 className="font-medium" style={{ color: "var(--text)" }}>
+                    New to your library?
+                  </h3>
+                  <p className="text-sm" style={{ color: "var(--muted)" }}>
+                    Add this series as a new show (optionally linked to TVDB data).
+                  </p>
+                </div>
+                <button
+                  onClick={onCreateNewShow}
+                  className="flex items-center gap-1 px-4 py-2 rounded-md whitespace-nowrap transition-colors"
+                  style={{ background: "var(--accent)", color: "#fff" }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New Show
+                </button>
+              </div>
+
+              <div className="mb-6 text-center text-sm" style={{ color: "var(--faint)" }}>
+                — or map to an existing show —
+              </div>
+
               {/* Search Section */}
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--text)" }}>
@@ -176,23 +204,18 @@ export default function ShowMapper({
                 </div>
               )}
 
-              {/* No Results / Create New Show Option */}
+              {/* No existing-show match — the "Create New Show" path above stays
+                  available, so this is just an inline hint. */}
               {showTVDBResults && (
-                <div className="text-center py-8">
-                  <Tv2 className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--faint)" }} />
-                  <h3 className="text-lg font-medium mb-2" style={{ color: "var(--text)" }}>
-                    No Existing Shows Found
-                  </h3>
-                  <p className="mb-4" style={{ color: "var(--muted)" }}>
-                    No shows match &quot;{searchQuery}&quot;. You can create a new show entry.
+                <div className="text-center py-6" style={{ color: "var(--muted)" }}>
+                  <Tv2 className="w-8 h-8 mx-auto mb-2" style={{ color: "var(--faint)" }} />
+                  <p className="text-sm">
+                    No existing shows match &quot;{searchQuery}&quot;. Use{" "}
+                    <span className="font-medium" style={{ color: "var(--text)" }}>
+                      Create New Show
+                    </span>{" "}
+                    above to add it.
                   </p>
-                  <button
-                    onClick={onCreateNewShow}
-                    className="px-6 py-2 rounded-md transition-colors"
-                    style={{ background: "var(--accent)", color: "#fff" }}
-                  >
-                    Create New Show
-                  </button>
                 </div>
               )}
 

@@ -75,9 +75,15 @@ export default function RTPUrlForm({
           <button
             onClick={onPreview}
             disabled={isScrapingPreview || isProcessing}
-            className="px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             style={{ background: "var(--accent)", color: "#fff" }}
           >
+            {isScrapingPreview && (
+              <span
+                className="animate-spin rounded-full h-4 w-4 border-2 border-white/40"
+                style={{ borderTopColor: "#fff" }}
+              />
+            )}
             {isScrapingPreview ? "Loading Preview..." : "Preview Series"}
           </button>
         </div>
