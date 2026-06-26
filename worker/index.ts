@@ -8,6 +8,7 @@ import { getExtractionJob } from "@/lib/db/extraction-jobs";
 import type { ExtractionJob } from "@/types/database";
 import { processRtpSeriesJob } from "./process-rtp-series";
 import { processManualUploadJob } from "./process-manual-upload";
+import { startWorkerHeartbeat } from "./heartbeat";
 import { sleep } from "./util";
 
 /**
@@ -190,6 +191,11 @@ function installShutdown() {
 async function main() {
   const supabase = createServiceClient();
   installShutdown();
+  const stopHeartbeat = startWorkerHeartbeat(
+    supabase,
+    log,
+    workerEnv.heartbeatMs
+  );
   log(
     `started — polling every ${workerEnv.pollIntervalMs}ms (rtp_series, manual_upload)`
   );
@@ -206,6 +212,7 @@ async function main() {
     }
   }
 
+  await stopHeartbeat();
   log("stopped");
 }
 
