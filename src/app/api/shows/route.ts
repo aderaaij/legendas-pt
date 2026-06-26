@@ -61,13 +61,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Show name is required' }, { status: 400 });
     }
 
-    // Create show in database
+    // Create show in database. NB: the `shows` table has no `slug` column —
+    // series URLs are derived from `name` at runtime (see utils/slugify +
+    // [series]/page.tsx), so we must not send one or PostgREST rejects the
+    // insert. Mirror the known-good findOrCreateShow insert (sets language).
     const { data: show, error } = await supabase
       .from('shows')
       .insert({
         name,
-        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
         source: source || 'rtp',
+        language: 'pt',
         overview,
         network,
         genres: genres || [],
@@ -81,7 +84,10 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating show:', error);
-      return NextResponse.json({ error: 'Failed to create show' }, { status: 500 });
+      return NextResponse.json(
+        { error: `Failed to create show: ${error.message}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(show);
