@@ -20,7 +20,7 @@ export function useShowImportJob(showId: string): {
       return (
         j.job_type === "rtp_series" &&
         plan?.showId === showId &&
-        ["pending", "running"].includes(j.status)
+        ["queued", "pending", "running"].includes(j.status)
       );
     }) ?? null;
 

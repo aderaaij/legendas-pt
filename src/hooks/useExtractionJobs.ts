@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthedFetch } from '@/hooks/useAuthedFetch';
+import { supabase } from '@/lib/supabase';
 import type { ExtractionJob } from '@/lib/supabase';
 
 interface UseExtractionJobsReturn {
@@ -20,6 +21,8 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
   const [allJobs, setAllJobs] = useState<ExtractionJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // True once the Realtime channel is subscribed; lets us slow the backstop poll.
+  const [realtimeReady, setRealtimeReady] = useState(false);
 
   const refreshJobs = useCallback(async () => {
     // Don't try to fetch jobs if user is not authenticated
@@ -106,16 +109,54 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
     }
   }, [authedFetch]);
 
-  // Auto-refresh active jobs every 5 seconds
+  // Realtime: subscribe to this user's extraction_jobs changes and refetch on any
+  // event. The worker's progress writes push to the UI instantly. RLS limits the
+  // stream to the user's own jobs. A ref keeps the subscription tied to the user
+  // only (so it doesn't churn when refreshJobs's identity changes).
+  const refreshRef = useRef(refreshJobs);
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (activeJobs.length > 0) {
-        refreshJobs();
-      }
-    }, 5000);
+    refreshRef.current = refreshJobs;
+  }, [refreshJobs]);
 
+  useEffect(() => {
+    // Initial state is false and the cleanup below resets it, so no setState is
+    // needed here when there's no user.
+    if (!user) return;
+    const channel = supabase
+      .channel(`extraction_jobs:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'extraction_jobs',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void refreshRef.current();
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeReady(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      setRealtimeReady(false);
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Backstop poll for active jobs. With Realtime delivering pushes we poll slowly
+  // (safety net); if Realtime isn't connected we keep the original fast cadence so
+  // the UI stays responsive regardless.
+  useEffect(() => {
+    if (activeJobs.length === 0) return;
+    const intervalMs = realtimeReady ? 30000 : 5000;
+    const interval = setInterval(() => {
+      void refreshJobs();
+    }, intervalMs);
     return () => clearInterval(interval);
-  }, [activeJobs.length, refreshJobs]);
+  }, [activeJobs.length, realtimeReady, refreshJobs]);
 
   // Initial load
   useEffect(() => {
@@ -170,7 +211,7 @@ export function useExtractionJob(jobId: string | null) {
 
   // Auto-refresh if job is active
   useEffect(() => {
-    if (!job || !['pending', 'running'].includes(job.status)) return;
+    if (!job || !['queued', 'pending', 'running'].includes(job.status)) return;
 
     const interval = setInterval(refreshJob, 3000);
     return () => clearInterval(interval);

@@ -24,7 +24,6 @@ interface PhraseExtractorProps {
 }
 
 export interface ExtractionSettings {
-  saveToDatabase: boolean;
   forceReExtraction: boolean;
   /** Override the server's default LLM provider for this extraction. */
   provider?: Provider;
@@ -39,20 +38,18 @@ export default function PhraseExtractor({
   metadata,
 }: PhraseExtractorProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const [saveToDatabase, setSaveToDatabase] = useState(true);
   const [forceReExtraction, setForceReExtraction] = useState(false);
   // "" = use the server's default provider (LLM_PROVIDER env / built-in default).
   const [provider, setProvider] = useState<Provider | "">("");
   const [model, setModel] = useState("");
 
   const settings: ExtractionSettings = {
-    saveToDatabase,
     forceReExtraction,
     provider: provider || undefined,
     model: model.trim() || undefined,
   };
 
-  const { isExtracting, handleExtraction } = usePhraseExtraction({
+  const { isExtracting, statusLabel, handleExtraction } = usePhraseExtraction({
     settings,
     fileName,
     metadata,
@@ -112,17 +109,6 @@ export default function PhraseExtractor({
           className="p-4 rounded-lg space-y-3"
           style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
         >
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={saveToDatabase}
-              onChange={(e) => setSaveToDatabase(e.target.checked)}
-              className="rounded"
-              style={{ accentColor: "var(--accent)" }}
-            />
-            <span className="text-sm" style={{ color: "var(--text)" }}>Save to database</span>
-          </label>
-
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -186,7 +172,7 @@ export default function PhraseExtractor({
             style={{ borderColor: "var(--accent)", borderBottomColor: "var(--accent)" }}
           ></div>
           <span className="text-sm">
-            Extracting phrases from subtitle content...
+            {statusLabel ?? "Extracting phrases on the worker…"}
           </span>
         </div>
       )}

@@ -1,0 +1,20 @@
+# Worker-only Compose for ardencore (or any always-on box).
+#
+# The Next.js web app deploys on Vercel; this stack runs ONLY the data-plane
+# worker that does all scraping + LLM extraction. It is outbound-only (talks to
+# Supabase, RTP, and the LLM provider) and exposes no ports.
+#
+#   cp .env.worker.example .env.worker && chmod 600 .env.worker   # then fill it in
+#   docker compose up -d --build
+#   docker compose logs -f worker
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: legendas-worker
+    env_file: .env.worker
+    restart: unless-stopped
+    # tini as PID 1: forwards SIGTERM to the worker for graceful `docker stop`.
+    init: true
+    # No ports — outbound-only.

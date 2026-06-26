@@ -6,7 +6,9 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "worker": "tsx worker/index.ts",
+    "worker:watch": "tsx watch worker/index.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.0",
@@ -34,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }

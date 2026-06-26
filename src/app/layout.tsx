@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Anton, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { RTPImportProvider } from "@/contexts/RTPImportContext";
 import { Navigation } from "@/app/components/layout/Navigation";
 import Footer from "@/app/components/layout/Footer";
 
@@ -41,11 +40,9 @@ export default function RootLayout({
         className={`${hankenGrotesk.variable} ${anton.variable} antialiased`}
       >
         <AuthProvider>
-          <RTPImportProvider>
-            <Navigation />
-            {children}
-            <Footer />
-          </RTPImportProvider>
+          <Navigation />
+          {children}
+          <Footer />
         </AuthProvider>
       </body>
     </html>

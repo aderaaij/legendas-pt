@@ -26,12 +26,6 @@ export function createServiceClient(): SupabaseClient {
   });
 }
 
-/** True when a bearer token is our service key (a trusted server-to-server call). */
-function isServiceKey(token: string): boolean {
-  const key = process.env.SUPABASE_SECRET_KEY;
-  return !!key && token === key;
-}
-
 export type AuthError = { message: string; status: number };
 
 /**
@@ -76,51 +70,4 @@ export async function requireAdmin(
   }
 
   return { user: { id: user.id } };
-}
-
-export type SaveAuthResult =
-  | { client: SupabaseClient }
-  | { error: { message: string; status: number } };
-
-/**
- * Resolve the Supabase client to use for a write that requires authorization.
- * - A bearer equal to the service key → trusted internal call (e.g. the RTP
- *   importer), already authorized upstream; use the service-role client, with no
- *   per-request `auth.getUser` round-trip.
- * - Otherwise validate the user's JWT and return a user-scoped client.
- */
-export async function resolveSaveAuth(
-  authHeader: string | null
-): Promise<SaveAuthResult> {
-  if (!authHeader?.startsWith("Bearer ")) {
-    return {
-      error: {
-        message: "Authentication required for database operations",
-        status: 401,
-      },
-    };
-  }
-
-  const token = authHeader.slice(7);
-
-  if (isServiceKey(token)) {
-    return { client: createServiceClient() };
-  }
-
-  const userClient = createClient(
-    url(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-
-  const {
-    data: { user },
-    error,
-  } = await userClient.auth.getUser(token);
-
-  if (error || !user) {
-    return { error: { message: "Invalid authentication", status: 401 } };
-  }
-
-  return { client: userClient };
 }

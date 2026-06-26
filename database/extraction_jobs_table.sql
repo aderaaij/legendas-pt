@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS extraction_jobs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   job_type TEXT NOT NULL CHECK (job_type IN ('rtp_series', 'manual_upload')),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('queued', 'pending', 'running', 'completed', 'failed', 'cancelled')),
   progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
   total_episodes INTEGER NOT NULL DEFAULT 0,
   completed_episodes INTEGER NOT NULL DEFAULT 0,

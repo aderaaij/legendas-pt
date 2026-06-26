@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
+import { WorkerStatusBadge } from "@/app/components/common/WorkerStatusBadge";
 import { generateShowSlug } from "@/utils/slugify";
 
 import SubtitleUploader from "./components/SubtitleUploader";
@@ -99,10 +100,13 @@ export default function UploadPage() {
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back to Library</span>
               </Link>
-              <h1 className="font-display flex items-center gap-3 text-[40px] uppercase leading-none">
-                <Languages style={{ color: "var(--accent)" }} />
-                Upload New Subtitles
-              </h1>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <h1 className="font-display flex items-center gap-3 text-[40px] uppercase leading-none">
+                  <Languages style={{ color: "var(--accent)" }} />
+                  Upload New Subtitles
+                </h1>
+                <WorkerStatusBadge />
+              </div>
             </div>
             <p className="max-w-2xl text-lg" style={{ color: "var(--muted)" }}>
               Upload Portuguese subtitle files to extract meaningful phrases for

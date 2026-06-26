@@ -4,7 +4,6 @@ import RTPScraperService from "@/lib/rtp-scraper";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthedFetch } from "@/hooks/useAuthedFetch";
 import { useExtractionJob } from "@/hooks/useExtractionJobs";
-import { useRTPImport } from "@/contexts/RTPImportContext";
 import { Show } from "@/lib/supabase";
 import type { RTPSeries, RTPPreviewResponse } from "@/types/rtp";
 
@@ -41,7 +40,6 @@ export type ShowMappingStep = "none" | "mapping" | "creating";
 export function useRTPImporter() {
   const { user, isAdmin } = useAuth();
   const authedFetch = useAuthedFetch();
-  const { startImport } = useRTPImport();
 
   const [rtpUrl, setRtpUrl] = useState("");
   const [isScrapingPreview, setIsScrapingPreview] = useState(false);
@@ -166,23 +164,32 @@ export function useRTPImporter() {
       return;
     }
 
-    // Kick off the chunked import. The global driver (RTPImportProvider) runs the
-    // per-episode loop in the background; this returns as soon as the job exists,
-    // and progress is shown by the JobStatusBanner + the series-page panel.
+    // Enqueue the import and return. The persistent worker claims the job and
+    // runs the per-episode loop in the background; progress is shown by the
+    // JobStatusBanner + the series-page panel (both poll the job row).
     setIsProcessing(true);
     setError(null);
     setResults([]);
     setSummary(null);
 
     try {
-      const jobId = await startImport({
-        rtpUrl,
-        selectedEpisodes: Array.from(selectedEpisodes),
-        selectedShowId: selectedShow.id,
-        saveToDatabase,
-        forceReExtraction,
-        season: seriesPreview.season,
+      const res = await authedFetch("/api/rtp-import/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rtpUrl,
+          selectedEpisodes: Array.from(selectedEpisodes),
+          selectedShowId: selectedShow.id,
+          saveToDatabase,
+          forceReExtraction,
+          season: seriesPreview.season,
+        }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to start import");
+      }
+      const { jobId } = await res.json();
       setCurrentJobId(jobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start import");

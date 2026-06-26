@@ -123,7 +123,7 @@ export async function getActiveExtractionJobs(
     .from("extraction_jobs")
     .select("*")
     .eq("user_id", userId)
-    .in("status", ["pending", "running"])
+    .in("status", ["queued", "pending", "running"])
     .order("created_at", { ascending: false });
 
   if (error) {

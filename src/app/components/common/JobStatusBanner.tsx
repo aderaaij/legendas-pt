@@ -7,6 +7,7 @@ import type { ExtractionJob } from '@/lib/supabase';
 
 const getStatusColor = (status: string): React.CSSProperties => {
   switch (status) {
+    case 'queued': return { background: 'rgba(245,197,24,.1)', border: '1px solid rgba(245,197,24,.3)', color: 'var(--gold)' };
     case 'pending': return { background: 'rgba(245,197,24,.1)', border: '1px solid rgba(245,197,24,.3)', color: 'var(--gold)' };
     case 'running': return { background: 'rgba(59,130,246,.1)', border: '1px solid rgba(59,130,246,.3)', color: 'var(--blue)' };
     case 'completed': return { background: 'rgba(34,197,94,.1)', border: '1px solid rgba(34,197,94,.3)', color: 'var(--green)' };
@@ -18,6 +19,7 @@ const getStatusColor = (status: string): React.CSSProperties => {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
+    case 'queued': return '🕒';
     case 'pending': return '⏳';
     case 'running': return '🔄';
     case 'completed': return '✅';
@@ -48,7 +50,7 @@ function JobCard({ job, onCancel, isExpanded, onToggle }: JobCardProps) {
     }
   };
 
-  const canCancel = ['pending', 'running'].includes(job.status);
+  const canCancel = ['queued', 'pending', 'running'].includes(job.status);
 
   return (
     <div className="rounded-lg p-4" style={getStatusColor(job.status)}>

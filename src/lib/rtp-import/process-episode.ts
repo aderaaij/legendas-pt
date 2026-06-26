@@ -1,24 +1,28 @@
 /**
- * Process ONE RTP episode: scrape its subtitle, find/create the episode row, and
- * extract+save phrases via the internal `/api/extract-phrases` endpoint (authorized
- * with the service key). Extracted from the old monolithic `scrape-rtp` loop so it
- * can run as a single short serverless request per episode. SERVER-ONLY.
+ * Process ONE RTP episode: scrape its subtitle, find/create the episode row, then
+ * extract + persist phrases by calling the scraper, extractor, and persistence
+ * layers **directly** (no HTTP hop). This is the orchestration unit reused by
+ * both the Next `/step` route and the standalone worker — it depends on no web
+ * server being reachable. SERVER-ONLY (uses a service-role Supabase client).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import RTPScraperService from "@/lib/rtp-scraper";
+import { extractFromSubtitle } from "@/lib/extractor";
+import { persistExtraction } from "@/lib/db/extractions";
+import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { generateContentHash } from "@/utils/extractPhrasesUtils";
+import type { Provider } from "@/lib/llm/types";
 import type { EpisodeStep, PlanEpisode } from "./types";
 
 export interface ProcessEpisodeParams {
   supabase: SupabaseClient; // service-role
-  origin: string; // request origin, for the internal extract-phrases fetch
   episode: PlanEpisode;
   showId: string | null;
   season: number;
   seriesTitle: string;
   saveToDatabase: boolean;
   forceReExtraction: boolean;
-  provider?: string | null;
+  provider?: Provider | null;
   model?: string | null;
   onStep?: (step: EpisodeStep) => Promise<void> | void;
 }
@@ -40,7 +44,6 @@ export async function processEpisode(
 ): Promise<ProcessEpisodeResult> {
   const {
     supabase,
-    origin,
     episode,
     showId,
     season,
@@ -69,7 +72,8 @@ export async function processEpisode(
     return { status: "no_subtitle" };
   }
 
-  // Dedup: skip if this exact content was already extracted (unless forcing).
+  // Pre-LLM dedup: skip the expensive extraction if this exact content was
+  // already extracted (unless forcing). Keeps the unit cheaply retry-able.
   const contentHash = generateContentHash(scrapedSubtitle.content);
   if (saveToDatabase) {
     const { data: existingExtraction } = await supabase
@@ -132,46 +136,69 @@ export async function processEpisode(
     }
   }
 
-  // Extract + save through the internal endpoint, authorized as a service call.
+  // Extract phrases (pure LLM layer — holds the keys, no DB).
   await onStep?.("extracting");
-  const extractionResponse = await fetch(`${origin}/api/extract-phrases`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
-    },
-    body: JSON.stringify({
+  let extraction;
+  try {
+    extraction = await extractFromSubtitle({
       content: scrapedSubtitle.content,
       filename: scrapedSubtitle.filename,
-      showTitle: seriesTitle,
-      episodeTitle: episode.title,
-      seasonNumber: season, // (the old loop hardcoded 1 here)
-      episodeNumber: episode.episodeNumber,
-      saveToDatabase,
+      provider,
+      model,
+    });
+  } catch (extractError) {
+    if (
+      extractError instanceof MissingApiKeyError ||
+      extractError instanceof UnknownProviderError
+    ) {
+      return { status: "extraction_failed", error: extractError.message };
+    }
+    return {
+      status: "extraction_failed",
+      error:
+        extractError instanceof Error
+          ? extractError.message
+          : "Failed to extract phrases",
+    };
+  }
+
+  // Persist (all Supabase writes live here).
+  await onStep?.("saving");
+  if (!saveToDatabase) {
+    return { status: "success", phraseCount: extraction.phrases.length };
+  }
+
+  try {
+    const result = await persistExtraction(supabase, {
+      phrases: extraction.phrases,
+      content: scrapedSubtitle.content,
+      language: "pt",
+      truncated: extraction.truncated,
       forceReExtraction,
       showId,
       episodeId,
-      ...(provider ? { provider } : {}),
-      ...(model ? { model } : {}),
-    }),
-  });
+      provider: extraction.resolved.provider,
+      model: extraction.resolved.model,
+      filename: scrapedSubtitle.filename,
+      showTitle: seriesTitle,
+      episodeTitle: episode.title,
+      seasonNumber: season,
+      episodeNumber: episode.episodeNumber,
+    });
 
-  if (!extractionResponse.ok) {
-    let errorMsg = "Unknown extraction error";
-    try {
-      const errorData = await extractionResponse.json();
-      errorMsg = errorData.error || errorMsg;
-    } catch {
-      // non-JSON error body
+    if (result.alreadyExists) {
+      return { status: "already_exists", extractionId: result.extractionId };
     }
-    return { status: "extraction_failed", error: errorMsg };
+    return {
+      status: "success",
+      extractionId: result.extractionId,
+      phraseCount: extraction.phrases.length,
+    };
+  } catch (saveError) {
+    return {
+      status: "extraction_failed",
+      error:
+        saveError instanceof Error ? saveError.message : "Failed to save extraction",
+    };
   }
-
-  await onStep?.("saving");
-  const data = await extractionResponse.json();
-  return {
-    status: "success",
-    extractionId: data.extractionId,
-    phraseCount: data.phrases?.length ?? 0,
-  };
 }
