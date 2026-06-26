@@ -15,7 +15,7 @@ import MetadataEditor from "@/app/components/phrase/MetadataEditor";
 import PhraseEditor from "@/app/components/phrase/PhraseEditor";
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
 import Breadcrumb from "@/app/components/common/Breadcrumb";
-import { useShowEdit } from "@/hooks/useShowEdit";
+import { useShowEdit } from "./useShowEdit";
 
 export default function ShowEditPage() {
   const params = useParams();

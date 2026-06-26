@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { Play, Settings } from "lucide-react";
-import { usePhraseExtraction } from "@/hooks/usePhraseExtraction";
+import { usePhraseExtraction } from "./usePhraseExtraction";
 import { SubtitleMetadata } from "../page";
 import { parseShowInfo } from "@/utils/extractPhrasesUtils";
+import {
+  DEFAULT_MODELS,
+  PROVIDER_LABELS,
+  PROVIDERS,
+  type Provider,
+} from "@/lib/llm/types";
 
 interface PhraseExtractorProps {
   subtitleContent: string;
@@ -20,6 +26,10 @@ interface PhraseExtractorProps {
 export interface ExtractionSettings {
   saveToDatabase: boolean;
   forceReExtraction: boolean;
+  /** Override the server's default LLM provider for this extraction. */
+  provider?: Provider;
+  /** Override the provider's default model for this extraction. */
+  model?: string;
 }
 
 export default function PhraseExtractor({
@@ -31,10 +41,15 @@ export default function PhraseExtractor({
   const [showSettings, setShowSettings] = useState(false);
   const [saveToDatabase, setSaveToDatabase] = useState(true);
   const [forceReExtraction, setForceReExtraction] = useState(false);
+  // "" = use the server's default provider (LLM_PROVIDER env / built-in default).
+  const [provider, setProvider] = useState<Provider | "">("");
+  const [model, setModel] = useState("");
 
   const settings: ExtractionSettings = {
     saveToDatabase,
     forceReExtraction,
+    provider: provider || undefined,
+    model: model.trim() || undefined,
   };
 
   const { isExtracting, handleExtraction } = usePhraseExtraction({
@@ -120,6 +135,47 @@ export default function PhraseExtractor({
               Force re-extraction (add to existing phrases)
             </span>
           </label>
+
+          <div className="space-y-2 pt-1">
+            <label className="block text-sm" style={{ color: "var(--text)" }}>
+              LLM provider
+            </label>
+            <select
+              value={provider}
+              onChange={(e) => {
+                setProvider(e.target.value as Provider | "");
+                setModel(""); // reset model when switching provider
+              }}
+              className="w-full px-3 py-2 rounded-lg text-sm"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+              }}
+            >
+              <option value="">Default (server setting)</option>
+              {PROVIDERS.map((p) => (
+                <option key={p} value={p}>
+                  {PROVIDER_LABELS[p]}
+                </option>
+              ))}
+            </select>
+
+            {provider && (
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={`Model (default: ${DEFAULT_MODELS[provider]})`}
+                className="w-full px-3 py-2 rounded-lg text-sm"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text)",
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
 

@@ -51,6 +51,12 @@ export default function SeriesPreviewCard({
           <p>
             <strong>Episodes Found:</strong> {seriesPreview.episodes.length}
           </p>
+          <p>
+            <strong>Season:</strong> {seriesPreview.season ?? 1}
+            {seriesPreview.season == null && (
+              <span style={{ color: "var(--muted)" }}> (assumed — no season in title)</span>
+            )}
+          </p>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import RTPScraperService from "@/lib/rtp-scraper";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthedFetch } from "@/hooks/useAuthedFetch";
 import { useExtractionJob } from "@/hooks/useExtractionJobs";
+import { useRTPImport } from "@/contexts/RTPImportContext";
 import { Show } from "@/lib/supabase";
 import type { RTPSeries, RTPPreviewResponse } from "@/types/rtp";
 
@@ -40,6 +41,7 @@ export type ShowMappingStep = "none" | "mapping" | "creating";
 export function useRTPImporter() {
   const { user, isAdmin } = useAuth();
   const authedFetch = useAuthedFetch();
+  const { startImport } = useRTPImport();
 
   const [rtpUrl, setRtpUrl] = useState("");
   const [isScrapingPreview, setIsScrapingPreview] = useState(false);
@@ -164,49 +166,26 @@ export function useRTPImporter() {
       return;
     }
 
-    // Proceed with processing
+    // Kick off the chunked import. The global driver (RTPImportProvider) runs the
+    // per-episode loop in the background; this returns as soon as the job exists,
+    // and progress is shown by the JobStatusBanner + the series-page panel.
     setIsProcessing(true);
     setError(null);
     setResults([]);
     setSummary(null);
 
     try {
-      const response = await authedFetch("/api/scrape-rtp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rtpUrl,
-          saveToDatabase,
-          forceReExtraction,
-          selectedEpisodes: Array.from(selectedEpisodes),
-          selectedShowId: selectedShow?.id,
-        }),
+      const jobId = await startImport({
+        rtpUrl,
+        selectedEpisodes: Array.from(selectedEpisodes),
+        selectedShowId: selectedShow.id,
+        saveToDatabase,
+        forceReExtraction,
+        season: seriesPreview.season,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to process series");
-      }
-
-      const data = await response.json();
-      setResults(data.results);
-      setSummary(data.summary);
-
-      // Set the job ID for tracking
-      if (data.jobId) {
-        setCurrentJobId(data.jobId);
-      }
+      setCurrentJobId(jobId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to process series");
-      // If we got a job ID even on error, track it
-      if (err instanceof Error && err.message.includes("jobId:")) {
-        const jobIdMatch = err.message.match(/jobId: (\w+)/);
-        if (jobIdMatch) {
-          setCurrentJobId(jobIdMatch[1]);
-        }
-      }
+      setError(err instanceof Error ? err.message : "Failed to start import");
     } finally {
       setIsProcessing(false);
     }

@@ -2,7 +2,7 @@
 
 import { Film } from "lucide-react";
 
-import { useHomePage } from "@/hooks/useHomePage";
+import { useHomePage } from "./useHomePage";
 import { LibraryShow } from "@/lib/supabase";
 import { buildLibraryRows, pickFeaturedShow } from "@/utils/libraryRows";
 import { HeroSection } from "./HeroSection";

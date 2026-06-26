@@ -21,6 +21,7 @@ interface ShowDetailsFormProps {
   onChange: (patch: Partial<ShowFormData>) => void;
   selectedTVDBShow: TVDBSearchResult | null;
   episodes: EpisodePreview[];
+  season: number;
 }
 
 /** The show-metadata form (with optional "selected from TVDB" banner) shown
@@ -30,6 +31,7 @@ export default function ShowDetailsForm({
   onChange,
   selectedTVDBShow,
   episodes,
+  season,
 }: ShowDetailsFormProps) {
   return (
     <>
@@ -127,7 +129,7 @@ export default function ShowDetailsForm({
         </div>
 
         {/* Episodes Preview */}
-        <EpisodesPreviewList episodes={episodes} />
+        <EpisodesPreviewList episodes={episodes} season={season} />
       </div>
     </>
   );

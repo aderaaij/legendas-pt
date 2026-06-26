@@ -40,6 +40,16 @@ export default function RTPImporter() {
     handleCreateNewShow,
   } = useRTPImporter();
 
+  // The mapping/creation modals should preview only the episodes the user chose
+  // to import (the backend already filters on the same selection), not the whole
+  // series.
+  const episodesToImport = (seriesPreview?.episodes ?? []).filter((ep) =>
+    selectedEpisodes.has(ep.episodeNumber)
+  );
+  // The whole import uses one season (parsed from the RTP title; defaults to 1),
+  // since RTP episode titles don't carry it. Mirror the backend's resolution.
+  const importSeason = seriesPreview?.season ?? 1;
+
   // Show authentication message if not logged in or not admin
   if (!user) {
     return (
@@ -143,7 +153,8 @@ export default function RTPImporter() {
       <ShowMapper
         isOpen={showMappingStep === "mapping"}
         seriesTitle={seriesPreview?.title || ""}
-        episodes={seriesPreview?.episodes || []}
+        episodes={episodesToImport}
+        season={importSeason}
         onShowSelected={handleShowSelected}
         onCreateNewShow={handleCreateNewShow}
         onCancel={handleCancelMapping}
@@ -153,7 +164,8 @@ export default function RTPImporter() {
       <ShowTVDBCreator
         isOpen={showMappingStep === "creating"}
         seriesTitle={seriesPreview?.title || ""}
-        episodes={seriesPreview?.episodes || []}
+        episodes={episodesToImport}
+        season={importSeason}
         onShowCreated={handleShowCreated}
         onCancel={handleCancelMapping}
       />

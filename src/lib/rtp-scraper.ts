@@ -58,18 +58,80 @@ class RTPScraperService {
         ? titleMatch[1].replace(" - RTP Play", "").trim()
         : "Unknown Series";
 
+      const season = this.getSeasonFromTitle(title);
+
       const episodes = this.extractEpisodes(html, seriesId, seriesSlug);
+      const seen = new Set(episodes.map((ep) => ep.id));
+
+      // RTP only renders the first page of episodes (~12-16) in the initial
+      // HTML; the rest are lazy-loaded via GET /play/bg_l_ep/, paged by a
+      // `stamp` cursor (the last episode's `last_id`) and the NUMERIC program id
+      // (e.g. 10551, not p10551). Follow the cursor until a page returns nothing.
+      const numericProgramId = seriesId.replace(/^p/, "");
+      let stamp = this.extractLastId(html);
+      for (let page = 2; stamp && page <= 50; page++) {
+        let fragment: string;
+        try {
+          const params = new URLSearchParams({
+            stamp,
+            listProgram: numericProgramId,
+            page: String(page),
+            type: "all",
+          });
+          const res = await fetch(`${this.BASE_URL}/play/bg_l_ep/?${params.toString()}`, {
+            headers: { Referer: seriesUrl },
+          });
+          if (!res.ok) break;
+          fragment = await res.text();
+        } catch (paginationError) {
+          console.error("Error paging RTP episodes:", paginationError);
+          break;
+        }
+
+        const more = this.extractEpisodes(fragment, seriesId, seriesSlug).filter(
+          (ep) => !seen.has(ep.id)
+        );
+        if (more.length === 0) break;
+        for (const ep of more) {
+          seen.add(ep.id);
+          episodes.push(ep);
+        }
+
+        const nextStamp = this.extractLastId(fragment);
+        if (!nextStamp || nextStamp === stamp) break;
+        stamp = nextStamp;
+      }
+
+      episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
 
       return {
         id: seriesId,
         title,
         url: seriesUrl,
         episodes,
+        season,
       };
     } catch (error) {
       console.error("Error scraping RTP series:", error);
       return null;
     }
+  }
+
+  // The `last_id` cursor RTP uses to page additional episodes; the last one in
+  // a chunk of HTML points past the most recently rendered episode.
+  private static extractLastId(html: string): string | null {
+    const matches = [...html.matchAll(/last_id[^>]*>(\d+)</g)];
+    return matches.length ? matches[matches.length - 1][1] : null;
+  }
+
+  // RTP series pages are titled e.g. "Pôr do Sol, temporada 2 - RTP Play". Pull
+  // the season number out so episodes land in the right season; undefined when
+  // there's no marker (callers default to season 1).
+  static getSeasonFromTitle(title: string): number | undefined {
+    const match = title.match(
+      /\b(?:temporada|temp\.?|s[ée]rie|season)\s*(\d+)/i
+    );
+    return match ? parseInt(match[1], 10) : undefined;
   }
 
   private static extractEpisodes(

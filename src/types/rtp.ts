@@ -12,6 +12,9 @@ export interface RTPSeries {
   title: string;
   url: string;
   episodes: RTPEpisode[];
+  // Season parsed from the RTP page title (e.g. "…, temporada 2"); undefined when
+  // the title carries no season marker (treated as season 1 downstream).
+  season?: number;
 }
 
 export interface RTPPreviewResponse {
