@@ -146,17 +146,20 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
     };
   }, [user]);
 
-  // Backstop poll for active jobs. With Realtime delivering pushes we poll slowly
-  // (safety net); if Realtime isn't connected we keep the original fast cadence so
-  // the UI stays responsive regardless.
+  // Poll on an interval. This refreshes active-job progress AND discovers
+  // newly-created jobs, so the banner appears even if the page was idle when the
+  // job started elsewhere. We must poll even with zero active jobs — otherwise an
+  // idle page can only ever learn about a new job from a Realtime push, and if
+  // Realtime isn't delivering (e.g. it failed to connect) the job stays invisible
+  // for its whole run. With Realtime connected we poll slowly (a backstop, since
+  // pushes do the fast updates); without it we poll quickly so the UI still works.
   useEffect(() => {
-    if (activeJobs.length === 0) return;
-    const intervalMs = realtimeReady ? 30000 : 5000;
+    const intervalMs = realtimeReady ? 15000 : 5000;
     const interval = setInterval(() => {
       void refreshJobs();
     }, intervalMs);
     return () => clearInterval(interval);
-  }, [activeJobs.length, realtimeReady, refreshJobs]);
+  }, [realtimeReady, refreshJobs]);
 
   // Initial load
   useEffect(() => {
