@@ -122,27 +122,56 @@ export function useExtractionJobs(): UseExtractionJobsReturn {
     // Initial state is false and the cleanup below resets it, so no setState is
     // needed here when there's no user.
     if (!user) return;
-    const channel = supabase
-      .channel(`extraction_jobs:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'extraction_jobs',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          void refreshRef.current();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    (async () => {
+      // Ensure the Realtime socket carries the user's JWT. postgres_changes is
+      // RLS-filtered, so without the token Realtime evaluates the policy as an
+      // anonymous role and silently drops every event for the user's own rows.
+      // supabase-js usually syncs this on auth changes, but doing it explicitly
+      // here makes it reliable regardless of timing.
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await supabase.realtime.setAuth(session.access_token);
         }
-      )
-      .subscribe((status) => {
-        setRealtimeReady(status === 'SUBSCRIBED');
-      });
+      } catch {
+        // Subscribe anyway — the interval poll is the backstop.
+      }
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`extraction_jobs:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'extraction_jobs',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            void refreshRef.current();
+          }
+        )
+        .subscribe((status, err) => {
+          // Diagnostic: lets us confirm Realtime on the deployed client via the
+          // browser console (expect "SUBSCRIBED"; CHANNEL_ERROR/TIMED_OUT signal
+          // a connection/auth problem — polling still covers the UI).
+          console.log(
+            `[realtime extraction_jobs] ${status}${err ? ` — ${err.message}` : ''}`
+          );
+          setRealtimeReady(status === 'SUBSCRIBED');
+        });
+    })();
 
     return () => {
+      cancelled = true;
       setRealtimeReady(false);
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user]);
 
