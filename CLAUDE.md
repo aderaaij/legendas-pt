@@ -113,6 +113,20 @@ To restore a `db_cluster` backup into a brand-new Supabase project:
 4. Update `.env.local` with the new project's `NEXT_PUBLIC_SUPABASE_URL` and
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` (use the **publishable**/anon key, never the
    secret/service_role key), then restart `npm run dev`.
+5. **Verify Row-Level Security after restore.** A data/schema restore can leave a
+   table's policies in place while silently dropping its `ENABLE ROW LEVEL
+   SECURITY` flag — the policies then become *dormant* and the table is wide open
+   to the anon key. This happened to `user_profiles` after the June 2026 restore
+   (fixed July 2026 by `database/enable_rls_user_tables.sql`). Confirm every
+   `public` table reports RLS on:
+   ```sql
+   SELECT relname, relrowsecurity
+   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;
+   ```
+   Any row returned is a table with RLS **off** — re-run the relevant migration
+   (or `ALTER TABLE public.<t> ENABLE ROW LEVEL SECURITY`). Supabase's own
+   "rls_disabled_in_public" advisor also catches this.
 
 What the generator handles (see the script header for details): keeps the whole
 `public` schema + data, preserves `auth.users`/`auth.identities` so existing
