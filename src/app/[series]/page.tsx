@@ -11,6 +11,10 @@ type Props = {
 
 type EpisodeWithStats = Episode & { extractionCount: number; totalPhrases: number; lastExtraction: string | null };
 
+// Regenerate in the background so shows/episodes added by the worker appear
+// without a redeploy.
+export const revalidate = 300;
+
 async function getShowBySlug(slug: string): Promise<{ show: Show; episodes: EpisodeWithStats[] } | null> {
   try {
     // Parse the series slug to get show information

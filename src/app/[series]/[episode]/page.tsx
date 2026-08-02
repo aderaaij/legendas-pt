@@ -18,6 +18,10 @@ type Props = {
   params: Promise<{ series: string; episode: string }>;
 };
 
+// Regenerate in the background so phrases added by the worker appear without a
+// redeploy.
+export const revalidate = 300;
+
 async function getEpisodeBySlug(seriesSlug: string, episodeSlug: string): Promise<{
   show: Show;
   episode: Episode;
