@@ -8,11 +8,15 @@ import { StudyCard } from "./StudyCard";
 import { StudyProgressBar } from "./StudyProgressBar";
 import { useSpacedRepetitionGame } from "./useSpacedRepetitionGame";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useLanguage } from "@/hooks/useLanguage";
+import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
 import { StudyDirection } from "@/types/spaced-repetition";
 
 interface SpacedRepetitionGameProps {
   episodeId: string;
   episodeTitle: string;
+  /** The show's (content) language — the phrases' language, not the UI's. */
+  language: TargetLanguage;
   open: boolean;
   onClose: () => void;
 }
@@ -72,9 +76,11 @@ function Shell({
 export function SpacedRepetitionGame({
   episodeId,
   episodeTitle,
+  language,
   open,
   onClose,
 }: SpacedRepetitionGameProps) {
+  const { t } = useLanguage();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [studyDirection, setStudyDirection] = useState<StudyDirection>("pt-en");
 
@@ -129,7 +135,7 @@ export function SpacedRepetitionGame({
             className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
             style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
           />
-          <p style={{ color: "var(--muted)" }}>A carregar cartões…</p>
+          <p style={{ color: "var(--muted)" }}>{t.study.loading}</p>
         </div>
       </Shell>
     );
@@ -142,10 +148,10 @@ export function SpacedRepetitionGame({
         <div className="p-8 text-center">
           <Brain className="mx-auto mb-4 h-12 w-12" style={{ color: "var(--accent2)" }} />
           <Dialog.Title className="mb-2 text-lg font-extrabold">
-            Sem cartões disponíveis
+            {t.study.noCardsTitle}
           </Dialog.Title>
           <Dialog.Description className="mb-6 text-sm" style={{ color: "var(--muted)" }}>
-            {error}
+            {error === "noCards" ? t.study.noCards : t.study.loadFailed}
           </Dialog.Description>
           <div className="flex gap-3">
             <Dialog.Close asChild>
@@ -153,7 +159,7 @@ export function SpacedRepetitionGame({
                 className="flex-1 rounded-lg py-2 text-sm font-semibold"
                 style={{ background: "var(--surface2)", color: "var(--text)" }}
               >
-                Fechar
+                {t.common.close}
               </button>
             </Dialog.Close>
             <button
@@ -161,7 +167,7 @@ export function SpacedRepetitionGame({
               className="flex-1 rounded-lg py-2 text-sm font-bold text-white"
               style={{ background: "var(--accent)" }}
             >
-              Tentar de novo
+              {t.study.retry}
             </button>
           </div>
         </div>
@@ -184,10 +190,10 @@ export function SpacedRepetitionGame({
             <Trophy className="mx-auto h-16 w-16" />
           </motion.div>
           <Dialog.Title className="mb-2 text-2xl font-extrabold">
-            Sessão concluída!
+            {t.study.completeTitle}
           </Dialog.Title>
           <Dialog.Description className="mb-6 text-sm" style={{ color: "var(--muted)" }}>
-            Bom trabalho com {episodeTitle}
+            {t.study.goodJob(episodeTitle)}
           </Dialog.Description>
 
           <div
@@ -199,7 +205,7 @@ export function SpacedRepetitionGame({
                 {sessionStats.studied}
               </div>
               <div className="text-xs" style={{ color: "var(--muted)" }}>
-                cartões
+                {t.study.statCards}
               </div>
             </div>
             <div>
@@ -207,7 +213,7 @@ export function SpacedRepetitionGame({
                 {accuracy.toFixed(0)}%
               </div>
               <div className="text-xs" style={{ color: "var(--muted)" }}>
-                precisão
+                {t.study.statAccuracy}
               </div>
             </div>
             <div>
@@ -215,7 +221,7 @@ export function SpacedRepetitionGame({
                 {Math.floor(duration / 60)}m
               </div>
               <div className="text-xs" style={{ color: "var(--muted)" }}>
-                duração
+                {t.study.statDuration}
               </div>
             </div>
           </div>
@@ -226,8 +232,8 @@ export function SpacedRepetitionGame({
               style={{ background: "rgba(245,196,81,.1)", border: "1px solid rgba(245,196,81,.25)" }}
             >
               <p style={{ color: "var(--gold)" }}>
-                <strong>Inicia sessão para guardar o teu progresso</strong> e obter
-                um agendamento de repetição personalizado.
+                <strong>{t.study.saveProgressStrong}</strong>{" "}
+                {t.study.saveProgressRest}
               </p>
             </div>
           )}
@@ -238,7 +244,7 @@ export function SpacedRepetitionGame({
                 className="flex-1 rounded-lg py-2 text-sm font-semibold"
                 style={{ background: "var(--surface2)", color: "var(--text)" }}
               >
-                Fechar
+                {t.common.close}
               </button>
             </Dialog.Close>
             <button
@@ -247,7 +253,7 @@ export function SpacedRepetitionGame({
               style={{ background: "var(--accent)" }}
             >
               <RotateCcw className="h-4 w-4" />
-              Estudar de novo
+              {t.study.studyAgain}
             </button>
           </div>
         </div>
@@ -257,7 +263,10 @@ export function SpacedRepetitionGame({
 
   if (!currentCard) return null;
 
-  const dirLabel = studyDirection === "pt-en" ? "PT → EN" : "EN → PT";
+  // "pt-en" / "en-pt" are persisted keys meaning target → English and
+  // English → target, whatever the show's language is.
+  const tag = LANGUAGES[language].tag;
+  const dirLabel = studyDirection === "pt-en" ? `${tag} → EN` : `EN → ${tag}`;
 
   // ----- Active session -----
   return (
@@ -277,7 +286,9 @@ export function SpacedRepetitionGame({
           <Timer className="h-[18px] w-[18px] text-white" />
         </div>
         <div className="flex-1">
-          <Dialog.Title className="text-base font-extrabold">Sessão de estudo</Dialog.Title>
+          <Dialog.Title className="text-base font-extrabold">
+            {t.study.sessionTitle}
+          </Dialog.Title>
           <Dialog.Description className="text-[12.5px]" style={{ color: "var(--muted)" }}>
             {episodeTitle}
           </Dialog.Description>
@@ -286,7 +297,7 @@ export function SpacedRepetitionGame({
           onClick={toggleDirection}
           className="flex items-center gap-[7px] rounded-lg px-3 py-[7px] text-xs font-bold"
           style={{ border: "1px solid var(--border2)", color: "var(--muted)" }}
-          title="Trocar direção (R)"
+          title={t.study.switchDirection}
         >
           <ArrowLeftRight className="h-[14px] w-[14px]" />
           {dirLabel}
@@ -295,7 +306,7 @@ export function SpacedRepetitionGame({
           <button
             className="grid h-[34px] w-[34px] place-items-center rounded-lg"
             style={{ color: "var(--muted)", border: "1px solid transparent" }}
-            aria-label="Fechar"
+            aria-label={t.common.close}
           >
             <X className="h-[17px] w-[17px]" />
           </button>
@@ -320,6 +331,7 @@ export function SpacedRepetitionGame({
           isFavorite={isFavorite(currentCard.phrase.id)}
           onToggleFavorite={handleToggleFavorite}
           studyDirection={studyDirection}
+          language={language}
         />
       </AnimatePresence>
 
@@ -328,7 +340,7 @@ export function SpacedRepetitionGame({
           className="px-6 py-3 text-center text-xs"
           style={{ borderTop: "1px solid var(--border)", color: "var(--muted)" }}
         >
-          Inicia sessão para guardar o progresso e teres repetição espaçada personalizada.
+          {t.study.guestFooter}
         </div>
       )}
     </Shell>

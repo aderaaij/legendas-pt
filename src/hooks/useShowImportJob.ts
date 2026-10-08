@@ -1,12 +1,12 @@
 import { useExtractionJobs } from "@/hooks/useExtractionJobs";
 import type { ExtractionJob } from "@/lib/supabase";
-import type { ImportPlan } from "@/lib/rtp-import/types";
+import type { ImportPlan } from "@/lib/series-import/types";
 
 /**
- * Returns the active RTP import job (if any) whose plan targets `showId`, by
- * reusing the polling `useExtractionJobs` hook. Only the admin who started the
- * import sees it (jobs are scoped per user), which is the intended behaviour on
- * the otherwise-public series page.
+ * Returns the active series import job (RTP/RTVE; job_type 'rtp_series') whose
+ * plan targets `showId`, by reusing the polling `useExtractionJobs` hook. Only
+ * the admin who started the import sees it (jobs are scoped per user), which is
+ * the intended behaviour on the otherwise-public series page.
  */
 export function useShowImportJob(showId: string): {
   job: ExtractionJob | null;

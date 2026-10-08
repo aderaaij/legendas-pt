@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase-client";
 import { LibraryShow } from "@/types/database";
+import { toTargetLanguage, type TargetLanguage } from "@/lib/i18n/languages";
 
 import { getAllShows } from "./shows";
 
@@ -151,8 +152,11 @@ export async function getShowsWithExtractionStats() {
 
 // Get shows that have extractions, enriched with full show metadata.
 // Used by the CENA library view which needs blurb/genres/year alongside
-// the phrase/extraction counts.
-export async function getLibraryShows(): Promise<LibraryShow[]> {
+// the phrase/extraction counts. Only shows in `language` are returned (shows
+// with no stored language predate multi-language support and are Portuguese).
+export async function getLibraryShows(
+  language: TargetLanguage
+): Promise<LibraryShow[]> {
   const [stats, allShows] = await Promise.all([
     getShowsWithExtractionStats(),
     getAllShows(),
@@ -175,29 +179,32 @@ export async function getLibraryShows(): Promise<LibraryShow[]> {
     tvdb_confidence?: number;
   };
 
-  return (stats as StatShow[]).map((s) => {
-    const full = byId.get(s.id);
-    return {
-      id: s.id,
-      name: s.name,
-      source: s.source,
-      extractionCount: s.extractionCount,
-      totalPhrases: s.totalPhrases,
-      lastExtraction: s.lastExtraction,
-      network: s.network ?? full?.network,
-      rating: s.rating ?? full?.rating,
-      poster_url: s.poster_url ?? full?.poster_url,
-      tvdb_confidence: s.tvdb_confidence ?? full?.tvdb_confidence,
-      overview: full?.overview,
-      description: full?.description,
-      first_aired: full?.first_aired,
-      genre: full?.genre,
-      genres: full?.genres,
-      status: full?.status,
-      watch_url: full?.watch_url,
-      rtp_links: full?.rtp_links,
-    };
-  });
+  return (stats as StatShow[])
+    .filter((s) => toTargetLanguage(byId.get(s.id)?.language) === language)
+    .map((s) => {
+      const full = byId.get(s.id);
+      return {
+        id: s.id,
+        name: s.name,
+        source: s.source,
+        language,
+        extractionCount: s.extractionCount,
+        totalPhrases: s.totalPhrases,
+        lastExtraction: s.lastExtraction,
+        network: s.network ?? full?.network,
+        rating: s.rating ?? full?.rating,
+        poster_url: s.poster_url ?? full?.poster_url,
+        tvdb_confidence: s.tvdb_confidence ?? full?.tvdb_confidence,
+        overview: full?.overview,
+        description: full?.description,
+        first_aired: full?.first_aired,
+        genre: full?.genre,
+        genres: full?.genres,
+        status: full?.status,
+        watch_url: full?.watch_url,
+        rtp_links: full?.rtp_links,
+      };
+    });
 }
 
 // Get episodes for a show with their extraction statistics

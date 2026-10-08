@@ -1,4 +1,5 @@
 // Database schema types for Supabase tables.
+import type { TargetLanguage } from "@/lib/i18n/languages";
 
 // One RTP "programa" page for a show. A show can have several (one per season),
 // because RTP often gives each season its own program id. `season` is optional:
@@ -124,6 +125,7 @@ export interface LibraryShow {
   id: string;
   name: string;
   source: string;
+  language: TargetLanguage;
   extractionCount: number;
   totalPhrases: number;
   lastExtraction: string;

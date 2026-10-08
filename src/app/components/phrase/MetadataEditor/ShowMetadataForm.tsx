@@ -48,6 +48,7 @@ export default function ShowMetadataForm({
             style={fieldInputStyle}
           >
             <option value="rtp">RTP</option>
+            <option value="rtve">RTVE</option>
             <option value="sic">SIC</option>
             <option value="tvi">TVI</option>
             <option value="netflix">Netflix</option>

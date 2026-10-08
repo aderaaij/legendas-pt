@@ -4,6 +4,7 @@ import { PhraseExtractionService } from "@/lib/supabase";
 import type { ExtractionJob } from "@/lib/supabase";
 import { createServiceClient, requireAdmin } from "@/lib/supabase-admin";
 import { isProvider, type Provider } from "@/lib/llm/types";
+import { toTargetLanguage } from "@/lib/i18n/languages";
 import type { ManualUploadResults } from "@/lib/manual-upload/types";
 
 // Enqueue only — small (create a job, embed the content). No scraping/LLM here.
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const {
       content,
       filename,
-      language = "pt",
+      language,
       source = "uploaded_file",
       showName,
       showId = null,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         content,
         filename,
         fileType: inferFileType(filename),
-        language,
+        language: toTargetLanguage(language),
         source,
         showId,
         showName,

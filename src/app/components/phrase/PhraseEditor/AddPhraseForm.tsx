@@ -1,6 +1,7 @@
 "use client";
 
 import { FormField } from "@/app/components/ui/FormField";
+import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
 
 interface NewPhrase {
   phrase: string;
@@ -9,20 +10,25 @@ interface NewPhrase {
 
 interface AddPhraseFormProps {
   newPhrase: NewPhrase;
+  /** The phrases' (content) language. */
+  language: TargetLanguage;
   saving: boolean;
   onChange: (patch: Partial<NewPhrase>) => void;
   onAdd: () => void;
   onCancel: () => void;
 }
 
-/** Inline form for adding a new Portuguese/English phrase to the extraction. */
+/** Inline form for adding a new target-language/English phrase to the extraction. */
 export default function AddPhraseForm({
   newPhrase,
+  language,
   saving,
   onChange,
   onAdd,
   onCancel,
 }: AddPhraseFormProps) {
+  const languageName = LANGUAGES[language].englishShortName;
+
   return (
     <div
       className="rounded-lg p-4"
@@ -33,10 +39,10 @@ export default function AddPhraseForm({
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <FormField
-          label="Portuguese Phrase *"
+          label={`${languageName} Phrase *`}
           value={newPhrase.phrase}
           onChange={(phrase) => onChange({ phrase })}
-          placeholder="Enter Portuguese phrase..."
+          placeholder={`Enter ${languageName} phrase...`}
         />
         <FormField
           label="English Translation *"

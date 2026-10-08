@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/hooks/useLanguage";
+
 interface StudyProgressBarProps {
   currentCard: number;
   totalCards: number;
@@ -13,6 +15,7 @@ export function StudyProgressBar({
   correctCards,
   studiedCards,
 }: StudyProgressBarProps) {
+  const { t } = useLanguage();
   const progressPercentage = totalCards > 0 ? (currentCard / totalCards) * 100 : 0;
   const accuracyPercentage =
     studiedCards > 0 ? Math.round((correctCards / studiedCards) * 100) : 100;
@@ -21,7 +24,7 @@ export function StudyProgressBar({
     <div className="px-6 pb-2 pt-[18px]">
       <div className="mb-2 flex justify-between text-[12.5px]">
         <span className="font-semibold" style={{ color: "var(--muted)" }}>
-          Progresso
+          {t.study.progress}
         </span>
         <span className="font-bold" style={{ color: "var(--text)" }}>
           {currentCard} / {totalCards}
@@ -45,15 +48,15 @@ export function StudyProgressBar({
         <div className="flex gap-4">
           <span className="flex items-center gap-[6px]" style={{ color: "var(--muted)" }}>
             <span className="h-2 w-2 rounded-full" style={{ background: "var(--green)" }} />
-            Certas: <b style={{ color: "var(--text)" }}>{correctCards}</b>
+            {t.study.correct}: <b style={{ color: "var(--text)" }}>{correctCards}</b>
           </span>
           <span className="flex items-center gap-[6px]" style={{ color: "var(--muted)" }}>
             <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
-            Erradas: <b style={{ color: "var(--text)" }}>{studiedCards - correctCards}</b>
+            {t.study.wrong}: <b style={{ color: "var(--text)" }}>{studiedCards - correctCards}</b>
           </span>
         </div>
         <span style={{ color: "var(--muted)" }}>
-          Precisão: <b style={{ color: "var(--text)" }}>{accuracyPercentage}%</b>
+          {t.study.accuracy}: <b style={{ color: "var(--text)" }}>{accuracyPercentage}%</b>
         </span>
       </div>
     </div>

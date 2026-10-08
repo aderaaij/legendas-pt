@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export type SortOption =
   | "none"
@@ -26,23 +27,27 @@ export const PhraseSortAndFilter = ({
   currentFilter,
 }: PhraseSortAndFilterProps) => {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
 
   const sortOptions = [
-    { value: "none" as const, label: "Ordem original" },
-    { value: "alphabetical" as const, label: "A-Z" },
-    { value: "reverse-alphabetical" as const, label: "Z-A" },
+    { value: "none" as const, label: t.phrase.sort.none },
+    { value: "alphabetical" as const, label: t.phrase.sort.alphabetical },
+    {
+      value: "reverse-alphabetical" as const,
+      label: t.phrase.sort.reverseAlphabetical,
+    },
     ...(isAuthenticated
       ? [
-          { value: "progress-high" as const, label: "Mais progresso" },
-          { value: "progress-low" as const, label: "Menos progresso" },
+          { value: "progress-high" as const, label: t.phrase.sort.progressHigh },
+          { value: "progress-low" as const, label: t.phrase.sort.progressLow },
         ]
       : []),
   ];
 
   const currentSortLabel =
     sortOptions.find((option) => option.value === currentSort)?.label ||
-    "Ordem original";
+    t.phrase.sort.none;
 
   const pillBase =
     "rounded-lg px-4 py-2 text-[13px] font-bold transition-colors cursor-pointer";
@@ -58,7 +63,7 @@ export const PhraseSortAndFilter = ({
           color: "var(--muted)",
         }}
       >
-        <span>Ordenar</span>
+        <span>{t.phrase.sortLabel}</span>
         <div className="relative">
           <button
             onClick={() => setSortDropdownOpen((v) => !v)}
@@ -114,7 +119,7 @@ export const PhraseSortAndFilter = ({
                   }
             }
           >
-            Todas
+            {t.phrase.filterAll}
           </button>
           <button
             onClick={() => onFilterChange("favorites")}
@@ -133,7 +138,7 @@ export const PhraseSortAndFilter = ({
               className="h-[13px] w-[13px]"
               fill={currentFilter === "favorites" ? "currentColor" : "none"}
             />
-            Favoritas
+            {t.phrase.filterFavorites}
           </button>
         </div>
       )}

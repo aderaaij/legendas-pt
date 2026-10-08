@@ -8,21 +8,25 @@ the worker claims jobs from Supabase and runs them to completion.
 Vercel (UI · enqueue) ──> Supabase (jobs + results) <── Worker (scrape + extract + persist)
 ```
 
-The worker is **outbound-only** — it connects to Supabase, RTP, and the LLM
-provider, and exposes no inbound ports. It can run anywhere with outbound network
+The worker is **outbound-only** — it connects to Supabase, the streaming
+sources (RTP Play, RTVE Play), and the LLM provider, and exposes no inbound ports. It can run anywhere with outbound network
 (a local box, a container) with no tunnels or public IP.
 
 ## Pieces
 
 - `index.ts` — orchestrator: poll loop, claim, cancellation, graceful shutdown.
-- `process-rtp-series.ts` — runs one `rtp_series` job (the looped equivalent of
-  the old `/api/rtp-import/step`), writing per-episode progress to the job row.
+- `process-series-import.ts` — runs one series-import job (`job_type =
+  'rtp_series'`, a name that predates RTVE; `plan.source` is `rtp` or `rtve`,
+  absent = `rtp`), writing per-episode progress to the job row.
+- `process-manual-upload.ts` — runs one `manual_upload` job (embedded file,
+  `plan.language` = `pt` | `es`).
 - `env.ts` / `bootstrap.ts` — env loading + validation (bootstrap runs first).
 
 It reuses the shared, framework-free libraries under `src/lib/*`:
-`@/lib/extractor` (subtitle → phrases, the pure core), `@/lib/rtp-scraper`,
-`@/lib/db/extractions` (`persistExtraction`), and `@/lib/rtp-import/process-episode`
-(the per-episode pipeline). The `@/*` alias is resolved by `tsx` from
+`@/lib/extractor` (subtitle → phrases, the pure core; prompted per target
+language), `@/lib/sources` (the RTP + RTVE scrapers behind one `SeriesSource`
+interface), `@/lib/db/extractions` (`persistExtraction`), and
+`@/lib/series-import/process-episode` (the per-episode pipeline). The `@/*` alias is resolved by `tsx` from
 `tsconfig.json` — no separate build step.
 
 ## Run locally
@@ -55,7 +59,7 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 
 ## Behaviour & scope (Phase 1)
 
-- Handles `rtp_series` and `manual_upload` jobs, one job at a time per worker
+- Handles `rtp_series` (RTP or RTVE series import) and `manual_upload` jobs, one job at a time per worker
   (single internal concurrency).
 - Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
   'queued'`), so running **multiple workers is safe** — each job goes to exactly

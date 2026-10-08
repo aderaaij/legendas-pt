@@ -3,9 +3,13 @@
 import { Download, FileDown, X } from "lucide-react";
 
 import { PhraseItem } from "@/types/phrase";
+import { useLanguage } from "@/hooks/useLanguage";
+import type { TargetLanguage } from "@/lib/i18n/languages";
 
 interface AnkiExporterProps {
   phrases: PhraseItem[];
+  /** The phrases' (content) language; names the downloaded files. */
+  language: TargetLanguage;
   isExportMode?: boolean;
   onEnterExportMode?: () => void;
   onExitExportMode?: () => void;
@@ -15,8 +19,16 @@ interface AnkiExporterProps {
   onDeselectAll?: () => void;
 }
 
+/** "Español" → "espanol": ASCII-only, lowercase, for filenames. */
+const toFileSafe = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
 export default function AnkiExporter({
   phrases,
+  language,
   isExportMode = false,
   onEnterExportMode,
   onExitExportMode,
@@ -25,6 +37,10 @@ export default function AnkiExporter({
   onSelectAll,
   onDeselectAll,
 }: AnkiExporterProps) {
+  const { t } = useLanguage();
+  // e.g. "frases-portugues" (pt UI, pt show) or "frases-espanol" (es UI, es show).
+  const fileBase = `${t.anki.filePrefix}-${toFileSafe(t.languageNames[language])}`;
+
   const generateAnkiCSV = (): string => {
     const headers = ["Front", "Back"];
     const rows = phrases.map((item) => [
@@ -50,10 +66,10 @@ export default function AnkiExporter({
   };
 
   const handleDownloadCSV = () =>
-    downloadFile(generateAnkiCSV(), "frases-portugues.csv", "text/csv");
+    downloadFile(generateAnkiCSV(), `${fileBase}.csv`, "text/csv");
 
   const handleDownloadAnki = () =>
-    downloadFile(generateAnkiTSV(), "frases-portugues-anki.txt", "text/plain");
+    downloadFile(generateAnkiTSV(), `${fileBase}-anki.txt`, "text/plain");
 
   // Normal mode — toolbar button.
   if (!isExportMode) {
@@ -68,7 +84,7 @@ export default function AnkiExporter({
         }}
       >
         <Download className="h-[14px] w-[14px]" />
-        Exportar Anki
+        {t.anki.exportButton}
       </button>
     );
   }
@@ -80,12 +96,12 @@ export default function AnkiExporter({
       style={{ background: "var(--surface)", border: "1px solid var(--border2)" }}
     >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[15px] font-extrabold">Exportar frases</h3>
+        <h3 className="text-[15px] font-extrabold">{t.anki.title}</h3>
         <button
           onClick={onExitExportMode}
           style={{ color: "var(--muted)" }}
           className="transition-colors hover:opacity-80"
-          aria-label="Fechar"
+          aria-label={t.common.close}
         >
           <X className="h-5 w-5" />
         </button>
@@ -97,7 +113,7 @@ export default function AnkiExporter({
       >
         <div className="flex items-center gap-4">
           <span className="text-sm" style={{ color: "var(--muted)" }}>
-            {selectedCount} de {totalCount} selecionadas
+            {t.anki.selectedOf(selectedCount, totalCount)}
           </span>
           <div className="flex gap-2">
             <button
@@ -105,14 +121,14 @@ export default function AnkiExporter({
               className="rounded-md px-3 py-1 text-xs font-semibold"
               style={{ background: "rgba(229,9,20,.14)", color: "var(--accent2)" }}
             >
-              Selecionar todas
+              {t.anki.selectAll}
             </button>
             <button
               onClick={onDeselectAll}
               className="rounded-md px-3 py-1 text-xs font-semibold"
               style={{ background: "rgba(255,255,255,.06)", color: "var(--muted)" }}
             >
-              Limpar
+              {t.anki.clear}
             </button>
           </div>
         </div>
@@ -126,7 +142,7 @@ export default function AnkiExporter({
             style={{ background: "var(--accent)" }}
           >
             <Download className="h-4 w-4" />
-            Para Anki (.txt)
+            {t.anki.toAnki}
           </button>
           <button
             onClick={handleDownloadCSV}
@@ -138,13 +154,13 @@ export default function AnkiExporter({
             }}
           >
             <Download className="h-4 w-4" />
-            Como CSV
+            {t.anki.asCsv}
           </button>
         </div>
       ) : (
         <div className="py-4 text-center" style={{ color: "var(--faint)" }}>
           <FileDown className="mx-auto mb-2 h-8 w-8" />
-          <p className="text-sm">Seleciona frases para exportar</p>
+          <p className="text-sm">{t.anki.empty}</p>
         </div>
       )}
     </div>

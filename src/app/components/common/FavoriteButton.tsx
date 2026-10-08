@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Heart } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/hooks/useLanguage'
 
 interface FavoriteButtonProps {
   phraseId: string
@@ -14,6 +15,7 @@ interface FavoriteButtonProps {
 
 export function FavoriteButton({ phraseId, size = 16, className = '', isFavorite, onToggleFavorite }: FavoriteButtonProps) {
   const { isAuthenticated } = useAuth()
+  const { t } = useLanguage()
   const [isToggling, setIsToggling] = useState(false)
 
   if (!isAuthenticated) {
@@ -41,7 +43,7 @@ export function FavoriteButton({ phraseId, size = 16, className = '', isFavorite
       onClick={handleToggle}
       disabled={isToggling}
       className={`transition-colors disabled:opacity-50 ${className}`}
-      title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+      title={isFavorite ? t.phrase.removeFavorite : t.phrase.addFavorite}
     >
       <Heart
         size={size}

@@ -42,60 +42,70 @@ export const parseVTT = (content: string): string => {
   return textLines.join(" ");
 };
 
+// Strip WebVTT cue markup (<c.vtt_cyan>, <i>, <v Name>, inline timestamps) and
+// the few entities broadcaster files use, leaving the spoken text.
+const stripCueMarkup = (text: string): string =>
+  text
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .trim();
+
 export const parseVTTWithTimestamps = (content: string): SubtitleBlock[] => {
   const lines = content.split("\n");
   const blocks: SubtitleBlock[] = [];
-  let currentBlock: Partial<SubtitleBlock> = {};
-  let blockIndex = 0;
+  // The cue being read: a timing line followed by one or more text lines, up
+  // to the next blank line.
+  let cue: { startTime: string; endTime: string; lines: string[] } | null =
+    null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    // Skip WEBVTT header and empty lines
-    if (!line || line.startsWith("WEBVTT")) {
-      continue;
-    }
-
-    // Check for timestamp line (e.g., "00:16:05.360 --> 00:16:08.640")
-    const timestampMatch = line.match(/^(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})/);
-    if (timestampMatch) {
-      currentBlock.startTime = timestampMatch[1];
-      currentBlock.endTime = timestampMatch[2];
-      currentBlock.index = blockIndex++;
-      continue;
-    }
-
-    // Check for sequence number (optional in VTT)
-    if (/^\d+$/.test(line)) {
-      continue;
-    }
-
-    // This should be subtitle text
-    if (line && currentBlock.startTime && currentBlock.endTime) {
+  const flushCue = () => {
+    if (cue && cue.lines.length > 0) {
+      const text = cue.lines.join(" ");
       // Extract speaker if present (e.g., "HOMEM: Text here")
-      const speakerMatch = line.match(/^([A-Z]+)\s*:\s*(.+)/);
-      if (speakerMatch) {
-        currentBlock.speaker = speakerMatch[1];
-        currentBlock.text = speakerMatch[2].trim();
-      } else {
-        currentBlock.text = line;
-      }
-
-      // If we have all required fields, save the block
-      if (currentBlock.text && currentBlock.startTime && currentBlock.endTime) {
-        blocks.push({
-          text: currentBlock.text,
-          startTime: currentBlock.startTime,
-          endTime: currentBlock.endTime,
-          index: currentBlock.index!,
-          speaker: currentBlock.speaker
-        });
-      }
-
-      // Reset for next block
-      currentBlock = {};
+      const speakerMatch = text.match(/^([A-Z]+)\s*:\s*(.+)/);
+      blocks.push({
+        text: speakerMatch ? speakerMatch[2].trim() : text,
+        startTime: cue.startTime,
+        endTime: cue.endTime,
+        index: blocks.length,
+        speaker: speakerMatch?.[1],
+      });
     }
+    cue = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushCue();
+      continue;
+    }
+
+    // Timing line (e.g., "00:16:05.360 --> 00:16:08.640 line:85%") starts a cue
+    const timestampMatch = line.match(
+      /^(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})/
+    );
+    if (timestampMatch) {
+      flushCue();
+      cue = {
+        startTime: timestampMatch[1],
+        endTime: timestampMatch[2],
+        lines: [],
+      };
+      continue;
+    }
+
+    // Outside a cue: the WEBVTT header, cue identifiers, NOTE/STYLE blocks
+    if (!cue) continue;
+
+    const text = stripCueMarkup(line);
+    if (text) cue.lines.push(text);
   }
+  flushCue();
 
   return blocks;
 };

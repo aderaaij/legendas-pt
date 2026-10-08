@@ -19,10 +19,13 @@ import {
 } from "@/utils/subtitleUtils";
 import { extractPhrases } from "@/lib/llm/extract-phrases";
 import type { LlmSelection, Provider } from "@/lib/llm/types";
+import type { TargetLanguage } from "@/lib/i18n/languages";
 
 export interface ExtractInput {
   /** Raw subtitle text (VTT/SRT/plain). */
   content: string;
+  /** The language the subtitles are in (phrases are extracted in it). */
+  language: TargetLanguage;
   /** Original filename, used to infer the subtitle format when `fileType` is absent. */
   filename?: string;
   /** Explicit subtitle format; falls back to the filename extension. */
@@ -52,7 +55,7 @@ export interface ExtractResult {
 export async function extractFromSubtitle(
   input: ExtractInput
 ): Promise<ExtractResult> {
-  const { content, filename, fileType, provider, model } = input;
+  const { content, language, filename, fileType, provider, model } = input;
 
   // Parse subtitles with timestamps when the format is VTT or SRT. The text fed
   // to the model is the cue text joined together; timing is kept for re-matching.
@@ -75,7 +78,7 @@ export async function extractFromSubtitle(
     contentForAI = content;
   }
 
-  const extraction = await extractPhrases(contentForAI, {
+  const extraction = await extractPhrases(contentForAI, language, {
     provider: provider ?? undefined,
     model: model ?? undefined,
   });

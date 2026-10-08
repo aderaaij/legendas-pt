@@ -2,6 +2,7 @@
 
 import MetadataEditor from "@/app/components/phrase/MetadataEditor";
 import DuplicatePhraseManager from "@/app/components/phrase/DuplicatePhraseManager";
+import { toTargetLanguage } from "@/lib/i18n/languages";
 
 import AddPhraseForm from "./AddPhraseForm";
 import PhraseEditorHeader from "./PhraseEditorHeader";
@@ -52,6 +53,10 @@ export default function PhraseEditor({
     handleMetadataUpdate,
   } = usePhraseEditor({ extractionId, showName, episodeTitle });
 
+  // The phrases' language comes from the extraction's show (loaded with the
+  // metadata); until then it falls back to Portuguese.
+  const language = toTargetLanguage(currentShow?.language);
+
   // Convert to format expected by AnkiExporter
   const ankiPhrases = phrases.map((phrase) => ({
     phrase: phrase.phrase,
@@ -80,6 +85,7 @@ export default function PhraseEditor({
         displayEpisodeTitle={displayEpisodeTitle}
         currentShow={currentShow}
         currentEpisode={currentEpisode}
+        language={language}
         ankiPhrases={ankiPhrases}
         duplicateCount={duplicateCount}
         onBack={onBack}
@@ -112,6 +118,7 @@ export default function PhraseEditor({
       {showAddForm && (
         <AddPhraseForm
           newPhrase={newPhrase}
+          language={language}
           saving={saving}
           onChange={(patch) => setNewPhrase((prev) => ({ ...prev, ...patch }))}
           onAdd={addNewPhrase}
@@ -130,6 +137,7 @@ export default function PhraseEditor({
           <PhraseListItem
             key={phrase.id}
             phrase={phrase}
+            language={language}
             saving={saving}
             onStartEdit={startEditing}
             onCancelEdit={cancelEditing}

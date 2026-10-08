@@ -1,5 +1,13 @@
 import { ExtractedPhrase } from '@/lib/supabase';
 
+/**
+ * Study direction. These values are persisted DB keys
+ * (`user_card_studies.study_direction`) and predate multi-language support, so
+ * they keep their original names but apply to ANY target language:
+ * - 'pt-en' — target language → English (recognition)
+ * - 'en-pt' — English → target language (production)
+ * Do not rename them.
+ */
 export type StudyDirection = 'pt-en' | 'en-pt';
 
 export interface StudySession {

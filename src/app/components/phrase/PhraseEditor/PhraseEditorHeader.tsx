@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Settings, Copy } from "lucide-react";
 
 import { Show, Episode } from "@/lib/supabase";
 import AnkiExporter from "@/app/components/phrase/AnkiExporter";
+import type { TargetLanguage } from "@/lib/i18n/languages";
 import type { PhraseItem } from "@/types/phrase";
 
 interface PhraseEditorHeaderProps {
@@ -11,6 +12,8 @@ interface PhraseEditorHeaderProps {
   displayEpisodeTitle?: string;
   currentShow?: Show;
   currentEpisode?: Episode;
+  /** The phrases' (content) language. */
+  language: TargetLanguage;
   ankiPhrases: PhraseItem[];
   duplicateCount: number;
   onBack: () => void;
@@ -26,6 +29,7 @@ export default function PhraseEditorHeader({
   displayEpisodeTitle,
   currentShow,
   currentEpisode,
+  language,
   ankiPhrases,
   duplicateCount,
   onBack,
@@ -82,7 +86,7 @@ export default function PhraseEditorHeader({
       </div>
 
       <div className="flex items-center space-x-3">
-        <AnkiExporter phrases={ankiPhrases} />
+        <AnkiExporter phrases={ankiPhrases} language={language} />
         {duplicateCount > 0 && (
           <button
             onClick={onManageDuplicates}

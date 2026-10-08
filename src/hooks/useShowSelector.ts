@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Show, PhraseExtractionService } from "@/lib/supabase";
 import TVDBService, { TVDBSearchResult } from "@/lib/tvdb";
 import { useEpisodeSelection } from "@/hooks/useEpisodeSelection";
+import { toTargetLanguage, type TargetLanguage } from "@/lib/i18n/languages";
 
-export function useShowSelector() {
+/** @param language Only offer existing shows in this language (when given). */
+export function useShowSelector(language?: TargetLanguage) {
   const [searchQuery, setSearchQueryState] = useState("");
   const [existingShows, setExistingShows] = useState<Show[]>([]);
   const [isSearchingTVDB, setIsSearchingTVDB] = useState(false);
@@ -59,11 +61,16 @@ export function useShowSelector() {
 
   // Derive the filtered list during render instead of syncing it via an effect.
   const filteredShows = useMemo(() => {
-    if (searchQuery.trim() === "") return existingShows;
-    return existingShows.filter((show) =>
+    const inLanguage = language
+      ? existingShows.filter(
+          (show) => toTargetLanguage(show.language) === language
+        )
+      : existingShows;
+    if (searchQuery.trim() === "") return inLanguage;
+    return inLanguage.filter((show) =>
       show.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, existingShows]);
+  }, [searchQuery, existingShows, language]);
 
   // Offer the "search TVDB" option only when a query matches no existing show.
   const showTVDBResults =
@@ -122,7 +129,8 @@ export function useShowSelector() {
 
         // Create show in database
         const newShow = await PhraseExtractionService.createShowFromTVDB(
-          showDetails
+          showDetails,
+          language
         );
 
         // Update local state
@@ -139,7 +147,7 @@ export function useShowSelector() {
         setIsCreatingShow(false);
       }
     },
-    [loadEpisodesForNewShow]
+    [loadEpisodesForNewShow, language]
   );
 
   // Refresh episodes from TVDB for the selected show

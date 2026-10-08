@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import TVDBService, { TVDBShow } from "@/lib/tvdb";
 import { supabase } from "@/lib/supabase-client";
 import { normalizeShowName } from "@/utils/slugify";
+import { DEFAULT_LANGUAGE, type TargetLanguage } from "@/lib/i18n/languages";
 import { Show, RtpLink } from "@/types/database";
 
 import { deleteExtraction } from "./extractions";
@@ -46,7 +47,8 @@ export async function upsertShowRtpLink(
 
 export async function findOrCreateShow(
   name: string,
-  source: string = "rtp"
+  source: string = "rtp",
+  language: TargetLanguage = DEFAULT_LANGUAGE
 ): Promise<Show> {
   // First try exact match
 
@@ -134,7 +136,7 @@ export async function findOrCreateShow(
     .insert({
       name,
       source,
-      language: "pt",
+      language,
       ...tvdbData,
     })
     .select()
@@ -213,13 +215,16 @@ export async function showHasPhraseExtractions(
   return (data?.length || 0) > 0;
 }
 
-export async function createShowFromTVDB(tvdbShow: TVDBShow): Promise<Show> {
+export async function createShowFromTVDB(
+  tvdbShow: TVDBShow,
+  language: TargetLanguage = DEFAULT_LANGUAGE
+): Promise<Show> {
   const { data, error } = await supabase
     .from("shows")
     .insert({
       name: tvdbShow.name,
       source: "tvdb",
-      language: "pt",
+      language,
       tvdb_id: tvdbShow.id,
       tvdb_slug: tvdbShow.slug,
       overview: tvdbShow.overview,

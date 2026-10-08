@@ -14,9 +14,10 @@ import { extractFromSubtitle } from "@/lib/extractor";
 import { persistExtraction } from "@/lib/db/extractions";
 import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { normalizeShowName } from "@/utils/slugify";
+import { toTargetLanguage, type TargetLanguage } from "@/lib/i18n/languages";
 import type { ExtractionJob } from "@/types/database";
 import type { ManualUploadResults } from "@/lib/manual-upload/types";
-import type { ProcessJobHooks } from "./process-rtp-series";
+import type { ProcessJobHooks } from "./process-series-import";
 import { sleep, backoffDelay } from "./util";
 
 type Results = ExtractionJob["results"];
@@ -25,7 +26,8 @@ type Results = ExtractionJob["results"];
 async function resolveShowId(
   supabase: SupabaseClient,
   name: string,
-  source: string
+  source: string,
+  language: TargetLanguage
 ): Promise<string> {
   const { data: exact } = await supabase
     .from("shows")
@@ -47,7 +49,7 @@ async function resolveShowId(
 
   const { data: created, error } = await supabase
     .from("shows")
-    .insert({ name, source, language: "pt" })
+    .insert({ name, source, language })
     .select("id")
     .single();
   if (error) throw new Error(`Failed to create show: ${error.message}`);
@@ -118,6 +120,7 @@ export async function processManualUploadJob(
   }
 
   const { plan } = results;
+  const language = toTargetLanguage(plan.language);
 
   const writeStage = async (label: string, status: ManualUploadResults["status"]) => {
     await updateExtractionJob(
@@ -150,7 +153,8 @@ export async function processManualUploadJob(
   try {
     await writeStage("Resolving show/episode", "extracting");
     const showId =
-      plan.showId ?? (await resolveShowId(supabase, plan.showName, plan.source));
+      plan.showId ??
+      (await resolveShowId(supabase, plan.showName, plan.source, language));
     const episodeId =
       plan.season && plan.episodeNumber
         ? await resolveEpisodeId(
@@ -168,6 +172,7 @@ export async function processManualUploadJob(
       try {
         extraction = await extractFromSubtitle({
           content: plan.content,
+          language,
           filename: plan.filename,
           fileType: plan.fileType,
           provider: plan.provider,
@@ -207,7 +212,7 @@ export async function processManualUploadJob(
     const result = await persistExtraction(supabase, {
       phrases: extraction.phrases,
       content: plan.content,
-      language: plan.language,
+      language,
       truncated: extraction.truncated,
       forceReExtraction: plan.forceReExtraction,
       showId,

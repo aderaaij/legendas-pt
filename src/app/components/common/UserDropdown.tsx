@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Avatar } from './Avatar'
 import { User, Upload, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import { useLanguage } from '@/hooks/useLanguage'
 
 interface UserDropdownProps {
   user: { email?: string } | null
@@ -12,6 +13,8 @@ interface UserDropdownProps {
 }
 
 export function UserDropdown({ user, isAdmin, onSignOut }: UserDropdownProps) {
+  const { t } = useLanguage()
+
   if (!user || !user.email) return null
 
   return (
@@ -43,7 +46,7 @@ export function UserDropdown({ user, isAdmin, onSignOut }: UserDropdownProps) {
             >
               <User size={16} style={{ color: 'var(--muted)' }} />
               <div className="flex flex-col">
-                <span className="font-medium">Perfil</span>
+                <span className="font-medium">{t.userMenu.profile}</span>
                 <span className="text-xs truncate max-w-40" style={{ color: 'var(--muted)' }}>{user.email}</span>
               </div>
             </Link>
@@ -59,7 +62,7 @@ export function UserDropdown({ user, isAdmin, onSignOut }: UserDropdownProps) {
                   style={{ color: 'var(--text)' }}
                 >
                   <Upload size={16} style={{ color: 'var(--muted)' }} />
-                  <span>Carregar legendas</span>
+                  <span>{t.userMenu.upload}</span>
                 </Link>
               </DropdownMenu.Item>
             </>
@@ -73,7 +76,7 @@ export function UserDropdown({ user, isAdmin, onSignOut }: UserDropdownProps) {
             style={{ color: 'var(--text)' }}
           >
             <LogOut size={16} style={{ color: 'var(--muted)' }} />
-            <span>Terminar sessão</span>
+            <span>{t.userMenu.signOut}</span>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

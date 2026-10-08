@@ -1,4 +1,6 @@
 import { ExtractedPhrase } from "@/lib/supabase";
+import { useLanguage } from "@/hooks/useLanguage";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { FavoriteButton } from "../common/FavoriteButton";
 
 interface PhraseCardProps {
@@ -18,19 +20,20 @@ interface PhraseCardProps {
 
 function stateMeta(
   state: PhraseCardProps["learningState"],
-  isLearned: boolean
+  isLearned: boolean,
+  labels: Dictionary["study"]["states"]
 ): { label: string; color: string } {
-  if (isLearned) return { label: "Dominada", color: "var(--green)" };
+  if (isLearned) return { label: labels.mastered, color: "var(--green)" };
   switch (state) {
     case "Learning":
-      return { label: "A aprender", color: "var(--amber)" };
+      return { label: labels.learning, color: "var(--amber)" };
     case "Review":
-      return { label: "Revisão", color: "var(--green)" };
+      return { label: labels.review, color: "var(--green)" };
     case "Relearning":
-      return { label: "Reaprender", color: "var(--accent2)" };
+      return { label: labels.relearning, color: "var(--accent2)" };
     case "New":
     default:
-      return { label: "Nova", color: "var(--blue)" };
+      return { label: labels.new, color: "var(--blue)" };
   }
 }
 
@@ -47,7 +50,8 @@ export const PhraseCard = ({
   showProgress = false,
   viewMode = "grid",
 }: PhraseCardProps) => {
-  const { label, color } = stateMeta(learningState, isLearned);
+  const { t } = useLanguage();
+  const { label, color } = stateMeta(learningState, isLearned, t.study.states);
   const pct = Math.round(progressPercentage);
   const isListView = viewMode === "list";
 

@@ -4,11 +4,14 @@ import { Save, Trash2, Edit3 } from "lucide-react";
 
 import { ExtractedPhrase } from "@/lib/supabase";
 import { FormField } from "@/app/components/ui/FormField";
+import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
 
 import type { EditablePhrase } from "./usePhraseEditor";
 
 interface PhraseListItemProps {
   phrase: EditablePhrase;
+  /** The phrases' (content) language. */
+  language: TargetLanguage;
   saving: boolean;
   onStartEdit: (id: string) => void;
   onCancelEdit: (id: string) => void;
@@ -25,6 +28,7 @@ interface PhraseListItemProps {
  * duplicate / unsaved-change highlighting. */
 export default function PhraseListItem({
   phrase,
+  language,
   saving,
   onStartEdit,
   onCancelEdit,
@@ -55,7 +59,7 @@ export default function PhraseListItem({
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <FormField
-              label="Portuguese Phrase"
+              label={`${LANGUAGES[language].englishShortName} Phrase`}
               value={phrase.phrase}
               onChange={(value) => onUpdateField(phrase.id, "phrase", value)}
             />

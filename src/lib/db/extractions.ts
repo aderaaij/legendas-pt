@@ -115,6 +115,8 @@ export interface PersistExtractionInput {
   /** Raw subtitle content — hashed for dedup and stored as `content_full`. */
   content: string;
   language: string;
+  /** `phrase_extractions.source`; defaults to "file_upload" / "rtp" by filename. */
+  source?: string;
   truncated: boolean;
   forceReExtraction: boolean;
   showId?: string | null;
@@ -156,6 +158,7 @@ export async function persistExtraction(
     phrases,
     content,
     language,
+    source,
     truncated,
     forceReExtraction,
     showId,
@@ -235,7 +238,7 @@ export async function persistExtraction(
     content_length: content.length,
     show_id: showId || null,
     episode_id: episodeId || null,
-    source: filename ? "file_upload" : "rtp",
+    source: source ?? (filename ? "file_upload" : "rtp"),
     capture_timestamp: new Date().toISOString(),
     language,
     max_phrases: 1000,

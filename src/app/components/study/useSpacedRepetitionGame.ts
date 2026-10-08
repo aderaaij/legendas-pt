@@ -8,6 +8,9 @@ import {
 } from "@/types/spaced-repetition";
 import { useAuth } from "@/hooks/useAuth";
 
+/** Why a session couldn't start; the component maps it to UI-language copy. */
+type StudyLoadError = "noCards" | "loadFailed";
+
 interface UseSpacedRepetitionGameProps {
   episodeId: string;
   studyDirection: StudyDirection;
@@ -24,7 +27,7 @@ export function useSpacedRepetitionGame({
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<StudyLoadError | null>(null);
   const [session, setSession] = useState<StudySession | null>(null);
   const [sessionStats, setSessionStats] = useState(() => ({
     studied: 0,
@@ -40,13 +43,13 @@ export function useSpacedRepetitionGame({
   const initializeGame = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
+      setError(null);
 
       // Get due cards
       const dueCards = await studyService.getDueCards(episodeId, studyDirection, 20);
 
       if (dueCards.length === 0) {
-        setError("No cards available for study at this time.");
+        setError("noCards");
         return;
       }
 
@@ -62,7 +65,7 @@ export function useSpacedRepetitionGame({
       }
     } catch (err) {
       console.error("Error initializing game:", err);
-      setError("Failed to load study cards. Please try again.");
+      setError("loadFailed");
     } finally {
       setLoading(false);
     }

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Upload } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { AuthModal } from "./AuthModal";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { UserDropdown } from "../common/UserDropdown";
 
 type Theme = "noir" | "warm";
@@ -26,6 +28,7 @@ function getThemeServerSnapshot(): Theme {
 
 export function Navigation() {
   const { user, isAdmin, isAuthenticated, signOut } = useAuth();
+  const { t } = useLanguage();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "signup">(
     "login"
@@ -86,15 +89,17 @@ export function Navigation() {
             className="text-sm font-semibold"
             style={{ color: "var(--text)" }}
           >
-            Biblioteca
+            {t.nav.library}
           </Link>
         </div>
 
         <div className="flex-1" />
 
+        <LanguageSwitcher />
+
         <button
           onClick={toggleTheme}
-          title="Alternar direção visual"
+          title={t.nav.toggleTheme}
           className="flex items-center gap-2 rounded-full px-3 py-[7px] text-[12.5px] font-semibold"
           style={{ border: "1px solid var(--border2)", color: "var(--muted)" }}
         >
@@ -111,7 +116,7 @@ export function Navigation() {
         {isAdmin && (
           <Link
             href="/upload"
-            title="Carregar legendas"
+            title={t.nav.upload}
             className="grid h-[34px] w-[34px] place-items-center rounded-lg"
             style={{ border: "1px solid var(--border2)", color: "var(--muted)" }}
           >
@@ -128,14 +133,14 @@ export function Navigation() {
               className="px-3 py-2 text-sm font-medium"
               style={{ color: "var(--muted)" }}
             >
-              Entrar
+              {t.nav.login}
             </button>
             <button
               onClick={() => openAuthModal("signup")}
               className="rounded-lg px-4 py-2 text-sm font-bold text-white"
               style={{ background: "var(--accent)" }}
             >
-              Criar conta
+              {t.nav.signup}
             </button>
           </div>
         )}

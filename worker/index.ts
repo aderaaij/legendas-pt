@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase-admin";
 import { getExtractionJob } from "@/lib/db/extraction-jobs";
 import type { ExtractionJob } from "@/types/database";
-import { processRtpSeriesJob } from "./process-rtp-series";
+import { processSeriesImportJob } from "./process-series-import";
 import { processManualUploadJob } from "./process-manual-upload";
 import { startWorkerHeartbeat } from "./heartbeat";
 import { sleep } from "./util";
@@ -164,7 +164,7 @@ async function tick(supabase: SupabaseClient): Promise<boolean> {
     if (job.job_type === "manual_upload") {
       await processManualUploadJob(supabase, job, hooks);
     } else {
-      await processRtpSeriesJob(supabase, job, hooks);
+      await processSeriesImportJob(supabase, job, hooks);
     }
   } catch (err) {
     // Leave the job 'running' so it resumes once stale (dedup makes re-processing

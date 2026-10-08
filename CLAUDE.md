@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LegendasPT is a Portuguese language learning application that extracts useful phrases from subtitle files (.vtt/.srt) and translates them to English using OpenAI's API. The application features role-based authentication where users can browse and favorite phrases, while admins can upload subtitles, extract phrases, and manage content. All phrases can be exported to Anki for spaced repetition learning.
+LegendasPT (branded "CENA") is a language learning application for **European Portuguese and Spanish (Spain)** that extracts useful phrases from subtitle files (.vtt/.srt) and translates them to English with an LLM. See "Target Languages" below. The application features role-based authentication where users can browse and favorite phrases, while admins can upload subtitles, extract phrases, and manage content. All phrases can be exported to Anki for spaced repetition learning.
 
 ## Development Commands
 
@@ -43,10 +43,13 @@ Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀�
   `@/*` alias resolves from `tsconfig.json`, no build step). Outbound-only, no
   exposed ports. Claims jobs, runs the pipeline, owns **all** job-state writes.
   Reuses the shared, framework-free libs: `@/lib/extractor` (subtitle → phrases,
-  the pure LLM core), `@/lib/rtp-scraper`, `@/lib/db/extractions`
+  the pure LLM core), `@/lib/sources` (RTP + RTVE scrapers),
+  `@/lib/series-import/process-episode`, `@/lib/db/extractions`
   (`persistExtraction`). See `worker/README.md`.
-- **Job types** (`extraction_jobs.job_type`): `rtp_series` (worker scrapes each
-  episode) and `manual_upload` (browser POSTs the file content to
+- **Job types** (`extraction_jobs.job_type`): `rtp_series` — a **series import
+  from RTP or RTVE** (the name predates RTVE; `results.plan.source` is
+  `rtp`/`rtve`, absent = `rtp`); the worker scrapes each episode — and
+  `manual_upload` (browser POSTs the file content to
   `/api/manual-upload/start`, which embeds it in the job; the worker extracts it —
   no scraper). Both enqueue with `status='queued'`; the worker claims
   `queued → running`.
@@ -56,8 +59,9 @@ Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀�
   `worker_status` liveness row surfaced as a "worker online" badge on `/upload`.
 - **Progress** reaches the UI via **Supabase Realtime** on `extraction_jobs`
   (`useExtractionJobs` subscribes; a slow poll is the backstop).
-- **Enqueue endpoints:** `POST /api/rtp-import/start`, `POST /api/manual-upload/start`
-  (both admin-only, enqueue-only). There is **no** `/api/extract-phrases` route
+- **Enqueue endpoints:** `POST /api/series-import/start`, `POST /api/manual-upload/start`
+  (both admin-only, enqueue-only); `POST /api/series-import/preview` lists a
+  series' episodes (and seasons, for RTVE) for the importer UI. There is **no** `/api/extract-phrases` route
   anymore — extraction is the worker's job.
 
 **Run it:** `cp .env.worker.example .env.worker` (fill in Supabase + LLM keys,
@@ -274,16 +278,51 @@ falls back to `LLM_PROVIDER`/`LLM_MODEL`, then the built-in defaults in
 `src/lib/llm/types.ts`. Selection resolution + model construction live in
 `src/lib/llm/providers.ts`.
 
+## Target Languages (PT / ES)
+
+The app teaches a **target language**: `pt` (European Portuguese) or `es`
+(Spanish, Spain). Config lives in `src/lib/i18n/languages.ts` (UI-safe).
+
+- **Data:** a show's `shows.language` is the source of truth (null = `pt`, via
+  `toTargetLanguage`); episodes/extractions/phrases inherit it
+  (`phrase_extractions.language` mirrors it). No per-language tables.
+- **Switching:** the nav `LanguageSwitcher` sets the `cena-lang` cookie.
+  **Every page lives under `src/app/[lang]/`** — a *hidden* prefix: `src/proxy.ts`
+  (Next 16's renamed middleware) rewrites `/x` → `/{lang}/x` from the cookie, so
+  URLs stay unprefixed while pages render (and ISR-cache) per language without
+  reading cookies in the render. Don't add `dynamicParams = false` to the
+  `[lang]` layout — it would also 404 shows added after the build.
+- **Library:** the home page only lists shows in the selected language
+  (`getLibraryShows(lang)`); show/episode pages work for any show.
+- **UI chrome language = target language** (immersion). Public UI strings live in
+  `src/lib/i18n/dictionaries/{pt,es}.ts` (`pt` is the reference shape); read them
+  with `const { lang, t } = useLanguage()` in client components or
+  `getDictionary(lang)` server-side. Admin pages (upload, edit) stay English.
+  Keep the **UI language** (`lang`) distinct from a show's **content language**
+  (`toTargetLanguage(show.language)`) — e.g. study card labels name the content
+  language in the UI language (`t.languageNames[contentLang]`).
+- **Study directions** `'pt-en' | 'en-pt'` are persisted keys meaning
+  target→English / English→target for *any* target language — don't rename them.
+- **Sources:** `src/lib/sources/` — `meta.ts` (UI-safe: `SERIES_SOURCES`, which
+  language each source implies, `sourceIdForUrl`), `rtp.ts` (RTP Play, HTML
+  scraping), `rtve.ts` (RTVE Play, public JSON API under `rtve.es/api/`; programs
+  span several seasons, so a series is listed one season at a time and the
+  importer shows a season picker), `index.ts` (`seriesSourceForUrl`). The URL
+  decides the language; manual uploads pick it explicitly.
+- **LLM prompt** (`src/lib/llm/extract-phrases.ts`) is built per language.
+- `shows.rtp_links` holds watch links for **any** source (historical name);
+  `src/utils/watchLinks.ts` labels them ("Ver no RTP" / "Ver en RTVE").
+
 ## File Structure Notes
 
 ### Routes
-- `/` - Homepage showing library of all shows and episodes (public)
+All page routes below live under `src/app/[lang]/` (hidden prefix, see above).
+- `/` - Homepage showing the library of shows in the selected language (public)
 - `/upload/` - Subtitle upload and phrase extraction interface (**admin only**)
 - `/[series]/` - Show detail page (e.g., `/breaking-bad`) (public)
 - `/[series]/edit/` - Show management and bulk operations (**admin only**)
 - `/[series]/[episode]/` - Episode detail page (e.g., `/breaking-bad/s01e01`) (public)
 - `/[series]/[episode]/edit/` - Episode management interface (**admin only**)
-- `/api/extract-phrases/` - API endpoint for phrase extraction processing
 
 ### Directories
 - `/src/app/` - Next.js App Router pages and layouts
@@ -302,8 +341,9 @@ falls back to `LLM_PROVIDER`/`LLM_MODEL`, then the built-in defaults in
 - `/src/lib/` - Service layer. `supabase.ts` is a thin barrel: it exports the
   client, re-exports DB types, and assembles the `PhraseExtractionService` facade
   from per-domain modules in `/src/lib/db/*` (shows, episodes, extractions,
-  phrases, extraction-jobs, stats, dedup). Also `tvdb.ts`, `rtp-scraper.ts`,
-  `study-service.ts`.
+  phrases, extraction-jobs, stats, dedup). Also `tvdb.ts`, `study-service.ts`,
+  `sources/` (series scrapers), `series-import/` (plan types + per-episode
+  pipeline), `i18n/` (languages + UI dictionaries).
 - `/src/lib/llm/` - Provider-agnostic LLM layer (Vercel AI SDK). `types.ts`
   (UI-safe: `Provider`, `DEFAULT_MODELS`, `LlmSelection`), `providers.ts`
   (`resolveSelection` = per-request override → `LLM_PROVIDER`/`LLM_MODEL` env →

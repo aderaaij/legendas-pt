@@ -3,6 +3,7 @@
 import { Film } from "lucide-react";
 
 import { useHomePage } from "./useHomePage";
+import { useLanguage } from "@/hooks/useLanguage";
 import { LibraryShow } from "@/lib/supabase";
 import { buildLibraryRows, pickFeaturedShow } from "@/utils/libraryRows";
 import { HeroSection } from "./HeroSection";
@@ -24,6 +25,7 @@ export default function HomePage({
   initialStats,
   initialError,
 }: HomePageProps) {
+  const { t } = useLanguage();
   const { shows, loading, error, refetch } = useHomePage(
     initialShows,
     initialStats,
@@ -38,14 +40,14 @@ export default function HomePage({
             className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
             style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
           />
-          <p style={{ color: "var(--muted)" }}>A carregar séries…</p>
+          <p style={{ color: "var(--muted)" }}>{t.home.loading}</p>
         </div>
       </div>
     );
   }
 
   const featured = pickFeaturedShow(shows);
-  const rows = buildLibraryRows(shows);
+  const rows = buildLibraryRows(shows, t.home.rows);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
@@ -60,7 +62,7 @@ export default function HomePage({
             className="mt-2 text-sm underline hover:no-underline"
             style={{ color: "var(--accent2)" }}
           >
-            Tentar novamente
+            {t.common.retry}
           </button>
         </div>
       )}
@@ -72,10 +74,8 @@ export default function HomePage({
             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <Film className="mx-auto mb-4 h-16 w-16" style={{ color: "var(--faint)" }} />
-            <h3 className="mb-2 text-xl font-bold">Ainda não há séries</h3>
-            <p style={{ color: "var(--muted)" }}>
-              Carrega legendas para começar a criar a tua biblioteca.
-            </p>
+            <h3 className="mb-2 text-xl font-bold">{t.home.emptyTitle}</h3>
+            <p style={{ color: "var(--muted)" }}>{t.home.emptyBody}</p>
           </div>
         </div>
       ) : (

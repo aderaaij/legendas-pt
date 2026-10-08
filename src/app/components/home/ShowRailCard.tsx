@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { LibraryShow } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
+import { useLanguage } from "@/hooks/useLanguage";
 import { PosterArt } from "./PosterArt";
 
 interface ShowRailCardProps {
@@ -11,6 +12,7 @@ interface ShowRailCardProps {
 export function ShowRailCard({ show }: ShowRailCardProps) {
   const slug = generateShowSlug(show.name);
   const channel = show.network || show.source;
+  const { t } = useLanguage();
 
   return (
     <Link href={`/${slug}`} className="group block w-[190px] shrink-0">
@@ -52,14 +54,14 @@ export function ShowRailCard({ show }: ShowRailCardProps) {
             <span className="font-bold" style={{ color: "var(--accent2)" }}>
               {show.totalPhrases}
             </span>
-            <span>frases</span>
+            <span>{t.common.phraseNoun(show.totalPhrases)}</span>
             <span
               className="h-[3px] w-[3px] rounded-full"
               style={{ background: "rgba(255,255,255,.4)" }}
             />
             <span>
               {show.extractionCount}{" "}
-              {show.extractionCount === 1 ? "extração" : "extrações"}
+              {t.common.extractionNoun(show.extractionCount)}
             </span>
           </div>
         </div>

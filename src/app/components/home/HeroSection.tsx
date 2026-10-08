@@ -4,7 +4,8 @@ import { Play, ExternalLink } from "lucide-react";
 import { LibraryShow } from "@/lib/supabase";
 import { generateShowSlug } from "@/utils/slugify";
 import { yearFrom } from "@/utils/posterGradient";
-import { resolveRtpLinks } from "@/utils/rtpLinks";
+import { resolveWatchLinks } from "@/utils/watchLinks";
+import { useLanguage } from "@/hooks/useLanguage";
 import { PosterArt } from "./PosterArt";
 
 interface HeroSectionProps {
@@ -16,7 +17,8 @@ export function HeroSection({ show }: HeroSectionProps) {
   const channel = show.network || show.source;
   const year = yearFrom(show.first_aired);
   const blurb = show.overview || show.description;
-  const rtpLinks = resolveRtpLinks(show.rtp_links);
+  const { t } = useLanguage();
+  const watchLinks = resolveWatchLinks(show.rtp_links, t.watch);
 
   return (
     <section className="relative flex min-h-[540px] items-end overflow-hidden px-5 pb-13 md:px-10">
@@ -45,7 +47,7 @@ export function HeroSection({ show }: HeroSectionProps) {
             className="text-[11px] font-extrabold uppercase tracking-[0.18em]"
             style={{ color: "var(--accent2)" }}
           >
-            Em destaque
+            {t.home.featured}
           </span>
           <span className="h-1 w-1 rounded-full" style={{ background: "var(--faint)" }} />
           <span className="text-[12.5px] font-semibold" style={{ color: "var(--muted)" }}>
@@ -80,11 +82,11 @@ export function HeroSection({ show }: HeroSectionProps) {
             }}
           >
             <Play className="h-[17px] w-[17px]" fill="currentColor" />
-            Estudar agora
+            {t.home.studyNow}
           </Link>
 
-          {rtpLinks.length > 0
-            ? rtpLinks.map((link) => (
+          {watchLinks.length > 0
+            ? watchLinks.map((link) => (
                 <a
                   key={link.url}
                   href={link.url}
@@ -114,7 +116,7 @@ export function HeroSection({ show }: HeroSectionProps) {
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Ver original
+                  {t.watch.original}
                 </a>
               )}
 
@@ -122,13 +124,13 @@ export function HeroSection({ show }: HeroSectionProps) {
             <div>
               <div className="font-display text-[22px]">{show.totalPhrases}</div>
               <div className="text-[11px] tracking-[0.04em]" style={{ color: "var(--muted)" }}>
-                frases
+                {t.common.phraseNoun(show.totalPhrases)}
               </div>
             </div>
             <div>
               <div className="font-display text-[22px]">{show.extractionCount}</div>
               <div className="text-[11px] tracking-[0.04em]" style={{ color: "var(--muted)" }}>
-                {show.extractionCount === 1 ? "extração" : "extrações"}
+                {t.common.extractionNoun(show.extractionCount)}
               </div>
             </div>
           </div>

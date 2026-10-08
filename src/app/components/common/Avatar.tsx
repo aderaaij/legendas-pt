@@ -5,6 +5,7 @@ import { User } from "lucide-react";
 import { createHash } from "crypto";
 import Link from "next/link";
 import Image from "next/image";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface AvatarProps {
   email: string;
@@ -30,6 +31,7 @@ export function Avatar({
   showAdminBadge = true,
   linkToProfile = false,
 }: AvatarProps) {
+  const { t } = useLanguage();
   const [imageError, setImageError] = useState(false);
   const gravatarUrl = getGravatarUrl(email, size);
 
@@ -44,7 +46,7 @@ export function Avatar({
             src={gravatarUrl}
             width={size}
             height={size}
-            alt={`${email} avatar`}
+            alt={t.common.avatarAlt(email)}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
           />

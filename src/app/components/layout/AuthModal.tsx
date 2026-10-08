@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/hooks/useLanguage'
 import { X } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { motion, AnimatePresence } from 'motion/react'
@@ -20,6 +21,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [error, setError] = useState<string | null>(null)
   
   const { signIn, signUp } = useAuth()
+  const { t } = useLanguage()
 
   const resetForm = useCallback(() => {
     setEmail('')
@@ -54,13 +56,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         setError(error.message)
       } else {
         if (mode === 'signup') {
-          setError('Check your email for the confirmation link!')
+          setError(t.auth.checkEmail)
         } else {
           onClose()
         }
       }
     } catch {
-      setError('An unexpected error occurred')
+      setError(t.auth.unexpectedError)
     } finally {
       setLoading(false)
     }
@@ -97,7 +99,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               >
           <div className="flex justify-between items-center mb-4">
             <Dialog.Title className="text-xl font-bold" style={{ color: 'var(--text)' }}>
-              {mode === 'login' ? 'Entrar' : 'Criar conta'}
+              {mode === 'login' ? t.nav.login : t.nav.signup}
             </Dialog.Title>
             <Dialog.Close className="transition-opacity hover:opacity-80" style={{ color: 'var(--muted)' }}>
               <X size={20} />
@@ -107,7 +109,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                Email
+                {t.auth.email}
               </label>
               <input
                 type="email"
@@ -122,7 +124,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-                Palavra-passe
+                {t.auth.password}
               </label>
               <input
                 type="password"
@@ -148,7 +150,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               className="w-full py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'var(--accent)', color: '#fff' }}
             >
-              {loading ? 'A carregar...' : (mode === 'login' ? 'Entrar' : 'Criar conta')}
+              {loading ? t.auth.submitting : (mode === 'login' ? t.nav.login : t.nav.signup)}
             </button>
           </form>
 
@@ -158,10 +160,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               className="text-sm transition-opacity hover:opacity-80"
               style={{ color: 'var(--accent2)' }}
             >
-              {mode === 'login'
-                ? "Ainda não tens conta? Cria uma"
-                : "Já tens conta? Entra"
-              }
+              {mode === 'login' ? t.auth.toSignup : t.auth.toLogin}
             </button>
           </div>
               </motion.div>

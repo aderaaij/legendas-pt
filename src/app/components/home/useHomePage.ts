@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PhraseExtractionService, LibraryShow } from "@/lib/supabase";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface UseShowsReturn {
   shows: LibraryShow[];
@@ -22,6 +23,7 @@ export function useHomePage(
   },
   initialError?: string | null
 ): UseShowsReturn {
+  const { lang, t } = useLanguage();
   const [shows, setShows] = useState<LibraryShow[]>(initialShows);
   const [loading, setLoading] = useState(initialShows.length === 0);
   const [error, setError] = useState<string>(initialError || "");
@@ -31,14 +33,14 @@ export function useHomePage(
       setLoading(true);
       setError("");
 
-      const libraryShows = await PhraseExtractionService.getLibraryShows();
+      const libraryShows = await PhraseExtractionService.getLibraryShows(lang);
 
       setShows(libraryShows);
     } catch (err) {
       setError(
-        `Failed to load shows: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
+        t.home.loadError(
+          err instanceof Error ? err.message : t.common.unknownError
+        )
       );
       console.error("Error loading shows:", err);
     } finally {
@@ -53,14 +55,14 @@ export function useHomePage(
     let active = true;
     (async () => {
       try {
-        const libraryShows = await PhraseExtractionService.getLibraryShows();
+        const libraryShows = await PhraseExtractionService.getLibraryShows(lang);
         if (active) setShows(libraryShows);
       } catch (err) {
         if (active) {
           setError(
-            `Failed to load shows: ${
-              err instanceof Error ? err.message : "Unknown error"
-            }`
+            t.home.loadError(
+              err instanceof Error ? err.message : t.common.unknownError
+            )
           );
           console.error("Error loading shows:", err);
         }

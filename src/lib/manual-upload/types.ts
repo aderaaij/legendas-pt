@@ -8,7 +8,7 @@
  * it in the plan; the worker reads it, extracts, and persists (no scraper).
  */
 import type { Provider } from "@/lib/llm/types";
-import type { EpisodeStatus } from "@/lib/rtp-import/types";
+import type { EpisodeStatus } from "@/lib/series-import/types";
 
 export interface ManualUploadPlan {
   /** The uploaded subtitle text (small — jsonb is fine). */

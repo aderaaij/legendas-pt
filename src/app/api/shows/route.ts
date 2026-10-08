@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { toTargetLanguage } from '@/lib/i18n/languages';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
       watch_url, 
       poster_url,
       tvdb_id,
-      tvdb_slug 
+      tvdb_slug,
+      language,
     } = body;
 
     if (!name) {
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         source: source || 'rtp',
-        language: 'pt',
+        language: toTargetLanguage(language),
         overview,
         network,
         genres: genres || [],

@@ -7,6 +7,9 @@ import {
   StudyRating,
   StudyDirection,
 } from "@/types/spaced-repetition";
+import { useLanguage } from "@/hooks/useLanguage";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { TargetLanguage } from "@/lib/i18n/languages";
 import { FavoriteButton } from "../common/FavoriteButton";
 
 interface StudyCardProps {
@@ -19,32 +22,36 @@ interface StudyCardProps {
   isFavorite: boolean;
   onToggleFavorite: (phraseId: string) => Promise<void>;
   studyDirection: StudyDirection;
+  /** The show's (content) language — the phrases' language, not the UI's. */
+  language: TargetLanguage;
 }
 
 const RATINGS: {
   rating: StudyRating;
-  label: string;
-  hint: string;
+  key: keyof Dictionary["study"]["ratings"];
   bg: string;
   fg: string;
 }[] = [
-  { rating: 1, label: "Outra vez", hint: "Esqueci por completo · 1", bg: "var(--accent)", fg: "#fff" },
-  { rating: 2, label: "Difícil", hint: "Custou a lembrar · 2", bg: "var(--amber)", fg: "#1a1206" },
-  { rating: 3, label: "Bom", hint: "Lembrei com esforço · 3", bg: "var(--green)", fg: "#04210f" },
-  { rating: 4, label: "Fácil", hint: "Lembrei logo · 4", bg: "var(--blue)", fg: "#05122e" },
+  { rating: 1, key: "again", bg: "var(--accent)", fg: "#fff" },
+  { rating: 2, key: "hard", bg: "var(--amber)", fg: "#1a1206" },
+  { rating: 3, key: "good", bg: "var(--green)", fg: "#04210f" },
+  { rating: 4, key: "easy", bg: "var(--blue)", fg: "#05122e" },
 ];
 
-function stateMeta(card: StudyCardType): { label: string; color: string } {
+function stateMeta(
+  card: StudyCardType,
+  labels: Dictionary["study"]["states"]
+): { label: string; color: string } {
   switch (card.cardStudy?.state) {
     case "Learning":
-      return { label: "A aprender", color: "var(--amber)" };
+      return { label: labels.learning, color: "var(--amber)" };
     case "Review":
-      return { label: "Revisão", color: "var(--green)" };
+      return { label: labels.review, color: "var(--green)" };
     case "Relearning":
-      return { label: "Reaprender", color: "var(--accent2)" };
+      return { label: labels.relearning, color: "var(--accent2)" };
     case "New":
     default:
-      return { label: "Nova", color: "var(--blue)" };
+      return { label: labels.new, color: "var(--blue)" };
   }
 }
 
@@ -58,7 +65,9 @@ export function StudyCard({
   isFavorite,
   onToggleFavorite,
   studyDirection,
+  language,
 }: StudyCardProps) {
+  const { t } = useLanguage();
   const startTimeRef = useRef(0);
 
   useEffect(() => {
@@ -72,12 +81,15 @@ export function StudyCard({
     [onResponse]
   );
 
-  const ptFront = studyDirection === "pt-en";
-  const front = ptFront ? card.phrase.phrase : card.phrase.translation;
-  const back = ptFront ? card.phrase.translation : card.phrase.phrase;
-  const frontLabel = ptFront ? "PORTUGUÊS" : "INGLÊS";
-  const backLabel = ptFront ? "INGLÊS" : "PORTUGUÊS";
-  const state = stateMeta(card);
+  // "pt-en" means target language → English, for any target language.
+  const targetFront = studyDirection === "pt-en";
+  const front = targetFront ? card.phrase.phrase : card.phrase.translation;
+  const back = targetFront ? card.phrase.translation : card.phrase.phrase;
+  const targetLabel = t.languageNames[language];
+  const englishLabel = t.languageNames.en;
+  const frontLabel = targetFront ? targetLabel : englishLabel;
+  const backLabel = targetFront ? englishLabel : targetLabel;
+  const state = stateMeta(card, t.study.states);
 
   return (
     <motion.div
@@ -98,7 +110,7 @@ export function StudyCard({
             className="absolute left-[18px] top-[14px] text-[11px] font-bold tracking-[0.06em]"
             style={{ color: "var(--faint)" }}
           >
-            Cartão {cardNumber} de {totalCards}
+            {t.study.cardOf(cardNumber, totalCards)}
           </div>
           <div
             className="absolute right-4 top-3 flex items-center gap-2"
@@ -122,7 +134,7 @@ export function StudyCard({
           </div>
 
           <div
-            className="mb-4 text-[11px] font-extrabold tracking-[0.14em]"
+            className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.14em]"
             style={{ color: "var(--accent2)" }}
           >
             {frontLabel}
@@ -137,7 +149,7 @@ export function StudyCard({
               style={{ borderTop: "1px solid var(--border)" }}
             >
               <div
-                className="mb-3 text-center text-[11px] font-extrabold tracking-[0.14em]"
+                className="mb-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em]"
                 style={{ color: "var(--green)" }}
               >
                 {backLabel}
@@ -151,7 +163,7 @@ export function StudyCard({
             </div>
           ) : (
             <div className="mt-[22px] text-[12.5px]" style={{ color: "var(--faint)" }}>
-              Clica para revelar a tradução
+              {t.study.revealHint}
             </div>
           )}
         </div>
@@ -161,25 +173,29 @@ export function StudyCard({
       {showAnswer ? (
         <div className="px-6 pb-[22px]">
           <div className="mb-[14px] text-center text-[13px]" style={{ color: "var(--muted)" }}>
-            Como correu esta frase?
+            {t.study.howDidItGo}
           </div>
           <div className="grid grid-cols-2 gap-[11px]">
-            {RATINGS.map(({ rating, label, hint, bg, fg }) => (
+            {RATINGS.map(({ rating, key, bg, fg }) => (
               <button
                 key={rating}
                 onClick={() => handleResponse(rating)}
                 className="rounded-xl p-[14px] text-left transition-transform hover:scale-[1.02]"
                 style={{ background: bg, color: fg }}
               >
-                <div className="text-[15px] font-extrabold">{label}</div>
-                <div className="text-[11.5px] opacity-80">{hint}</div>
+                <div className="text-[15px] font-extrabold">
+                  {t.study.ratings[key].label}
+                </div>
+                <div className="text-[11.5px] opacity-80">
+                  {t.study.ratings[key].hint} · {rating}
+                </div>
               </button>
             ))}
           </div>
         </div>
       ) : (
         <div className="px-6 pb-6 text-center text-[12.5px]" style={{ color: "var(--faint)" }}>
-          Carrega{" "}
+          {t.study.keyHintBefore}{" "}
           <span
             className="rounded-[5px] px-[7px] py-[2px] font-bold"
             style={{
@@ -188,9 +204,9 @@ export function StudyCard({
               color: "var(--muted)",
             }}
           >
-            Espaço
+            {t.study.spaceKey}
           </span>{" "}
-          ou clica no cartão para ver a resposta
+          {t.study.keyHintAfter}
         </div>
       )}
     </motion.div>

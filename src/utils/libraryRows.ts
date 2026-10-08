@@ -1,4 +1,5 @@
 import { LibraryShow } from "@/lib/supabase";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 export interface LibraryRow {
   key: string;
@@ -34,9 +35,13 @@ export function pickFeaturedShow(shows: LibraryShow[]): LibraryShow | null {
 /**
  * Builds Netflix-style horizontal rows entirely from real data. Rows
  * intentionally reuse shows across categories (as the mockup does). Rows that
- * would depend on per-show study progress are omitted.
+ * would depend on per-show study progress are omitted. Row titles come from
+ * the UI-language dictionary (`t`); genre rows use the stored genre name.
  */
-export function buildLibraryRows(shows: LibraryShow[]): LibraryRow[] {
+export function buildLibraryRows(
+  shows: LibraryShow[],
+  t: Dictionary["home"]["rows"]
+): LibraryRow[] {
   if (shows.length === 0) return [];
   const rows: LibraryRow[] = [];
 
@@ -47,8 +52,8 @@ export function buildLibraryRows(shows: LibraryShow[]): LibraryRow[] {
   );
   rows.push({
     key: "recent",
-    title: "Adicionado recentemente",
-    note: "Atualizado esta semana",
+    title: t.recentTitle,
+    note: t.recentNote,
     shows: recent,
   });
 
@@ -73,7 +78,7 @@ export function buildLibraryRows(shows: LibraryShow[]): LibraryRow[] {
   if (shows.length >= 4) {
     rows.push({
       key: "most",
-      title: "Mais frases para estudar",
+      title: t.mostPhrases,
       shows: [...shows].sort((a, b) => b.totalPhrases - a.totalPhrases),
     });
   }

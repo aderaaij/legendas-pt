@@ -6,6 +6,7 @@ import { Search, Plus, Loader2, RefreshCw } from "lucide-react";
 import { Show, Episode } from "@/lib/supabase";
 import { useShowSelector } from "@/hooks/useShowSelector";
 import { fieldInputStyle } from "@/app/components/ui/FormField";
+import type { TargetLanguage } from "@/lib/i18n/languages";
 
 import EpisodeListItem from "./EpisodeListItem";
 import NewEpisodeForm from "./NewEpisodeForm";
@@ -14,11 +15,16 @@ import TVDBResultButton from "./TVDBResultButton";
 
 interface ShowSelectorProps {
   onShowSelected: (show: Show, episode?: Episode) => void;
+  /** Only offer shows in this language; new shows are created in it. */
+  language?: TargetLanguage;
   selectedShowId?: string;
   selectedEpisodeId?: string;
 }
 
-export default function ShowSelector({ onShowSelected }: ShowSelectorProps) {
+export default function ShowSelector({
+  onShowSelected,
+  language,
+}: ShowSelectorProps) {
   const {
     searchQuery,
     filteredShows,
@@ -40,7 +46,7 @@ export default function ShowSelector({ onShowSelected }: ShowSelectorProps) {
     handleCreateShowFromTVDB,
     refreshEpisodes,
     handleDeleteShow,
-  } = useShowSelector();
+  } = useShowSelector(language);
 
   const [showNewEpisodeForm, setShowNewEpisodeForm] = useState(false);
 
