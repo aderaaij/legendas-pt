@@ -241,6 +241,20 @@ export function useExtractionJob(jobId: string | null) {
     }
   }, [jobId, authedFetch, user]);
 
+  const cancelJob = useCallback(async () => {
+    if (!jobId) return;
+    const response = await authedFetch('/api/extraction-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel', jobId }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to cancel job');
+    }
+    await refreshJob();
+  }, [jobId, authedFetch, refreshJob]);
+
   // Auto-refresh if job is active
   useEffect(() => {
     if (!job || !['queued', 'pending', 'running'].includes(job.status)) return;
@@ -257,9 +271,12 @@ export function useExtractionJob(jobId: string | null) {
   }, [refreshJob]);
 
   return {
-    job,
+    // Only the job for the current id (a stale one is kept in state after the
+    // id changes or is cleared).
+    job: job && job.id === jobId ? job : null,
     loading,
     error,
     refreshJob,
+    cancelJob,
   };
 }

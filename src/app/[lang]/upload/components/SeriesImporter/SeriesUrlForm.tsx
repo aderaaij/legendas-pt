@@ -8,7 +8,6 @@ interface SeriesUrlFormProps {
   onUrlChange: (value: string) => void;
   onPreview: () => void;
   isScrapingPreview: boolean;
-  isProcessing: boolean;
   error: string | null;
 }
 
@@ -18,7 +17,6 @@ export default function SeriesUrlForm({
   onUrlChange,
   onPreview,
   isScrapingPreview,
-  isProcessing,
   error,
 }: SeriesUrlFormProps) {
   return (
@@ -81,14 +79,14 @@ export default function SeriesUrlForm({
               border: "1px solid var(--border)",
               color: "var(--text)",
             }}
-            disabled={isScrapingPreview || isProcessing}
+            disabled={isScrapingPreview}
           />
         </div>
 
         <div className="flex gap-4">
           <button
             onClick={onPreview}
-            disabled={isScrapingPreview || isProcessing}
+            disabled={isScrapingPreview}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             style={{ background: "var(--accent)", color: "#fff" }}
           >

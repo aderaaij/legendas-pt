@@ -4,7 +4,7 @@ import JobStatusBanner from "@/app/components/common/JobStatusBanner";
 
 import ShowMapper from "../ShowMapper";
 import ShowTVDBCreator from "../ShowTVDBCreator";
-import ProcessingResults from "./ProcessingResults";
+import ImportJobStatus from "./ImportJobStatus";
 import SeriesUrlForm from "./SeriesUrlForm";
 import SeriesPreviewCard from "./SeriesPreviewCard";
 import SeriesPreviewSkeleton from "./SeriesPreviewSkeleton";
@@ -17,14 +17,16 @@ export default function SeriesImporter() {
     seriesUrl,
     setSeriesUrl,
     isScrapingPreview,
-    isProcessing,
+    isBusy,
+    currentJobId,
+    currentJob,
+    cancelImport,
+    showHref,
     saveToDatabase,
     setSaveToDatabase,
     forceReExtraction,
     setForceReExtraction,
     seriesPreview,
-    results,
-    summary,
     error,
     selectedEpisodes,
     toggleEpisodeSelection,
@@ -107,7 +109,6 @@ export default function SeriesImporter() {
         onUrlChange={setSeriesUrl}
         onPreview={handlePreview}
         isScrapingPreview={isScrapingPreview}
-        isProcessing={isProcessing}
         error={error}
       />
 
@@ -127,31 +128,18 @@ export default function SeriesImporter() {
           onSaveToDatabaseChange={setSaveToDatabase}
           forceReExtraction={forceReExtraction}
           onForceReExtractionChange={setForceReExtraction}
-          isProcessing={isProcessing}
+          isProcessing={isBusy}
           onProcess={handleProcess}
         />
       )}
 
-      {(results.length > 0 || summary) && (
-        <ProcessingResults results={results} summary={summary} />
-      )}
-
-      {isProcessing && (
-        <div
-          className="rounded-lg p-6"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          <div className="flex items-center justify-center space-x-2">
-            <div
-              className="animate-spin rounded-full h-6 w-6 border-b-2"
-              style={{
-                borderColor: "var(--accent)",
-                borderBottomColor: "var(--accent)",
-              }}
-            ></div>
-            <span>Processing episodes... This may take several minutes.</span>
-          </div>
-        </div>
+      {currentJobId && (
+        <ImportJobStatus
+          key={currentJobId}
+          job={currentJob}
+          onCancel={cancelImport}
+          showHref={showHref}
+        />
       )}
 
       {/* Show Mapping Modal */}

@@ -206,7 +206,7 @@ export default function SeriesPreviewCard({
           style={{ background: "var(--green)", color: "#04210f" }}
         >
           {isProcessing
-            ? "Processing Episodes..."
+            ? "Import in progress…"
             : selectedShow
             ? "Process All Episodes"
             : "Select Show & Process Episodes"}

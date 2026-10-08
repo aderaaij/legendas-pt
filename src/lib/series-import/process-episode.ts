@@ -87,20 +87,6 @@ export async function processEpisode(
     return { status: "no_subtitle" };
   }
 
-  // Pre-LLM dedup: skip the expensive extraction if this exact content was
-  // already extracted (unless forcing). Keeps the unit cheaply retry-able.
-  const contentHash = generateContentHash(scrapedSubtitle.content);
-  if (saveToDatabase) {
-    const { data: existingExtraction } = await supabase
-      .from("phrase_extractions")
-      .select("id")
-      .eq("content_hash", contentHash)
-      .single();
-    if (existingExtraction && !forceReExtraction) {
-      return { status: "already_exists", extractionId: existingExtraction.id };
-    }
-  }
-
   // Find or create the episode row (by source episode id first, then season/number).
   let episodeId: string | null = null;
   if (saveToDatabase && showId) {
@@ -148,6 +134,27 @@ export async function processEpisode(
         };
       }
       episodeId = newEpisode.id;
+    }
+  }
+
+  // Pre-LLM dedup: skip the expensive extraction if this episode (or, without
+  // an episode, this exact content) was already extracted, unless forcing. Uses
+  // the same key persistExtraction dedups on — episode-scoped extractions store
+  // a per-episode content hash, so matching the bare hash would never hit. Keeps
+  // re-runs and duplicate imports cheap.
+  if (saveToDatabase && !forceReExtraction) {
+    const existingQuery = supabase.from("phrase_extractions").select("id");
+    const { data: existingExtraction } = await (episodeId
+      ? existingQuery.eq("episode_id", episodeId)
+      : existingQuery.eq(
+          "content_hash",
+          generateContentHash(scrapedSubtitle.content)
+        )
+    )
+      .limit(1)
+      .maybeSingle();
+    if (existingExtraction) {
+      return { status: "already_exists", extractionId: existingExtraction.id };
     }
   }
 

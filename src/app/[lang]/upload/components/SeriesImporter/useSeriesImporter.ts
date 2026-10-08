@@ -5,37 +5,16 @@ import { useAuthedFetch } from "@/hooks/useAuthedFetch";
 import { useExtractionJob } from "@/hooks/useExtractionJobs";
 import { Show } from "@/lib/supabase";
 import { SERIES_SOURCES, sourceIdForUrl } from "@/lib/sources/meta";
+import { generateShowSlug } from "@/utils/slugify";
 import type {
   SeriesPreviewResponse,
   SourceSeries,
 } from "@/types/series-source";
+import { ACTIVE_JOB_STATUSES } from "./importStatus";
 
 const EXAMPLE_URLS = Object.values(SERIES_SOURCES)
   .map((s) => s.exampleUrl)
   .join(" or ");
-
-export interface ScrapingResult {
-  episode: number;
-  title: string;
-  status:
-    | "success"
-    | "error"
-    | "extraction_failed"
-    | "already_exists"
-    | "no_subtitle";
-  extractionId?: number;
-  phraseCount?: number;
-  error?: string;
-  message?: string;
-}
-
-export interface ScrapingSummary {
-  total: number;
-  successful: number;
-  failed: number;
-  alreadyExists: number;
-  noSubtitle: number;
-}
 
 export type ShowMappingStep = "none" | "mapping" | "creating";
 
@@ -57,8 +36,6 @@ export function useSeriesImporter() {
   const [seriesPreview, setSeriesPreview] = useState<SourceSeries | null>(
     null
   );
-  const [results, setResults] = useState<ScrapingResult[]>([]);
-  const [summary, setSummary] = useState<ScrapingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [selectedEpisodes, setSelectedEpisodes] = useState<Set<number>>(
@@ -70,7 +47,15 @@ export function useSeriesImporter() {
     useState<ShowMappingStep>("none");
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
 
-  useExtractionJob(currentJobId);
+  // The import started from this page, polled while it's queued/running.
+  const { job: currentJob, cancelJob: cancelImport } =
+    useExtractionJob(currentJobId);
+  // Busy from the click until the job finishes — including the moment between
+  // enqueueing and the job's first fetch — so it can't be started twice.
+  const importActive =
+    currentJobId !== null &&
+    (!currentJob || ACTIVE_JOB_STATUSES.has(currentJob.status));
+  const isBusy = isProcessing || importActive;
 
   const toggleEpisodeSelection = (episodeNumber: number) => {
     const newSelected = new Set(selectedEpisodes);
@@ -150,17 +135,21 @@ export function useSeriesImporter() {
       return;
     }
 
-    // A new series: forget the show picked for the previous one.
+    // A new series: forget the show and import of the previous one.
     setSelectedShow(null);
+    setCurrentJobId(null);
     await fetchPreview(null);
   };
 
   /** List another season of the same program (RTVE). */
   const handleSeasonChange = async (seasonId: string) => {
+    setCurrentJobId(null);
     await fetchPreview(seasonId);
   };
 
   const handleProcess = async () => {
+    if (isBusy) return;
+
     if (!seriesPreview) {
       setError("Please preview the series first");
       return;
@@ -187,8 +176,6 @@ export function useSeriesImporter() {
     // JobStatusBanner + the series-page panel (both poll the job row).
     setIsProcessing(true);
     setError(null);
-    setResults([]);
-    setSummary(null);
 
     try {
       const res = await authedFetch("/api/series-import/start", {
@@ -241,14 +228,16 @@ export function useSeriesImporter() {
     seriesUrl,
     setSeriesUrl,
     isScrapingPreview,
-    isProcessing,
+    isBusy,
+    currentJobId,
+    currentJob,
+    cancelImport,
+    showHref: selectedShow ? `/${generateShowSlug(selectedShow.name)}` : null,
     saveToDatabase,
     setSaveToDatabase,
     forceReExtraction,
     setForceReExtraction,
     seriesPreview,
-    results,
-    summary,
     error,
     selectedEpisodes,
     toggleEpisodeSelection,
