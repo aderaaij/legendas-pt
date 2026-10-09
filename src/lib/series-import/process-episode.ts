@@ -10,6 +10,7 @@ import { getSeriesSource } from "@/lib/sources";
 import type { SeriesSourceId } from "@/lib/sources/meta";
 import { extractFromSubtitle } from "@/lib/extractor";
 import { persistExtraction } from "@/lib/db/extractions";
+import { generateEpisodeEssentials } from "@/lib/essentials/generate";
 import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { generateContentHash } from "@/utils/extractPhrasesUtils";
 import type { Provider } from "@/lib/llm/types";
@@ -39,6 +40,8 @@ export interface ProcessEpisodeResult {
   phraseCount?: number;
   extractionId?: string;
   error?: string;
+  essentialsCount?: number;
+  essentialsError?: string;
 }
 
 export async function processEpisode(
@@ -191,8 +194,9 @@ export async function processEpisode(
     return { status: "success", phraseCount: extraction.phrases.length };
   }
 
+  let result;
   try {
-    const result = await persistExtraction(supabase, {
+    result = await persistExtraction(supabase, {
       phrases: extraction.phrases,
       content: scrapedSubtitle.content,
       language,
@@ -209,15 +213,6 @@ export async function processEpisode(
       seasonNumber: season,
       episodeNumber: episode.episodeNumber,
     });
-
-    if (result.alreadyExists) {
-      return { status: "already_exists", extractionId: result.extractionId };
-    }
-    return {
-      status: "success",
-      extractionId: result.extractionId,
-      phraseCount: extraction.phrases.length,
-    };
   } catch (saveError) {
     return {
       status: "extraction_failed",
@@ -225,4 +220,39 @@ export async function processEpisode(
         saveError instanceof Error ? saveError.message : "Failed to save extraction",
     };
   }
+
+  if (result.alreadyExists) {
+    return { status: "already_exists", extractionId: result.extractionId };
+  }
+
+  // Essentials: a second, much smaller LLM pass. Non-fatal and tried once — the
+  // episode has already succeeded, and failing it here would trigger the episode
+  // retry, which hits the dedup above and skips essentials anyway. The
+  // essentials backfill job is the retry path.
+  const essentials: Pick<ProcessEpisodeResult, "essentialsCount" | "essentialsError"> = {};
+  if (episodeId) {
+    await onStep?.("essentials");
+    try {
+      essentials.essentialsCount = await generateEpisodeEssentials(supabase, {
+        episodeId,
+        language,
+        content: scrapedSubtitle.content,
+        filename: scrapedSubtitle.filename,
+        provider: extraction.resolved.provider,
+        model: extraction.resolved.model,
+      });
+    } catch (essentialsError) {
+      essentials.essentialsError =
+        essentialsError instanceof Error
+          ? essentialsError.message
+          : "Failed to pick essentials";
+    }
+  }
+
+  return {
+    status: "success",
+    extractionId: result.extractionId,
+    phraseCount: extraction.phrases.length,
+    ...essentials,
+  };
 }

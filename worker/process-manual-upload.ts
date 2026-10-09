@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { updateExtractionJob } from "@/lib/db/extraction-jobs";
 import { extractFromSubtitle } from "@/lib/extractor";
 import { persistExtraction } from "@/lib/db/extractions";
+import { generateEpisodeEssentials } from "@/lib/essentials/generate";
 import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { normalizeShowName } from "@/utils/slugify";
 import { toTargetLanguage, type TargetLanguage } from "@/lib/i18n/languages";
@@ -227,6 +228,30 @@ export async function processManualUploadJob(
     });
 
     const status = result.alreadyExists ? "already_exists" : "success";
+
+    // Essentials: non-fatal, tried once (the backfill job is the retry path).
+    const essentials: Pick<ManualUploadResults, "essentialsCount" | "essentialsError"> = {};
+    if (episodeId && !result.alreadyExists) {
+      await writeStage("Picking essentials", "essentials");
+      try {
+        essentials.essentialsCount = await generateEpisodeEssentials(supabase, {
+          episodeId,
+          language,
+          content: plan.content,
+          filename: plan.filename,
+          fileType: plan.fileType,
+          provider: extraction.resolved.provider,
+          model: extraction.resolved.model,
+        });
+      } catch (essentialsError) {
+        essentials.essentialsError =
+          essentialsError instanceof Error
+            ? essentialsError.message
+            : "Failed to pick essentials";
+        log(`job ${job.id}: essentials failed — ${essentials.essentialsError}`);
+      }
+    }
+
     await updateExtractionJob(
       job.id,
       {
@@ -240,6 +265,7 @@ export async function processManualUploadJob(
           status,
           phraseCount: extraction.phrases.length,
           extractionId: result.extractionId,
+          ...essentials,
         } as unknown as Results,
         completed_at: new Date().toISOString(),
       },

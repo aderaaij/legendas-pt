@@ -37,4 +37,6 @@ export interface ManualUploadResults {
   phraseCount?: number;
   extractionId?: string;
   error?: string;
+  essentialsCount?: number;
+  essentialsError?: string;
 }

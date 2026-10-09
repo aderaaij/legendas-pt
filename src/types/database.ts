@@ -49,6 +49,9 @@ export interface Episode {
   aired?: string;
   runtime?: number;
   episode_image?: string;
+  // Episode Essentials (database/essentials.sql)
+  essentials_generated_at?: string | null;
+  essentials_params?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -91,10 +94,15 @@ export interface ExtractedPhrase {
   created_at: string;
 }
 
+export type ExtractionJobType =
+  | "rtp_series"
+  | "manual_upload"
+  | "essentials_backfill";
+
 export interface ExtractionJob {
   id: string;
   user_id: string;
-  job_type: "rtp_series" | "manual_upload";
+  job_type: ExtractionJobType;
   status: "queued" | "pending" | "running" | "completed" | "failed" | "cancelled";
   progress: number; // 0-100
   total_episodes: number;

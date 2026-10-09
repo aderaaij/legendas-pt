@@ -11,15 +11,19 @@
  * runtime and knows nothing about jobs or the database.
  */
 import {
-  parseVTTWithTimestamps,
-  parseSRTWithTimestamps,
   matchPhrasesToTimestamps,
-  type SubtitleBlock,
   type PhraseWithTimestamp,
 } from "@/utils/subtitleUtils";
 import { extractPhrases } from "@/lib/llm/extract-phrases";
+import {
+  extractEssentials,
+  type EssentialCandidate,
+} from "@/lib/llm/extract-essentials";
+import { PROMPT_INFO } from "@/lib/llm/prompt-info";
 import type { LlmSelection, Provider } from "@/lib/llm/types";
 import type { TargetLanguage } from "@/lib/i18n/languages";
+import { normalizeExpression } from "@/lib/essentials/normalize";
+import { subtitleToBlocks } from "./subtitle-text";
 
 export interface ExtractInput {
   /** Raw subtitle text (VTT/SRT/plain). */
@@ -59,24 +63,11 @@ export async function extractFromSubtitle(
 
   // Parse subtitles with timestamps when the format is VTT or SRT. The text fed
   // to the model is the cue text joined together; timing is kept for re-matching.
-  let originalBlocks: SubtitleBlock[] = [];
-  let contentForAI = content;
-
-  try {
-    if (fileType === "vtt" || filename?.endsWith(".vtt")) {
-      originalBlocks = parseVTTWithTimestamps(content);
-      contentForAI = originalBlocks.map((block) => block.text).join(" ");
-    } else if (fileType === "srt" || filename?.endsWith(".srt")) {
-      originalBlocks = parseSRTWithTimestamps(content);
-      contentForAI = originalBlocks.map((block) => block.text).join(" ");
-    }
-  } catch (timestampParseError) {
-    console.warn(
-      "Failed to parse timestamps, falling back to original content:",
-      timestampParseError
-    );
-    contentForAI = content;
-  }
+  const originalBlocks = subtitleToBlocks(content, { filename, fileType }) ?? [];
+  const contentForAI =
+    originalBlocks.length > 0
+      ? originalBlocks.map((block) => block.text).join(" ")
+      : content;
 
   const extraction = await extractPhrases(contentForAI, language, {
     provider: provider ?? undefined,
@@ -104,4 +95,51 @@ export async function extractFromSubtitle(
     truncated: extraction.truncated,
     resolved: extraction.resolved,
   };
+}
+
+export interface ExtractEssentialsFromSubtitleResult {
+  /** Ranked (most important first), filtered and capped. */
+  essentials: EssentialCandidate[];
+  resolved: LlmSelection;
+}
+
+/** Most essentials an episode keeps; the prompt asks for 20–30. */
+const MAX_ESSENTIALS = 40;
+/** Longer than this is a whole line creeping back in, not a reusable chunk. */
+const MAX_EXPRESSION_WORDS = 8;
+
+/**
+ * Pick an episode's essentials: parse cues (one per line, so the model can quote
+ * "the line as heard") → LLM select + rank → drop empty, over-long and
+ * beginner-basic items → cap.
+ *
+ * Throws like `extractFromSubtitle`, and also on unparseable model output.
+ */
+export async function extractEssentialsFromSubtitle(
+  input: ExtractInput
+): Promise<ExtractEssentialsFromSubtitleResult> {
+  const { content, language, filename, fileType, provider, model } = input;
+
+  const blocks = subtitleToBlocks(content, { filename, fileType });
+  const subtitleText = blocks
+    ? blocks.map((block) => block.text).join("\n")
+    : content;
+
+  const { essentials, resolved } = await extractEssentials(
+    subtitleText,
+    language,
+    { provider: provider ?? undefined, model: model ?? undefined }
+  );
+
+  const basics = new Set(
+    PROMPT_INFO[language].basics.map((b) => normalizeExpression(b, language))
+  );
+  const kept = essentials.filter((item) => {
+    const expression = item.expression?.trim();
+    if (!expression || !item.translation?.trim()) return false;
+    if (expression.split(/\s+/).length > MAX_EXPRESSION_WORDS) return false;
+    return !basics.has(normalizeExpression(expression, language));
+  });
+
+  return { essentials: kept.slice(0, MAX_ESSENTIALS), resolved };
 }

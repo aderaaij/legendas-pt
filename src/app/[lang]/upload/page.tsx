@@ -11,6 +11,7 @@ import {
   Languages,
   Globe,
   Merge,
+  Sparkles,
 } from "lucide-react";
 
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
@@ -24,6 +25,7 @@ import PhraseExtractor from "./components/PhraseExtractor";
 import SeriesImporter from "./components/SeriesImporter";
 import UploadLanguagePicker from "./components/UploadLanguagePicker";
 import ShowMerger from "./components/ShowMerger";
+import EssentialsBackfill from "./components/EssentialsBackfill";
 
 export interface SubtitleMetadata {
   source: string;
@@ -33,9 +35,9 @@ export interface SubtitleMetadata {
 }
 
 export default function UploadPage() {
-  const [activeTab, setActiveTab] = useState<"upload" | "series" | "merge">(
-    "upload"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "upload" | "series" | "essentials" | "merge"
+  >("upload");
   // Manual uploads default to the target language selected in the nav.
   const { lang } = useLanguage();
   const [uploadLanguage, setUploadLanguage] = useState<TargetLanguage>(lang);
@@ -89,6 +91,7 @@ export default function UploadPage() {
   const tabs = [
     { id: "upload" as const, icon: Upload, label: "Manual Upload" },
     { id: "series" as const, icon: Globe, label: "Series Import" },
+    { id: "essentials" as const, icon: Sparkles, label: "Essentials" },
     { id: "merge" as const, icon: Merge, label: "Merge Shows" },
   ];
 
@@ -127,7 +130,7 @@ export default function UploadPage() {
             >
               {/* Tab Navigation */}
               <div style={{ borderBottom: "1px solid var(--border)" }}>
-                <nav className="flex gap-2 px-4" aria-label="Tabs">
+                <nav className="flex flex-wrap gap-x-2 px-4" aria-label="Tabs">
                   {tabs.map(({ id, icon: Icon, label }) => {
                     const active = activeTab === id;
                     return (
@@ -202,6 +205,18 @@ export default function UploadPage() {
                       <h2 className="text-xl font-extrabold">Import a Series (RTP / RTVE)</h2>
                     </div>
                     <SeriesImporter />
+                  </div>
+                )}
+
+                {activeTab === "essentials" && (
+                  <div>
+                    <div className="mb-6 flex items-center gap-3">
+                      <div className="rounded-full p-2" style={{ background: "rgba(245,196,81,.15)" }}>
+                        <Sparkles className="h-5 w-5" style={{ color: "var(--gold)" }} />
+                      </div>
+                      <h2 className="text-xl font-extrabold">Episode Essentials</h2>
+                    </div>
+                    <EssentialsBackfill />
                   </div>
                 )}
 

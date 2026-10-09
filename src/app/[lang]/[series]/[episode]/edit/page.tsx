@@ -6,10 +6,12 @@ import MetadataEditor from "@/app/components/phrase/MetadataEditor";
 import PhraseEditor from "@/app/components/phrase/PhraseEditor";
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
 import { useEpisodeEdit } from "./useEpisodeEdit";
+import { useEpisodeEssentials } from "./useEpisodeEssentials";
 
 import EpisodeEditHeader from "./components/EpisodeEditHeader";
 import EpisodeSettingsCard from "./components/EpisodeSettingsCard";
 import ExtractionsSection from "./components/ExtractionsSection";
+import EssentialsSection from "./components/EssentialsSection";
 
 export default function EpisodeEditPage() {
   const {
@@ -30,6 +32,7 @@ export default function EpisodeEditPage() {
     deleteEpisode,
     handleMetadataUpdate,
   } = useEpisodeEdit();
+  const essentials = useEpisodeEssentials(episodeData?.id);
 
   if (loading) {
     return (
@@ -113,6 +116,14 @@ export default function EpisodeEditPage() {
             isDeletingEpisode={deleting === episodeData?.id}
             onEditMetadata={() => setShowMetadataEditor(true)}
             onDeleteEpisode={deleteEpisode}
+          />
+
+          <EssentialsSection
+            essentials={essentials.essentials}
+            regenerating={essentials.regenerating}
+            message={essentials.message}
+            onRegenerate={essentials.regenerate}
+            onReload={essentials.reload}
           />
 
           <ExtractionsSection

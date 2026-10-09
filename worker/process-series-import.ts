@@ -24,6 +24,7 @@ const STEP_LABELS: Record<EpisodeStep, string> = {
   scraping: "Scraping subtitle",
   extracting: "Extracting phrases",
   saving: "Saving",
+  essentials: "Picking essentials",
 };
 
 function computeSummary(
@@ -166,8 +167,13 @@ export async function processSeriesImportJob(
       phraseCount: outcome.phraseCount,
       extractionId: outcome.extractionId,
       error: outcome.error,
+      essentialsCount: outcome.essentialsCount,
+      essentialsError: outcome.essentialsError,
       updatedAt: new Date().toISOString(),
     };
+    if (outcome.essentialsError) {
+      log(`job ${job.id}: ep ${ep.episodeNumber} essentials failed — ${outcome.essentialsError}`);
+    }
 
     const summary = computeSummary(episodes, total);
     const completed = summary.successful + summary.alreadyExists;

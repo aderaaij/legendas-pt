@@ -9,26 +9,8 @@ import { generateObject, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
 import { getModel, resolveSelection } from "./providers";
+import { PROMPT_INFO, quotedBasics } from "./prompt-info";
 import type { LlmSelection } from "./types";
-
-/** The language-specific bits of the extraction prompt. */
-interface LanguagePromptInfo {
-  /** Example interjections worth keeping despite being single words. */
-  interjections: string;
-  /** Basics every beginner knows, which aren't worth a card. */
-  basics: string;
-}
-
-const PROMPT_INFO: Record<TargetLanguage, LanguagePromptInfo> = {
-  pt: {
-    interjections: `"Bolas!" or "Fogo!"`,
-    basics: `"boa noite", "bom dia", "boa tarde", "obrigado", "obrigada", "por favor", "desculpa", "com licença", "olá", "adeus", "tchau", "sim", "não"`,
-  },
-  es: {
-    interjections: `"¡Venga!" or "¡Ostras!"`,
-    basics: `"hola", "adiós", "buenos días", "buenas tardes", "buenas noches", "gracias", "por favor", "perdón", "lo siento", "sí", "no"`,
-  },
-};
 
 function phraseSchemaFor(language: TargetLanguage) {
   const { englishShortName } = LANGUAGES[language];
@@ -53,7 +35,8 @@ function buildSystemPrompt(language: TargetLanguage): string {
 
 function buildUserPrompt(content: string, language: TargetLanguage): string {
   const { englishName, englishShortName: name } = LANGUAGES[language];
-  const { interjections, basics } = PROMPT_INFO[language];
+  const { interjections } = PROMPT_INFO[language];
+  const basics = quotedBasics(language);
   return `You are a ${name} language learning expert. Analyze the following ${englishName} subtitle content and extract ALL useful phrases for language learners. Be extremely comprehensive and thorough - extract as many valuable learning phrases as possible.
 
 For each phrase, provide:

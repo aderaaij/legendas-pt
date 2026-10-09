@@ -4,10 +4,11 @@ import { workerEnv } from "./bootstrap";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase-admin";
-import { getExtractionJob } from "@/lib/db/extraction-jobs";
+import { getExtractionJob, updateExtractionJob } from "@/lib/db/extraction-jobs";
 import type { ExtractionJob } from "@/types/database";
 import { processSeriesImportJob } from "./process-series-import";
 import { processManualUploadJob } from "./process-manual-upload";
+import { processEssentialsBackfillJob } from "./process-essentials-backfill";
 import { startWorkerHeartbeat } from "./heartbeat";
 import { sleep } from "./util";
 
@@ -22,7 +23,7 @@ import { sleep } from "./util";
  * reclaimed once stale. Safe to run multiple workers.
  */
 
-const JOB_TYPES = ["rtp_series", "manual_upload"] as const;
+const JOB_TYPES = ["rtp_series", "manual_upload", "essentials_backfill"] as const;
 
 const log = (msg: string) =>
   console.log(`[worker ${new Date().toISOString()}] ${msg}`);
@@ -161,10 +162,28 @@ async function tick(supabase: SupabaseClient): Promise<boolean> {
       maxRetries: workerEnv.maxRetries,
       retryBaseMs: workerEnv.retryBaseMs,
     };
-    if (job.job_type === "manual_upload") {
-      await processManualUploadJob(supabase, job, hooks);
-    } else {
-      await processSeriesImportJob(supabase, job, hooks);
+    switch (job.job_type) {
+      case "rtp_series":
+        await processSeriesImportJob(supabase, job, hooks);
+        break;
+      case "manual_upload":
+        await processManualUploadJob(supabase, job, hooks);
+        break;
+      case "essentials_backfill":
+        await processEssentialsBackfillJob(supabase, job, hooks);
+        break;
+      default:
+        // Fail it rather than leave it 'running' to be reclaimed forever.
+        await updateExtractionJob(
+          job.id,
+          {
+            status: "failed",
+            error_message: `Unknown job type: ${String(job.job_type)}`,
+            completed_at: new Date().toISOString(),
+          },
+          supabase
+        );
+        log(`job ${job.id}: unknown job type ${String(job.job_type)} — marked failed`);
     }
   } catch (err) {
     // Leave the job 'running' so it resumes once stale (dedup makes re-processing
@@ -197,7 +216,7 @@ async function main() {
     workerEnv.heartbeatMs
   );
   log(
-    `started — polling every ${workerEnv.pollIntervalMs}ms (rtp_series, manual_upload)`
+    `started — polling every ${workerEnv.pollIntervalMs}ms (${JOB_TYPES.join(", ")})`
   );
 
   while (!shuttingDown) {

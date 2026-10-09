@@ -1,11 +1,11 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase-client";
-import { ExtractionJob } from "@/types/database";
+import { ExtractionJob, ExtractionJobType } from "@/types/database";
 
 export async function createExtractionJob(
   userId: string,
-  jobType: "rtp_series" | "manual_upload",
+  jobType: ExtractionJobType,
   seriesTitle?: string,
   seriesUrl?: string,
   totalEpisodes: number = 0,

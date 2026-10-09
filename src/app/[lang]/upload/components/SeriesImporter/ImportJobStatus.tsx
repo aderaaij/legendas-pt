@@ -190,7 +190,13 @@ function EpisodeRow({ episode }: { episode: EpisodeState }) {
       >
         {meta.inFlight && <Loader2 className="h-3 w-3 animate-spin" />}
         {episode.status === "success" && episode.phraseCount != null
-          ? `${episode.phraseCount} phrases`
+          ? `${episode.phraseCount} phrases${
+              episode.essentialsCount != null
+                ? ` · ${episode.essentialsCount} essentials`
+                : episode.essentialsError
+                  ? " · essentials failed"
+                  : ""
+            }`
           : meta.label}
       </span>
     </div>
