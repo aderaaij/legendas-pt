@@ -7,11 +7,13 @@ import PhraseEditor from "@/app/components/phrase/PhraseEditor";
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
 import { useEpisodeEdit } from "./useEpisodeEdit";
 import { useEpisodeEssentials } from "./useEpisodeEssentials";
+import { useTranslationReview } from "./useTranslationReview";
 
 import EpisodeEditHeader from "./components/EpisodeEditHeader";
 import EpisodeSettingsCard from "./components/EpisodeSettingsCard";
 import ExtractionsSection from "./components/ExtractionsSection";
 import EssentialsSection from "./components/EssentialsSection";
+import TranslationReviewSection from "./components/TranslationReviewSection";
 
 export default function EpisodeEditPage() {
   const {
@@ -33,6 +35,7 @@ export default function EpisodeEditPage() {
     handleMetadataUpdate,
   } = useEpisodeEdit();
   const essentials = useEpisodeEssentials(episodeData?.id);
+  const review = useTranslationReview(episodeData?.id);
 
   if (loading) {
     return (
@@ -124,6 +127,16 @@ export default function EpisodeEditPage() {
             message={essentials.message}
             onRegenerate={essentials.regenerate}
             onReload={essentials.reload}
+          />
+
+          <TranslationReviewSection
+            phrases={review.phrases}
+            reviewedAt={review.reviewedAt}
+            error={review.error}
+            busyId={review.busyId}
+            onAccept={review.accept}
+            onReject={review.reject}
+            onReload={review.reload}
           />
 
           <ExtractionsSection

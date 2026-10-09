@@ -196,6 +196,12 @@ function EpisodeRow({ episode }: { episode: EpisodeState }) {
                 : episode.essentialsError
                   ? " · essentials failed"
                   : ""
+            }${
+              episode.reviewFlagCount
+                ? ` · ${episode.reviewFlagCount} to review`
+                : episode.reviewError
+                  ? " · review failed"
+                  : ""
             }`
           : meta.label}
       </span>

@@ -11,9 +11,10 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { LanguageModel } from "ai";
+import type { JSONValue, LanguageModel } from "ai";
 import {
   API_KEY_ENV,
+  DEFAULT_EFFORTS,
   DEFAULT_MODELS,
   isProvider,
   type LlmSelection,
@@ -39,7 +40,8 @@ export class UnknownProviderError extends Error {
 /**
  * Resolve the effective provider + model. Precedence:
  *   per-request override → env default (`LLM_PROVIDER` / `LLM_MODEL`) → built-in.
- * Empty strings are treated as unset.
+ * Effort: the override's, else the built-in default model's own default (only
+ * when that model is the one in use). Empty strings are treated as unset.
  */
 export function resolveSelection(
   override?: Partial<LlmSelection>
@@ -55,7 +57,38 @@ export function resolveSelection(
   const model =
     override?.model || process.env.LLM_MODEL || DEFAULT_MODELS[provider];
 
-  return { provider, model };
+  const effort =
+    override?.effort ||
+    (model === DEFAULT_MODELS[provider] ? DEFAULT_EFFORTS[provider] : undefined);
+
+  return effort ? { provider, model, effort } : { provider, model };
+}
+
+/**
+ * Provider options for a selection's reasoning effort, in each provider's own
+ * terms. Undefined when no effort is set, so the model's default applies.
+ */
+export function providerOptionsFor(
+  selection: LlmSelection
+): Record<string, Record<string, JSONValue>> | undefined {
+  const { effort } = selection;
+  if (!effort) return undefined;
+  switch (selection.provider) {
+    case "openai":
+      return { openai: { reasoningEffort: effort } };
+    case "anthropic":
+      return effort === "none"
+        ? { anthropic: { thinking: { type: "disabled" } } }
+        : { anthropic: { effort } };
+    case "google":
+      return {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: effort === "none" ? "minimal" : effort,
+          },
+        },
+      };
+  }
 }
 
 /**

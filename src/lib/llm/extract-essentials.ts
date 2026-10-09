@@ -4,14 +4,15 @@
  * phrase extraction, this is selective and ranked, and returns short reusable
  * chunks in dictionary form rather than whole lines. Pure: no DB, no Next.
  */
-import { generateObject } from "ai";
+import { generateObject, type LanguageModelUsage } from "ai";
 import { z } from "zod";
 import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
-import { getModel, resolveSelection } from "./providers";
+import { getModel, providerOptionsFor, resolveSelection } from "./providers";
 import { PROMPT_INFO, quotedBasics } from "./prompt-info";
 import {
   DEFAULT_MODELS,
   isProvider,
+  type Effort,
   type LlmSelection,
   type Provider,
 } from "./types";
@@ -22,18 +23,21 @@ export const ESSENTIALS_PROMPT_VERSION = 3;
 /**
  * Picking essentials takes more judgment than exhaustive extraction: the small
  * default models pick transparent cognates and mangle idioms. So essentials get
- * their own per-provider default, overridable with `ESSENTIALS_LLM_MODEL`.
+ * their own per-provider default model and effort, overridable with
+ * `ESSENTIALS_LLM_MODEL`. Picked by `scripts/model-bakeoff.ts` (Oct 2026).
  */
-const ESSENTIALS_MODELS: Record<Provider, string> = {
-  ...DEFAULT_MODELS,
-  openai: "gpt-4.1",
+const ESSENTIALS_DEFAULTS: Record<Provider, { model: string; effort?: Effort }> = {
+  openai: { model: "gpt-6-sol", effort: "medium" },
+  anthropic: { model: "claude-sonnet-5-5", effort: "medium" },
+  google: { model: DEFAULT_MODELS.google },
 };
 
 /**
  * Provider: per-call override → `ESSENTIALS_LLM_PROVIDER` → `LLM_PROVIDER` →
  * openai. Model: per-call override → `ESSENTIALS_LLM_MODEL` (only when the
  * provider is the env-configured one, so an override to another provider never
- * gets a mismatched model) → the essentials default for that provider.
+ * gets a mismatched model) → the essentials default for that provider. Effort:
+ * per-call override → the default's effort, when the default model is in use.
  */
 function resolveEssentialsSelection(
   override?: Partial<LlmSelection>
@@ -41,12 +45,16 @@ function resolveEssentialsSelection(
   const envProvider =
     process.env.ESSENTIALS_LLM_PROVIDER || process.env.LLM_PROVIDER || "openai";
   const provider = override?.provider || envProvider;
+  const defaults = isProvider(provider) ? ESSENTIALS_DEFAULTS[provider] : undefined;
   const model =
     override?.model ||
     (provider === envProvider ? process.env.ESSENTIALS_LLM_MODEL : undefined) ||
-    (isProvider(provider) ? ESSENTIALS_MODELS[provider] : undefined);
+    defaults?.model;
+  const effort =
+    override?.effort ||
+    (defaults && model === defaults.model ? defaults.effort : undefined);
   // Validates the provider (throws UnknownProviderError) and fills any gap.
-  return resolveSelection({ provider: provider as Provider, model });
+  return resolveSelection({ provider: provider as Provider, model, effort });
 }
 
 // Field order matters: the model writes the real line first, then lifts the
@@ -122,6 +130,8 @@ export interface ExtractEssentialsResult {
   essentials: EssentialCandidate[];
   /** The provider + model actually used, after applying overrides/defaults. */
   resolved: LlmSelection;
+  /** Token usage as reported by the provider, when available. */
+  usage?: LanguageModelUsage;
 }
 
 /**
@@ -136,13 +146,14 @@ export async function extractEssentials(
   const resolved = resolveEssentialsSelection(override);
   const model = getModel(resolved);
 
-  const { object } = await generateObject({
+  const { object, usage } = await generateObject({
     model,
     schema: essentialsSchema,
     system: `You are an expert ${LANGUAGES[language].englishShortName} teacher who prepares learners to watch TV in the original language.`,
     prompt: buildPrompt(subtitleText, language),
     maxOutputTokens: 8000,
+    providerOptions: providerOptionsFor(resolved),
   });
 
-  return { essentials: object.essentials, resolved };
+  return { essentials: object.essentials, resolved, usage };
 }

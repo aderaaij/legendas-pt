@@ -13,6 +13,7 @@ import { updateExtractionJob } from "@/lib/db/extraction-jobs";
 import { extractFromSubtitle } from "@/lib/extractor";
 import { persistExtraction } from "@/lib/db/extractions";
 import { generateEpisodeEssentials } from "@/lib/essentials/generate";
+import { reviewExtraction } from "@/lib/phrase-review/review-extraction";
 import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { normalizeShowName } from "@/utils/slugify";
 import { toTargetLanguage, type TargetLanguage } from "@/lib/i18n/languages";
@@ -251,6 +252,27 @@ export async function processManualUploadJob(
       }
     }
 
+    // Translation review: non-fatal and tried once, like essentials.
+    const review: Pick<ManualUploadResults, "reviewFlagCount" | "reviewError"> = {};
+    if (!result.alreadyExists) {
+      await writeStage("Reviewing translations", "reviewing");
+      try {
+        review.reviewFlagCount = await reviewExtraction(supabase, {
+          extractionId: result.extractionId,
+          language,
+          content: plan.content,
+          filename: plan.filename,
+          fileType: plan.fileType,
+        });
+      } catch (reviewError) {
+        review.reviewError =
+          reviewError instanceof Error
+            ? reviewError.message
+            : "Failed to review translations";
+        log(`job ${job.id}: review failed — ${review.reviewError}`);
+      }
+    }
+
     await updateExtractionJob(
       job.id,
       {
@@ -265,6 +287,7 @@ export async function processManualUploadJob(
           phraseCount: extraction.phrases.length,
           extractionId: result.extractionId,
           ...essentials,
+          ...review,
         } as unknown as Results,
         completed_at: new Date().toISOString(),
       },

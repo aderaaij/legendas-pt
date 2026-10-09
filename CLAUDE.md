@@ -73,7 +73,8 @@ worker-only `docker-compose.yml`). The worker needs `NEXT_PUBLIC_SUPABASE_URL`,
 **Required DB migrations** (in `database/`, idempotent — apply with `psql`):
 `extraction_jobs_table.sql`, `add_queued_status.sql`, `worker_status_table.sql`,
 `enable_realtime_extraction_jobs.sql`, `user_card_studies_learning_steps.sql`,
-`essentials.sql`. Deploy order for schema changes: migration → worker → app.
+`essentials.sql`, `phrase_review.sql`. Deploy order for schema changes:
+migration → worker → app.
 
 After this split, the LLM keys (`OPENAI_API_KEY`, etc.) live **only** on the
 worker and should be **removed from the Vercel env**; the `ai`/`@ai-sdk/*` SDK no
@@ -148,7 +149,10 @@ empty here — the app stores image URLs, not uploaded files).
 - **Next.js 15.3.3** with App Router and React 19
 - **TypeScript** for type safety
 - **Supabase** for PostgreSQL database, authentication, and Row Level Security
-- **OpenAI API** (GPT-4o-mini) for phrase extraction and translation
+- **LLMs via the Vercel AI SDK** (worker only): GPT-6 Luna extracts and
+  translates phrases, GPT-6 Sol picks essentials, Claude Sonnet 5.5 reviews the
+  translations. Chosen with `scripts/model-bakeoff.ts` (Oct 2026), which
+  re-runs the comparison on stored episodes.
 - **The TVDB API** for TV show metadata enrichment
 - **Tailwind CSS 4** for styling
 
@@ -210,7 +214,7 @@ The application uses a service layer pattern:
 ### Core Workflow
 1. Upload subtitle file → Auto-detect metadata → Parse content
 2. Check for existing extraction (SHA-256 deduplication) 
-3. Call OpenAI API for phrase extraction → Enrich with TVDB metadata
+3. LLM phrase extraction (worker) → essentials → translation review → Enrich with TVDB metadata
 4. Save to database → Display with export options
 
 ### Content Processing
@@ -281,6 +285,28 @@ button and a readiness pill ("Essenciais · 18/25 sabidas" → "Pronto para ver"
   `src/lib/fsrs.ts` (also used by the phrase deck — `learning_steps` must be
   persisted).
 
+## Translation Review
+
+Phrase extraction uses a cheap model, which occasionally gets a meaning wrong
+(slang, idioms, who is speaking to whom). After each extraction the worker has
+a stronger model (Claude Sonnet 5.5) check every translation against the whole
+episode and **suggest** fixes; nothing is applied automatically, because in
+testing the reviewer was wrong about a third of the time too.
+
+- **Data** (`database/phrase_review.sql`): `extracted_phrases.review_translation`
+  / `review_issue` / `review_status` (`pending` → `accepted` | `rejected`) and
+  `phrase_extractions.reviewed_at` / `review_params`.
+- **Generation** (worker only): `src/lib/llm/review-phrases.ts` (prompt; returns
+  only meaning errors, drops no-op "fixes"), `reviewTranslationsFromSubtitle` in
+  `src/lib/extractor`, `src/lib/phrase-review/review-extraction.ts` (load
+  phrases → review → save). A non-fatal step after essentials in both
+  series-import and manual-upload; an admin's earlier accept/reject is kept on
+  re-review. `scripts/review-translations.ts` backfills older episodes.
+- **Admin UI:** "Translation review" card on the episode edit page
+  (`useTranslationReview`): accept swaps in the suggestion, reject keeps the
+  original — both through the existing `updatePhrase`. `src/lib/db/phrase-review.ts`
+  is in the Next bundle, so it must not import runtime values from `@/lib/llm`.
+
 ## Environment Variables Required
 
 > **Note:** the LLM keys below now belong to the **worker** (`.env.worker`), not
@@ -291,7 +317,7 @@ button and a readiness pill ("Essenciais · 18/25 sabidas" → "Pronto para ver"
 ```bash
 # LLM providers — at least the one used as the default must be set (WORKER only).
 OPENAI_API_KEY=               # OpenAI key (phrase extraction; default provider)
-ANTHROPIC_API_KEY=            # Anthropic Claude key (optional provider)
+ANTHROPIC_API_KEY=            # Anthropic Claude key (translation review; optional extraction provider)
 GOOGLE_GENERATIVE_AI_API_KEY= # Google Gemini key (optional provider)
 LLM_PROVIDER=                 # Optional deploy-wide default: openai | anthropic | google (default: openai)
 LLM_MODEL=                    # Optional model override for the default provider (blank → provider's default)

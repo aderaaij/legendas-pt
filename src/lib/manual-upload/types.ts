@@ -39,4 +39,6 @@ export interface ManualUploadResults {
   error?: string;
   essentialsCount?: number;
   essentialsError?: string;
+  reviewFlagCount?: number;
+  reviewError?: string;
 }

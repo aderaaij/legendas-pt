@@ -5,12 +5,29 @@
  * provider's native structured-output mechanism via `generateObject`. Pure: no
  * DB, no Next.
  */
-import { generateObject, NoObjectGeneratedError } from "ai";
+import {
+  generateObject,
+  NoObjectGeneratedError,
+  parsePartialJson,
+  type LanguageModelUsage,
+} from "ai";
 import { z } from "zod";
 import { LANGUAGES, type TargetLanguage } from "@/lib/i18n/languages";
-import { getModel, resolveSelection } from "./providers";
+import { getModel, providerOptionsFor, resolveSelection } from "./providers";
 import { PROMPT_INFO, quotedBasics } from "./prompt-info";
-import type { LlmSelection } from "./types";
+import type { LlmSelection, Provider } from "./types";
+
+/**
+ * Output ceiling per provider. Claude's tokenizer counts more tokens for the
+ * same subtitle text and its models extract more exhaustively, so a long
+ * episode needs more room there (Claude 5.5 models support 128K; gpt-4.1-mini
+ * caps at ~32K).
+ */
+const MAX_OUTPUT_TOKENS: Record<Provider, number> = {
+  openai: 32000,
+  anthropic: 64000,
+  google: 32000,
+};
 
 function phraseSchemaFor(language: TargetLanguage) {
   const { englishShortName } = LANGUAGES[language];
@@ -77,6 +94,33 @@ Content:
 ${content}`;
 }
 
+/**
+ * Keep what a cut-off response managed to say. A repaired parse closes the last
+ * entry wherever the text stopped, so its translation may be cut short too —
+ * it's always dropped (at worst losing one complete phrase).
+ */
+async function salvagePhrases(
+  text: string | undefined
+): Promise<ExtractedPhrasePair[]> {
+  const { value, state } = await parsePartialJson(text);
+  if (state !== "successful-parse" && state !== "repaired-parse") return [];
+  const list =
+    value && typeof value === "object"
+      ? (value as { phrases?: unknown }).phrases
+      : undefined;
+  if (!Array.isArray(list)) return [];
+  const complete = state === "repaired-parse" ? list.slice(0, -1) : list;
+  return complete.flatMap((item) =>
+    item &&
+    typeof item === "object" &&
+    !Array.isArray(item) &&
+    typeof item.phrase === "string" &&
+    typeof item.translation === "string"
+      ? [{ phrase: item.phrase, translation: item.translation }]
+      : []
+  );
+}
+
 export interface ExtractPhrasesResult {
   phrases: ExtractedPhrasePair[];
   /** True when the model hit its output-token limit (or returned an unparseable
@@ -84,6 +128,8 @@ export interface ExtractPhrasesResult {
   truncated: boolean;
   /** The provider + model actually used, after applying overrides/defaults. */
   resolved: LlmSelection;
+  /** Token usage as reported by the provider, when available. */
+  usage?: LanguageModelUsage;
 }
 
 export async function extractPhrases(
@@ -95,24 +141,31 @@ export async function extractPhrases(
   const model = getModel(resolved);
 
   try {
-    const { object, finishReason } = await generateObject({
+    const { object, finishReason, usage } = await generateObject({
       model,
       schema: phraseSchemaFor(language),
       system: buildSystemPrompt(language),
       prompt: buildUserPrompt(content, language),
-      maxOutputTokens: 32000,
+      maxOutputTokens: MAX_OUTPUT_TOKENS[resolved.provider],
+      providerOptions: providerOptionsFor(resolved),
     });
 
     return {
       phrases: object.phrases,
       truncated: finishReason === "length",
       resolved,
+      usage,
     };
   } catch (error) {
     // A truncated or otherwise unparseable response surfaces here uniformly
-    // across providers, replacing the old manual JSON-repair logic.
+    // across providers. Keep the complete phrases rather than losing them all.
     if (NoObjectGeneratedError.isInstance(error)) {
-      return { phrases: [], truncated: true, resolved };
+      return {
+        phrases: await salvagePhrases(error.text),
+        truncated: true,
+        resolved,
+        usage: error.usage,
+      };
     }
     throw error;
   }

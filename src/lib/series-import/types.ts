@@ -9,7 +9,12 @@ import type { Provider } from "@/lib/llm/types";
 import type { SeriesSourceId } from "@/lib/sources/meta";
 
 /** Sub-stages emitted while processing a single episode (for "what it's doing"). */
-export type EpisodeStep = "scraping" | "extracting" | "saving" | "essentials";
+export type EpisodeStep =
+  | "scraping"
+  | "extracting"
+  | "saving"
+  | "essentials"
+  | "reviewing";
 
 /** Terminal outcomes plus the in-flight sub-stages and the initial pending state. */
 export type EpisodeStatus =
@@ -54,6 +59,9 @@ export interface EpisodeState {
   /** Essentials picked after a successful extraction (a non-fatal extra step). */
   essentialsCount?: number;
   essentialsError?: string;
+  /** Translation-review suggestions awaiting an admin (another non-fatal step). */
+  reviewFlagCount?: number;
+  reviewError?: string;
   updatedAt: string;
 }
 

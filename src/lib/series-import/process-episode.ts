@@ -11,6 +11,7 @@ import type { SeriesSourceId } from "@/lib/sources/meta";
 import { extractFromSubtitle } from "@/lib/extractor";
 import { persistExtraction } from "@/lib/db/extractions";
 import { generateEpisodeEssentials } from "@/lib/essentials/generate";
+import { reviewExtraction } from "@/lib/phrase-review/review-extraction";
 import { MissingApiKeyError, UnknownProviderError } from "@/lib/llm/providers";
 import { generateContentHash } from "@/utils/extractPhrasesUtils";
 import type { Provider } from "@/lib/llm/types";
@@ -42,6 +43,8 @@ export interface ProcessEpisodeResult {
   error?: string;
   essentialsCount?: number;
   essentialsError?: string;
+  reviewFlagCount?: number;
+  reviewError?: string;
 }
 
 export async function processEpisode(
@@ -248,10 +251,28 @@ export async function processEpisode(
     }
   }
 
+  // Translation review: a stronger model flags translations that would teach
+  // the wrong meaning, for an admin to accept or reject on the episode edit
+  // page. Non-fatal and tried once, like essentials.
+  const review: Pick<ProcessEpisodeResult, "reviewFlagCount" | "reviewError"> = {};
+  await onStep?.("reviewing");
+  try {
+    review.reviewFlagCount = await reviewExtraction(supabase, {
+      extractionId: result.extractionId,
+      language,
+      content: scrapedSubtitle.content,
+      filename: scrapedSubtitle.filename,
+    });
+  } catch (reviewError) {
+    review.reviewError =
+      reviewError instanceof Error ? reviewError.message : "Failed to review translations";
+  }
+
   return {
     status: "success",
     extractionId: result.extractionId,
     phraseCount: extraction.phrases.length,
     ...essentials,
+    ...review,
   };
 }

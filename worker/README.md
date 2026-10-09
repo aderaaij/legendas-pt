@@ -67,6 +67,11 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 - After each successful extraction it also picks the episode's **essentials**
   (a second, smaller LLM pass; non-fatal — a failure is recorded on the
   episode's state and the `essentials_backfill` job is the retry path).
+- Then it runs the **translation review** (`@/lib/phrase-review`): Claude
+  Sonnet 5.5 checks the phrase translations against the episode and stores
+  suggestions as `pending` for an admin to accept or reject on the episode edit
+  page. Also non-fatal; `scripts/review-translations.ts` is the backfill/retry
+  path. Needs `ANTHROPIC_API_KEY`.
 - Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
   'queued'`), so running **multiple workers is safe** — each job goes to exactly
   one worker, no double-processing. (One worker is plenty for this workload; the

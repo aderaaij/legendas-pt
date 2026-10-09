@@ -18,6 +18,7 @@ const STATUS_META: Record<
   extracting: { label: "A extrair frases", color: "var(--blue)", spin: true },
   saving: { label: "A guardar", color: "var(--blue)", spin: true },
   essentials: { label: "A escolher essenciais", color: "var(--blue)", spin: true },
+  reviewing: { label: "A rever traduções", color: "var(--blue)", spin: true },
   success: { label: "Concluído", color: "var(--green)" },
   already_exists: { label: "Já existe", color: "var(--muted)" },
   no_subtitle: { label: "Sem legendas", color: "var(--faint)" },

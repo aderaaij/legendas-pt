@@ -25,6 +25,7 @@ const STEP_LABELS: Record<EpisodeStep, string> = {
   extracting: "Extracting phrases",
   saving: "Saving",
   essentials: "Picking essentials",
+  reviewing: "Reviewing translations",
 };
 
 function computeSummary(
@@ -169,10 +170,15 @@ export async function processSeriesImportJob(
       error: outcome.error,
       essentialsCount: outcome.essentialsCount,
       essentialsError: outcome.essentialsError,
+      reviewFlagCount: outcome.reviewFlagCount,
+      reviewError: outcome.reviewError,
       updatedAt: new Date().toISOString(),
     };
     if (outcome.essentialsError) {
       log(`job ${job.id}: ep ${ep.episodeNumber} essentials failed — ${outcome.essentialsError}`);
+    }
+    if (outcome.reviewError) {
+      log(`job ${job.id}: ep ${ep.episodeNumber} review failed — ${outcome.reviewError}`);
     }
 
     const summary = computeSummary(episodes, total);

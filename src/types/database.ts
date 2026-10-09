@@ -75,6 +75,9 @@ export interface PhraseExtraction {
   extraction_params?: Record<string, unknown>;
   processing_time_ms?: number;
   api_cost_estimate?: number;
+  /** When the translation review last ran; null = never reviewed. */
+  reviewed_at?: string | null;
+  review_params?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -91,8 +94,14 @@ export interface ExtractedPhrase {
   end_time?: string;
   speaker?: string;
   matched_confidence?: number;
+  /** Translation review (see database/phrase_review.sql). */
+  review_translation?: string | null;
+  review_issue?: string | null;
+  review_status?: ReviewStatus | null;
   created_at: string;
 }
+
+export type ReviewStatus = "pending" | "accepted" | "rejected";
 
 export type ExtractionJobType =
   | "rtp_series"

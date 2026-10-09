@@ -10,6 +10,7 @@ export const EPISODE_STATUS_META: Record<
   extracting: { label: "Extracting phrases", color: "var(--blue)", inFlight: true },
   saving: { label: "Saving", color: "var(--blue)", inFlight: true },
   essentials: { label: "Picking essentials", color: "var(--blue)", inFlight: true },
+  reviewing: { label: "Reviewing translations", color: "var(--blue)", inFlight: true },
   success: { label: "Done", color: "var(--green)" },
   already_exists: { label: "Already imported", color: "var(--blue)" },
   no_subtitle: { label: "No subtitle", color: "var(--gold)" },

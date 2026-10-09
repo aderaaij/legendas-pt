@@ -20,7 +20,13 @@ import {
   type EssentialCandidate,
 } from "@/lib/llm/extract-essentials";
 import { PROMPT_INFO } from "@/lib/llm/prompt-info";
-import type { LlmSelection, Provider } from "@/lib/llm/types";
+import {
+  reviewPhrases,
+  type PhraseForReview,
+  type ReviewPhrasesResult,
+} from "@/lib/llm/review-phrases";
+import type { Effort, LlmSelection, Provider } from "@/lib/llm/types";
+import type { LanguageModelUsage } from "ai";
 import type { TargetLanguage } from "@/lib/i18n/languages";
 import { normalizeExpression } from "@/lib/essentials/normalize";
 import { createGroundingCheck } from "@/lib/essentials/grounding";
@@ -39,6 +45,8 @@ export interface ExtractInput {
   provider?: Provider | null;
   /** Per-call model override; falls back to `LLM_MODEL` env then provider default. */
   model?: string | null;
+  /** Per-call reasoning effort; unset → the model's default. */
+  effort?: Effort | null;
 }
 
 export interface ExtractResult {
@@ -48,6 +56,8 @@ export interface ExtractResult {
   truncated: boolean;
   /** The provider + model actually used, after applying overrides/defaults. */
   resolved: LlmSelection;
+  /** Token usage as reported by the provider, when available. */
+  usage?: LanguageModelUsage;
 }
 
 /**
@@ -60,7 +70,8 @@ export interface ExtractResult {
 export async function extractFromSubtitle(
   input: ExtractInput
 ): Promise<ExtractResult> {
-  const { content, language, filename, fileType, provider, model } = input;
+  const { content, language, filename, fileType, provider, model, effort } =
+    input;
 
   // Parse subtitles with timestamps when the format is VTT or SRT. The text fed
   // to the model is the cue text joined together; timing is kept for re-matching.
@@ -73,6 +84,7 @@ export async function extractFromSubtitle(
   const extraction = await extractPhrases(contentForAI, language, {
     provider: provider ?? undefined,
     model: model ?? undefined,
+    effort: effort ?? undefined,
   });
 
   // The schema guarantees the shape; this drops empty or too-short entries.
@@ -95,6 +107,7 @@ export async function extractFromSubtitle(
     phrases,
     truncated: extraction.truncated,
     resolved: extraction.resolved,
+    usage: extraction.usage,
   };
 }
 
@@ -102,6 +115,7 @@ export interface ExtractEssentialsFromSubtitleResult {
   /** Ranked (most important first), filtered, deduped later on save, capped. */
   essentials: EssentialCandidate[];
   resolved: LlmSelection;
+  usage?: LanguageModelUsage;
 }
 
 /** Most essentials an episode keeps (the deck is meant to be ~20–30). */
@@ -121,17 +135,22 @@ const MAX_EXPRESSION_WORDS = 8;
 export async function extractEssentialsFromSubtitle(
   input: ExtractInput
 ): Promise<ExtractEssentialsFromSubtitleResult> {
-  const { content, language, filename, fileType, provider, model } = input;
+  const { content, language, filename, fileType, provider, model, effort } =
+    input;
 
   const blocks = subtitleToBlocks(content, { filename, fileType });
   const subtitleText = blocks
     ? blocks.map((block) => block.text).join("\n")
     : content;
 
-  const { essentials, resolved } = await extractEssentials(
+  const { essentials, resolved, usage } = await extractEssentials(
     subtitleText,
     language,
-    { provider: provider ?? undefined, model: model ?? undefined }
+    {
+      provider: provider ?? undefined,
+      model: model ?? undefined,
+      effort: effort ?? undefined,
+    }
   );
 
   const { basics, common } = PROMPT_INFO[language];
@@ -155,5 +174,32 @@ export async function extractEssentialsFromSubtitle(
     )
     .map(({ item }) => item);
 
-  return { essentials: ranked.slice(0, MAX_ESSENTIALS), resolved };
+  return { essentials: ranked.slice(0, MAX_ESSENTIALS), resolved, usage };
+}
+
+export interface ReviewTranslationsInput {
+  /** Raw subtitle text (VTT/SRT/plain) the phrases were extracted from. */
+  content: string;
+  language: TargetLanguage;
+  filename?: string;
+  fileType?: "vtt" | "srt" | "txt";
+  phrases: PhraseForReview[];
+  /** Per-call reviewer override; falls back to the review default. */
+  reviewer?: Partial<LlmSelection>;
+}
+
+/**
+ * Review phrase translations against the episode they came from: parse cues
+ * (one per line, for context) → reviewer returns fixes for translations that
+ * get the meaning wrong. Fixes index into `phrases`. Throws like the others.
+ */
+export async function reviewTranslationsFromSubtitle(
+  input: ReviewTranslationsInput
+): Promise<ReviewPhrasesResult> {
+  const { content, language, filename, fileType, phrases, reviewer } = input;
+  const blocks = subtitleToBlocks(content, { filename, fileType });
+  const subtitleText = blocks
+    ? blocks.map((block) => block.text).join("\n")
+    : content;
+  return reviewPhrases(subtitleText, phrases, language, reviewer);
 }
