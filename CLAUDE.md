@@ -91,7 +91,7 @@ For first-time deployment, you'll need to manually promote a user to admin statu
 ```sql
 UPDATE user_profiles 
 SET role = 'admin' 
-WHERE user_id = 'your-user-id-here';
+WHERE id = 'your-user-id-here';  -- user_profiles.id is the auth user's id
 ```
 
 See `AUTHENTICATION_SETUP.md` for detailed authentication setup instructions.
