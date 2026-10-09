@@ -54,7 +54,11 @@ export default function EpisodePageClient({
   const contentLang = toTargetLanguage(show.language);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getProgressForPhrase } = useCardProgress(phrases.map((p) => p.id));
-  const { knownIds, recordReview } = useEssentialsProgress(
+  const {
+    knownIds,
+    recordReview,
+    ready: essentialsReady,
+  } = useEssentialsProgress(
     essentials.map((e) => e.id)
   );
   const episodeTitle = `${episodeCode(episode.season, episode.episode_number)}${
@@ -139,6 +143,7 @@ export default function EpisodePageClient({
         phrases={phrases}
         essentialsCount={essentials.length}
         knownEssentials={knownIds.size}
+        essentialsReady={essentialsReady}
         onStartStudy={() => setShowStudyGame(true)}
         onStartEssentials={() => setShowEssentials(true)}
       />

@@ -27,6 +27,9 @@ export function useSpacedRepetitionGame({
   onClose,
 }: UseSpacedRepetitionGameProps) {
   const { isAuthenticated, user } = useAuth();
+  // The id, not the object: AuthContext hands out a new user object on every
+  // auth event (e.g. token refresh), which would restart an open session.
+  const userId = user?.id;
   const [cards, setCards] = useState<StudyCardType[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -67,7 +70,7 @@ export function useSpacedRepetitionGame({
       setCards(dueCards);
 
       // Create study session if user is authenticated
-      if (isAuthenticated && user) {
+      if (isAuthenticated && userId) {
         const newSession = await studyService.createStudySession(episodeId);
         setSession(newSession);
         await studyService.updateStudySession(newSession.id, {
@@ -80,7 +83,7 @@ export function useSpacedRepetitionGame({
     } finally {
       setLoading(false);
     }
-  }, [episodeId, studyDirection, isAuthenticated, user]);
+  }, [episodeId, studyDirection, isAuthenticated, userId]);
 
   useEffect(() => {
     if (!open) return;

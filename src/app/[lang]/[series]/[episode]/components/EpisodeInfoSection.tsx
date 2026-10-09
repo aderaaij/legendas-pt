@@ -19,6 +19,8 @@ interface EpisodeInfoSectionProps {
   phrases: ExtractedPhrase[];
   essentialsCount: number;
   knownEssentials: number;
+  /** The learner's essentials progress has loaded (always true for guests). */
+  essentialsReady: boolean;
   onStartStudy: () => void;
   onStartEssentials: () => void;
 }
@@ -43,6 +45,7 @@ export const EpisodeInfoSection = ({
   phrases,
   essentialsCount,
   knownEssentials,
+  essentialsReady,
   onStartStudy,
   onStartEssentials,
 }: EpisodeInfoSectionProps) => {
@@ -156,8 +159,10 @@ export const EpisodeInfoSection = ({
             {hasEssentials && (
               <button
                 onClick={onStartEssentials}
+                disabled={!essentialsReady}
                 title={t.essentials.buttonHint}
-                {...(essentialsLead ? primaryButton : secondaryButton)}
+                className={`${(essentialsLead ? primaryButton : secondaryButton).className} disabled:opacity-60`}
+                style={(essentialsLead ? primaryButton : secondaryButton).style}
               >
                 <Sparkles className="h-4 w-4" />
                 {t.essentials.button}
@@ -184,7 +189,7 @@ export const EpisodeInfoSection = ({
                 {t.episode.editEpisode}
               </Link>
             )}
-            {hasEssentials && (
+            {hasEssentials && essentialsReady && (
               <span
                 className="flex items-center gap-[6px] rounded-full px-3 py-[6px] text-[12px] font-bold"
                 style={

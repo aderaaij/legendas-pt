@@ -46,6 +46,24 @@ interface EpisodeRow {
   show: { name: string; language: string | null } | null;
 }
 
+const PAGE_SIZE = 1000; // PostgREST's default max rows per request
+
+/** Every row of a query, paging past the per-request row cap. */
+async function fetchAll<T>(
+  page: (from: number, to: number) => PromiseLike<{
+    data: T[] | null;
+    error: { message: string } | null;
+  }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE_SIZE) return rows;
+  }
+}
+
 /** Episodes in scope that have a stored subtitle to pick essentials from. */
 async function selectEpisodes(
   supabase: SupabaseClient,
@@ -57,36 +75,45 @@ async function selectEpisodes(
     force: boolean;
   }
 ): Promise<EpisodeRow[]> {
-  let episodeQuery = supabase
-    .from("episodes")
-    .select(
-      "id, show_id, season, episode_number, essentials_generated_at, show:shows(name, language)"
-    );
-  if (scope === "episode") episodeQuery = episodeQuery.eq("id", episodeId!);
-  if (scope === "show") episodeQuery = episodeQuery.eq("show_id", showId!);
+  const episodes = await fetchAll<EpisodeRow>((from, to) => {
+    let query = supabase
+      .from("episodes")
+      .select(
+        "id, show_id, season, episode_number, essentials_generated_at, show:shows(name, language)"
+      );
+    if (scope === "episode") query = query.eq("id", episodeId!);
+    if (scope === "show") query = query.eq("show_id", showId!);
+    if (!force) query = query.is("essentials_generated_at", null);
+    return query.order("id").range(from, to) as unknown as PromiseLike<{
+      data: EpisodeRow[] | null;
+      error: { message: string } | null;
+    }>;
+  });
 
-  let sourceQuery = supabase
-    .from("phrase_extractions")
-    .select("episode_id")
-    .not("episode_id", "is", null)
-    .not("content_full", "is", null);
-  if (scope === "episode") sourceQuery = sourceQuery.eq("episode_id", episodeId!);
-  if (scope === "show") sourceQuery = sourceQuery.eq("show_id", showId!);
+  const inLanguage = episodes.filter(
+    (ep) => !language || toTargetLanguage(ep.show?.language) === language
+  );
+  if (inLanguage.length === 0) return [];
 
-  const [episodesRes, sourcesRes] = await Promise.all([episodeQuery, sourceQuery]);
-  if (episodesRes.error) throw new Error(episodesRes.error.message);
-  if (sourcesRes.error) throw new Error(sourcesRes.error.message);
-
+  // Which of them have an extraction with stored subtitle content.
   const withSource = new Set(
-    (sourcesRes.data ?? []).map((row) => row.episode_id as string)
+    (
+      await fetchAll<{ episode_id: string }>((from, to) => {
+        let query = supabase
+          .from("phrase_extractions")
+          .select("episode_id")
+          .not("episode_id", "is", null)
+          .not("content_full", "is", null);
+        if (scope !== "missing") {
+          query = query.in("episode_id", inLanguage.map((ep) => ep.id));
+        }
+        return query.order("id").range(from, to);
+      })
+    ).map((row) => row.episode_id)
   );
 
-  return ((episodesRes.data ?? []) as unknown as EpisodeRow[])
+  return inLanguage
     .filter((ep) => withSource.has(ep.id))
-    .filter((ep) => force || !ep.essentials_generated_at)
-    .filter(
-      (ep) => !language || toTargetLanguage(ep.show?.language) === language
-    )
     .sort(
       (a, b) =>
         (a.show?.name ?? "").localeCompare(b.show?.name ?? "") ||

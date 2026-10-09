@@ -9,62 +9,108 @@ import type { StudyRating } from "@/types/spaced-repetition";
 const isKnown = (progress: FsrsProgress | undefined) =>
   (progress?.last_rating ?? 0) >= 3;
 
+/** Progress belongs to one user (null = guest); another owner's is ignored. */
+interface ProgressState {
+  owner: string | null;
+  rows: Map<string, FsrsProgress>;
+  /** The owner's saved rows have been loaded (always true for a guest). */
+  loaded: boolean;
+}
+
+const EMPTY_ROWS: Map<string, FsrsProgress> = new Map();
+
 /**
  * The learner's progress on an episode's essentials, shared by the readiness
  * pill and the essentials session so the pill updates as you drill.
  *
  * Progress is keyed by lexicon item, so essentials learned in other episodes
  * already count here. Guests get the same behaviour in memory; signed-in users'
- * reviews are scheduled with FSRS and saved in order.
+ * reviews are scheduled with FSRS and saved in order. `ready` stays false until
+ * a signed-in user's saved progress is in, so a review is never scheduled from
+ * (and saved over) a blank card.
  */
 export function useEssentialsProgress(essentialIds: string[]) {
-  const { user } = useAuth();
-  const userId = user?.id;
-  const [progress, setProgress] = useState<Map<string, FsrsProgress>>(new Map());
-  // Mirrors `progress` for scheduling inside callbacks without stale closures.
-  const progressRef = useRef(progress);
+  const { user, loading: authLoading } = useAuth();
+  const owner = user?.id ?? null;
+  const [state, setState] = useState<ProgressState>({
+    owner: null,
+    rows: new Map(),
+    loaded: true,
+  });
+  // Mirrors `state` for scheduling inside callbacks without stale closures.
+  const stateRef = useRef(state);
+  // Ids reviewed while a load was in flight; their newer in-memory rows win.
+  const reviewedDuringLoad = useRef(new Set<string>());
   // Saves run one after another so a later review never lands before an earlier one.
   const saveChain = useRef<Promise<void>>(Promise.resolve());
+
+  const commit = useCallback((next: ProgressState) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
 
   const idsKey = essentialIds.join(",");
 
   useEffect(() => {
-    if (!userId || essentialIds.length === 0) return;
+    if (!owner || essentialIds.length === 0) return;
+    let cancelled = false;
+    reviewedDuringLoad.current = new Set();
     (async () => {
-      const rows = await studyService.getEssentialStudies(userId, essentialIds);
-      const loaded = new Map<string, FsrsProgress>(
-        rows.map((row) => [row.essential_id, row])
+      const saved = await studyService.getEssentialStudies(owner, essentialIds);
+      if (cancelled) return;
+      const rows = new Map<string, FsrsProgress>(
+        saved.map((row) => [row.essential_id, row])
       );
-      progressRef.current = loaded;
-      setProgress(loaded);
+      const current = stateRef.current;
+      if (current.owner === owner) {
+        for (const id of reviewedDuringLoad.current) {
+          const newer = current.rows.get(id);
+          if (newer) rows.set(id, newer);
+        }
+      }
+      commit({ owner, rows, loaded: true });
     })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, idsKey]);
+  }, [owner, idsKey, commit]);
 
   const recordReview = useCallback(
     (essentialId: string, rating: StudyRating) => {
-      const next = scheduleReview(progressRef.current.get(essentialId) ?? null, rating);
-      const updated = new Map(progressRef.current).set(essentialId, next);
-      progressRef.current = updated;
-      setProgress(updated);
+      const current = stateRef.current;
+      const rows = current.owner === owner ? current.rows : EMPTY_ROWS;
+      const next = scheduleReview(rows.get(essentialId) ?? null, rating);
+      reviewedDuringLoad.current.add(essentialId);
+      commit({
+        owner,
+        rows: new Map(rows).set(essentialId, next),
+        loaded: current.owner === owner ? current.loaded : owner === null,
+      });
 
-      if (userId) {
+      if (owner) {
         saveChain.current = saveChain.current
-          .then(() => studyService.saveEssentialStudy(userId, essentialId, next))
+          .then(() => studyService.saveEssentialStudy(owner, essentialId, next))
           .catch(() => {
             // Logged by the service; the drill carries on regardless.
           });
       }
     },
-    [userId]
+    [owner, commit]
   );
 
+  const ownRows = state.owner === owner ? state.rows : EMPTY_ROWS;
   const knownIds = useMemo(
-    () =>
-      new Set(essentialIds.filter((id) => isKnown(progress.get(id)))),
+    () => new Set(essentialIds.filter((id) => isKnown(ownRows.get(id)))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [progress, idsKey]
+    [ownRows, idsKey]
   );
 
-  return { knownIds, recordReview };
+  const ready =
+    !authLoading &&
+    (owner === null ||
+      essentialIds.length === 0 ||
+      (state.owner === owner && state.loaded));
+
+  return { knownIds, recordReview, ready };
 }

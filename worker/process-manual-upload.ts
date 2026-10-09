@@ -240,8 +240,7 @@ export async function processManualUploadJob(
           content: plan.content,
           filename: plan.filename,
           fileType: plan.fileType,
-          // Same provider as the phrases, the essentials' default model for it.
-          provider: extraction.resolved.provider,
+          // No override: essentials resolve their own provider/model from env.
         });
       } catch (essentialsError) {
         essentials.essentialsError =

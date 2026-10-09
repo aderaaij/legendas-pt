@@ -29,19 +29,21 @@ const ESSENTIALS_MODELS: Record<Provider, string> = {
   openai: "gpt-4.1",
 };
 
-/** Per-call override → `ESSENTIALS_LLM_PROVIDER`/`_MODEL` → `LLM_PROVIDER` →
- *  the essentials default model for that provider. */
+/**
+ * Provider: per-call override → `ESSENTIALS_LLM_PROVIDER` → `LLM_PROVIDER` →
+ * openai. Model: per-call override → `ESSENTIALS_LLM_MODEL` (only when the
+ * provider is the env-configured one, so an override to another provider never
+ * gets a mismatched model) → the essentials default for that provider.
+ */
 function resolveEssentialsSelection(
   override?: Partial<LlmSelection>
 ): LlmSelection {
-  const provider =
-    override?.provider ||
-    process.env.ESSENTIALS_LLM_PROVIDER ||
-    process.env.LLM_PROVIDER ||
-    "openai";
+  const envProvider =
+    process.env.ESSENTIALS_LLM_PROVIDER || process.env.LLM_PROVIDER || "openai";
+  const provider = override?.provider || envProvider;
   const model =
     override?.model ||
-    process.env.ESSENTIALS_LLM_MODEL ||
+    (provider === envProvider ? process.env.ESSENTIALS_LLM_MODEL : undefined) ||
     (isProvider(provider) ? ESSENTIALS_MODELS[provider] : undefined);
   // Validates the provider (throws UnknownProviderError) and fills any gap.
   return resolveSelection({ provider: provider as Provider, model });

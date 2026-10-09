@@ -14,7 +14,10 @@
 -- Also: episodes.essentials_generated_at/_params, and 'essentials_backfill' as
 -- an extraction_jobs.job_type.
 --
--- Idempotent: safe to run repeatedly.
+-- Idempotent: safe to run repeatedly. Runs in one transaction so a failure can
+-- never leave the new tables behind without their RLS policies.
+
+BEGIN;
 
 -- 1) Lexicon --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.essentials (
@@ -159,3 +162,5 @@ END $$;
 ALTER TABLE extraction_jobs
   ADD CONSTRAINT extraction_jobs_job_type_check
   CHECK (job_type IN ('rtp_series', 'manual_upload', 'essentials_backfill'));
+
+COMMIT;

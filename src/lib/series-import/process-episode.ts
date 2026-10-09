@@ -238,9 +238,7 @@ export async function processEpisode(
         language,
         content: scrapedSubtitle.content,
         filename: scrapedSubtitle.filename,
-        // Same provider as the phrases (its key is known to work), but the
-        // essentials' own default model for it.
-        provider: extraction.resolved.provider,
+        // No override: essentials resolve their own provider/model from env.
       });
     } catch (essentialsError) {
       essentials.essentialsError =

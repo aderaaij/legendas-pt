@@ -177,6 +177,7 @@ export async function loadEssentialsSource(
     .from("phrase_extractions")
     .select("content_full, extraction_params, language")
     .eq("episode_id", episodeId)
+    .not("content_full", "is", null)
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw new Error(`Loading extraction failed: ${error.message}`);
