@@ -133,10 +133,13 @@ export default function EpisodeEditPage() {
             phrases={review.phrases}
             reviewedAt={review.reviewedAt}
             error={review.error}
+            message={review.message}
             busyId={review.busyId}
+            requesting={review.requesting}
             onAccept={review.accept}
             onReject={review.reject}
             onReload={review.reload}
+            onRequestReview={review.requestReview}
           />
 
           <ExtractionsSection

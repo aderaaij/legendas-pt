@@ -18,39 +18,10 @@ import type {
   BackfillEpisodeState,
   EssentialsBackfillResults,
 } from "@/lib/essentials/types";
-import type { ImportSummary } from "@/lib/series-import/types";
 import type { ProcessJobHooks } from "./process-series-import";
-import { sleep, backoffDelay } from "./util";
+import { sleep, backoffDelay, progressFields, summarizeUnits } from "./util";
 
 type Results = ExtractionJob["results"];
-
-function computeSummary(
-  episodes: Record<string, BackfillEpisodeState>,
-  total: number
-): ImportSummary {
-  const vals = Object.values(episodes);
-  const count = (status: BackfillEpisodeState["status"]) =>
-    vals.filter((e) => e.status === status).length;
-  return {
-    total,
-    successful: count("success"),
-    failed: count("failed"),
-    alreadyExists: count("skipped"),
-    noSubtitle: count("no_subtitle"),
-  };
-}
-
-function progressFields(summary: ImportSummary) {
-  const completed = summary.successful + summary.alreadyExists;
-  const failed = summary.failed + summary.noSubtitle;
-  return {
-    completed_episodes: completed,
-    failed_episodes: failed,
-    progress: summary.total
-      ? Math.round(((completed + failed) / summary.total) * 100)
-      : 100,
-  };
-}
 
 interface EpisodeRow {
   season: number | null;
@@ -172,7 +143,7 @@ export async function processEssentialsBackfillJob(
     }
 
     episodes[episodeId] = state;
-    const summary = computeSummary(episodes, total);
+    const summary = summarizeUnits(episodes, total);
     await updateExtractionJob(
       job.id,
       {
@@ -189,7 +160,7 @@ export async function processEssentialsBackfillJob(
     );
   }
 
-  const summary = computeSummary(episodes, total);
+  const summary = summarizeUnits(episodes, total);
   const { completed_episodes, failed_episodes } = progressFields(summary);
   const finalStatus =
     failed_episodes === 0 || completed_episodes > 0 ? "completed" : "failed";

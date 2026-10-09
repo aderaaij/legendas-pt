@@ -12,6 +12,7 @@ import {
   Globe,
   Merge,
   Sparkles,
+  SpellCheck,
 } from "lucide-react";
 
 import { AdminRoute } from "@/app/components/common/ProtectedRoute";
@@ -26,6 +27,7 @@ import SeriesImporter from "./components/SeriesImporter";
 import UploadLanguagePicker from "./components/UploadLanguagePicker";
 import ShowMerger from "./components/ShowMerger";
 import EssentialsBackfill from "./components/EssentialsBackfill";
+import TranslationReviewBackfill from "./components/TranslationReviewBackfill";
 
 export interface SubtitleMetadata {
   source: string;
@@ -36,7 +38,7 @@ export interface SubtitleMetadata {
 
 export default function UploadPage() {
   const [activeTab, setActiveTab] = useState<
-    "upload" | "series" | "essentials" | "merge"
+    "upload" | "series" | "essentials" | "review" | "merge"
   >("upload");
   // Manual uploads default to the target language selected in the nav.
   const { lang } = useLanguage();
@@ -92,6 +94,7 @@ export default function UploadPage() {
     { id: "upload" as const, icon: Upload, label: "Manual Upload" },
     { id: "series" as const, icon: Globe, label: "Series Import" },
     { id: "essentials" as const, icon: Sparkles, label: "Essentials" },
+    { id: "review" as const, icon: SpellCheck, label: "Review" },
     { id: "merge" as const, icon: Merge, label: "Merge Shows" },
   ];
 
@@ -217,6 +220,18 @@ export default function UploadPage() {
                       <h2 className="text-xl font-extrabold">Episode Essentials</h2>
                     </div>
                     <EssentialsBackfill />
+                  </div>
+                )}
+
+                {activeTab === "review" && (
+                  <div>
+                    <div className="mb-6 flex items-center gap-3">
+                      <div className="rounded-full p-2" style={{ background: "rgba(245,196,81,.15)" }}>
+                        <SpellCheck className="h-5 w-5" style={{ color: "var(--gold)" }} />
+                      </div>
+                      <h2 className="text-xl font-extrabold">Translation Review</h2>
+                    </div>
+                    <TranslationReviewBackfill />
                   </div>
                 )}
 

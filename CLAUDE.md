@@ -52,8 +52,10 @@ Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀�
   `manual_upload` (browser POSTs the file content to
   `/api/manual-upload/start`, which embeds it in the job; the worker extracts it —
   no scraper) — and `essentials_backfill` (pick essentials for already-extracted
-  episodes from their stored subtitle; see "Episode Essentials"). All enqueue
-  with `status='queued'`; the worker claims `queued → running`.
+  episodes from their stored subtitle; see "Episode Essentials") — and
+  `phrase_review` (run the translation review for stored extractions; see
+  "Translation Review"). All enqueue with `status='queued'`; the worker claims
+  `queued → running`.
 - **Robustness:** atomic claim (safe to run multiple workers), a per-job
   heartbeat + stale-reclaim (a crashed worker's job auto-resumes; dedup makes
   re-processing safe), per-unit retries with backoff, graceful shutdown, and a
@@ -61,7 +63,7 @@ Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀�
 - **Progress** reaches the UI via **Supabase Realtime** on `extraction_jobs`
   (`useExtractionJobs` subscribes; a slow poll is the backstop).
 - **Enqueue endpoints:** `POST /api/series-import/start`, `POST /api/manual-upload/start`,
-  `POST /api/essentials/start` (all admin-only, enqueue-only); `POST /api/series-import/preview` lists a
+  `POST /api/essentials/start`, `POST /api/phrase-review/start` (all admin-only, enqueue-only); `POST /api/series-import/preview` lists a
   series' episodes (and seasons, for RTVE) for the importer UI. There is **no** `/api/extract-phrases` route
   anymore — extraction is the worker's job.
 
@@ -301,10 +303,14 @@ testing the reviewer was wrong about a third of the time too.
   `src/lib/extractor`, `src/lib/phrase-review/review-extraction.ts` (load
   phrases → review → save). A non-fatal step after essentials in both
   series-import and manual-upload; an admin's earlier accept/reject is kept on
-  re-review. `scripts/review-translations.ts` backfills older episodes.
+  re-review. The `phrase_review` job (`worker/process-phrase-review.ts`, enqueued
+  by `POST /api/phrase-review/start`) is the on-request and backfill path:
+  scope `episode` from the edit page's "Review again" button, scope
+  `unreviewed` from the Review tab on `/upload`.
 - **Admin UI:** "Translation review" card on the episode edit page
   (`useTranslationReview`): accept swaps in the suggestion, reject keeps the
-  original — both through the existing `updatePhrase`. `src/lib/db/phrase-review.ts`
+  original — both through the existing `updatePhrase`; a button queues a fresh
+  review. `src/lib/db/phrase-review.ts`
   is in the Next bundle, so it must not import runtime values from `@/lib/llm`.
 
 ## Environment Variables Required

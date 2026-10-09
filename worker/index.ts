@@ -9,6 +9,7 @@ import type { ExtractionJob } from "@/types/database";
 import { processSeriesImportJob } from "./process-series-import";
 import { processManualUploadJob } from "./process-manual-upload";
 import { processEssentialsBackfillJob } from "./process-essentials-backfill";
+import { processPhraseReviewJob } from "./process-phrase-review";
 import { startWorkerHeartbeat } from "./heartbeat";
 import { sleep } from "./util";
 
@@ -23,7 +24,12 @@ import { sleep } from "./util";
  * reclaimed once stale. Safe to run multiple workers.
  */
 
-const JOB_TYPES = ["rtp_series", "manual_upload", "essentials_backfill"] as const;
+const JOB_TYPES = [
+  "rtp_series",
+  "manual_upload",
+  "essentials_backfill",
+  "phrase_review",
+] as const;
 
 const log = (msg: string) =>
   console.log(`[worker ${new Date().toISOString()}] ${msg}`);
@@ -171,6 +177,9 @@ async function tick(supabase: SupabaseClient): Promise<boolean> {
         break;
       case "essentials_backfill":
         await processEssentialsBackfillJob(supabase, job, hooks);
+        break;
+      case "phrase_review":
+        await processPhraseReviewJob(supabase, job, hooks);
         break;
       default:
         // Fail it rather than leave it 'running' to be reclaimed forever.

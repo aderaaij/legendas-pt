@@ -12,6 +12,10 @@
 -- Written by the worker (service role); accept/reject goes through the existing
 -- admin update policy on extracted_phrases. No new policies needed.
 --
+-- Also: 'phrase_review' as an extraction_jobs.job_type (review on request from
+-- the edit page, or every unreviewed episode from /upload). Run AFTER
+-- essentials.sql, which re-creates the job_type check without it.
+--
 -- Idempotent: safe to run repeatedly.
 
 BEGIN;
@@ -40,5 +44,26 @@ CREATE INDEX IF NOT EXISTS idx_extracted_phrases_review
 ALTER TABLE public.phrase_extractions
   ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS review_params JSONB;
+
+-- New job type: drop whatever CHECK currently governs job_type (its name can
+-- vary after a restore), then re-add it with 'phrase_review'.
+DO $$
+DECLARE c text;
+BEGIN
+  FOR c IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    WHERE rel.relname = 'extraction_jobs'
+      AND con.contype = 'c'
+      AND pg_get_constraintdef(con.oid) ILIKE '%job_type%'
+  LOOP
+    EXECUTE format('ALTER TABLE extraction_jobs DROP CONSTRAINT %I', c);
+  END LOOP;
+END $$;
+
+ALTER TABLE extraction_jobs
+  ADD CONSTRAINT extraction_jobs_job_type_check
+  CHECK (job_type IN ('rtp_series', 'manual_upload', 'essentials_backfill', 'phrase_review'));
 
 COMMIT;

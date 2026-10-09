@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PhraseExtractionService } from "@/lib/supabase";
+import { fetchAll } from "@/lib/db/fetch-all";
 import type { ExtractionJob } from "@/lib/supabase";
 import { createServiceClient, requireAdmin } from "@/lib/supabase-admin";
 import { isProvider, type Provider } from "@/lib/llm/types";
@@ -44,24 +45,6 @@ interface EpisodeRow {
   episode_number: number | null;
   essentials_generated_at: string | null;
   show: { name: string; language: string | null } | null;
-}
-
-const PAGE_SIZE = 1000; // PostgREST's default max rows per request
-
-/** Every row of a query, paging past the per-request row cap. */
-async function fetchAll<T>(
-  page: (from: number, to: number) => PromiseLike<{
-    data: T[] | null;
-    error: { message: string } | null;
-  }>
-): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await page(from, from + PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE_SIZE) return rows;
-  }
 }
 
 /** Episodes in scope that have a stored subtitle to pick essentials from. */

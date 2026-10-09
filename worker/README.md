@@ -22,6 +22,8 @@ sources (RTP Play, RTVE Play), and the LLM provider, and exposes no inbound port
   `plan.language` = `pt` | `es`).
 - `process-essentials-backfill.ts` — runs one `essentials_backfill` job:
   (re)generates essentials for a list of episodes from their stored subtitle.
+- `process-phrase-review.ts` — runs one `phrase_review` job: the translation
+  review for a list of extractions from their stored subtitle.
 - `env.ts` / `bootstrap.ts` — env loading + validation (bootstrap runs first).
 
 It reuses the shared, framework-free libraries under `src/lib/*`:
@@ -61,17 +63,18 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 
 ## Behaviour & scope (Phase 1)
 
-- Handles `rtp_series` (RTP or RTVE series import), `manual_upload` and
-  `essentials_backfill` jobs, one job at a time per worker (single internal
-  concurrency). Unknown job types are marked failed.
+- Handles `rtp_series` (RTP or RTVE series import), `manual_upload`,
+  `essentials_backfill` and `phrase_review` jobs, one job at a time per worker
+  (single internal concurrency). It only claims job types it knows, so an older
+  worker leaves newer job types queued for an updated one.
 - After each successful extraction it also picks the episode's **essentials**
   (a second, smaller LLM pass; non-fatal — a failure is recorded on the
   episode's state and the `essentials_backfill` job is the retry path).
 - Then it runs the **translation review** (`@/lib/phrase-review`): Claude
   Sonnet 5.5 checks the phrase translations against the episode and stores
   suggestions as `pending` for an admin to accept or reject on the episode edit
-  page. Also non-fatal; `scripts/review-translations.ts` is the backfill/retry
-  path. Needs `ANTHROPIC_API_KEY`.
+  page. Also non-fatal; the `phrase_review` job is the on-request, retry and
+  backfill path. Needs `ANTHROPIC_API_KEY`.
 - Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
   'queued'`), so running **multiple workers is safe** — each job goes to exactly
   one worker, no double-processing. (One worker is plenty for this workload; the

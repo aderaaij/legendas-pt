@@ -106,7 +106,8 @@ export type ReviewStatus = "pending" | "accepted" | "rejected";
 export type ExtractionJobType =
   | "rtp_series"
   | "manual_upload"
-  | "essentials_backfill";
+  | "essentials_backfill"
+  | "phrase_review";
 
 export interface ExtractionJob {
   id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, SpellCheck } from "lucide-react";
+import { Loader2, RefreshCw, SpellCheck } from "lucide-react";
 
 import type { ReviewedPhrase } from "@/lib/db/phrase-review";
 
@@ -10,10 +10,13 @@ interface TranslationReviewSectionProps {
   phrases: ReviewedPhrase[];
   reviewedAt: string | null;
   error: string | null;
+  message: string | null;
   busyId: string | null;
+  requesting: boolean;
   onAccept: (phrase: ReviewedPhrase) => void;
   onReject: (phrase: ReviewedPhrase) => void;
   onReload: () => void;
+  onRequestReview: () => void;
 }
 
 /**
@@ -24,10 +27,13 @@ export default function TranslationReviewSection({
   phrases,
   reviewedAt,
   error,
+  message,
   busyId,
+  requesting,
   onAccept,
   onReject,
   onReload,
+  onRequestReview,
 }: TranslationReviewSectionProps) {
   const pending = phrases.filter((phrase) => phrase.review_status === "pending");
   const decided = phrases.filter((phrase) => phrase.review_status !== "pending");
@@ -69,13 +75,33 @@ export default function TranslationReviewSection({
         >
           <RefreshCw className="h-4 w-4" />
         </button>
+        <button
+          onClick={onRequestReview}
+          disabled={requesting}
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 disabled:opacity-50"
+          style={{ background: "var(--accent)", color: "#fff" }}
+        >
+          {requesting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <SpellCheck className="h-4 w-4" />
+          )}
+          <span>{reviewedAt ? "Review again" : "Review translations"}</span>
+        </button>
       </div>
 
       <p className="mb-6 text-sm" style={{ color: "var(--muted)" }}>
         {reviewedAt
           ? `A second model checked this episode's translations on ${new Date(reviewedAt).toLocaleDateString()}. Its suggestions can be wrong too — nothing changes until you decide.`
-          : "Not reviewed yet. New imports are reviewed automatically after extraction."}
+          : "Not reviewed yet. New imports are reviewed automatically after extraction."}{" "}
+        A review costs about $0.05; your earlier decisions are kept.
       </p>
+
+      {message && (
+        <p className="mb-4 text-sm" style={{ color: "var(--green)" }}>
+          {message}
+        </p>
+      )}
 
       {error && (
         <p className="mb-4 text-sm" style={{ color: "var(--accent2)" }}>
