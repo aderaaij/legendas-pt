@@ -23,6 +23,7 @@ import { PROMPT_INFO } from "@/lib/llm/prompt-info";
 import type { LlmSelection, Provider } from "@/lib/llm/types";
 import type { TargetLanguage } from "@/lib/i18n/languages";
 import { normalizeExpression } from "@/lib/essentials/normalize";
+import { createGroundingCheck } from "@/lib/essentials/grounding";
 import { subtitleToBlocks } from "./subtitle-text";
 
 export interface ExtractInput {
@@ -98,20 +99,22 @@ export async function extractFromSubtitle(
 }
 
 export interface ExtractEssentialsFromSubtitleResult {
-  /** Ranked (most important first), filtered and capped. */
+  /** Ranked (most important first), filtered, deduped later on save, capped. */
   essentials: EssentialCandidate[];
   resolved: LlmSelection;
 }
 
-/** Most essentials an episode keeps; the prompt asks for 20–30. */
-const MAX_ESSENTIALS = 40;
+/** Most essentials an episode keeps (the deck is meant to be ~20–30). */
+const MAX_ESSENTIALS = 30;
 /** Longer than this is a whole line creeping back in, not a reusable chunk. */
 const MAX_EXPRESSION_WORDS = 8;
 
 /**
  * Pick an episode's essentials: parse cues (one per line, so the model can quote
- * "the line as heard") → LLM select + rank → drop empty, over-long and
- * beginner-basic items → cap.
+ * "the line as heard") → LLM selects and scores candidates → drop empty,
+ * over-long, ungrounded (example not in the subtitles, or expression not from
+ * the example) and beginner-level items → rank by importance (ties keep the
+ * model's order, which roughly follows the episode) → cap.
  *
  * Throws like `extractFromSubtitle`, and also on unparseable model output.
  */
@@ -131,15 +134,26 @@ export async function extractEssentialsFromSubtitle(
     { provider: provider ?? undefined, model: model ?? undefined }
   );
 
-  const basics = new Set(
-    PROMPT_INFO[language].basics.map((b) => normalizeExpression(b, language))
+  const { basics, common } = PROMPT_INFO[language];
+  const known = new Set(
+    [...basics, ...common].map((word) => normalizeExpression(word, language))
   );
+  const isGrounded = createGroundingCheck(subtitleText);
   const kept = essentials.filter((item) => {
     const expression = item.expression?.trim();
     if (!expression || !item.translation?.trim()) return false;
     if (expression.split(/\s+/).length > MAX_EXPRESSION_WORDS) return false;
-    return !basics.has(normalizeExpression(expression, language));
+    if (known.has(normalizeExpression(expression, language))) return false;
+    return isGrounded(item);
   });
 
-  return { essentials: kept.slice(0, MAX_ESSENTIALS), resolved };
+  const ranked = kept
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        (b.item.importance ?? 0) - (a.item.importance ?? 0) || a.index - b.index
+    )
+    .map(({ item }) => item);
+
+  return { essentials: ranked.slice(0, MAX_ESSENTIALS), resolved };
 }

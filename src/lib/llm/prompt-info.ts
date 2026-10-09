@@ -9,8 +9,8 @@ interface LanguagePromptInfo {
   interjections: string;
   /** Basics every beginner knows, which aren't worth a card. */
   basics: string[];
-  /** A dictionary-form example for the essentials prompt: [form, not-this]. */
-  dictionaryForm: [string, string];
+  /** Everyday words an A2 learner knows, which aren't essentials either. */
+  common: string[];
   /** Placeholder words for the essentials prompt ("someone" / "something"). */
   placeholders: string;
   /** Where the variety we teach is spoken, for usage notes. */
@@ -21,14 +21,14 @@ export const PROMPT_INFO: Record<TargetLanguage, LanguagePromptInfo> = {
   pt: {
     interjections: `"Bolas!" or "Fogo!"`,
     basics: ["boa noite", "bom dia", "boa tarde", "obrigado", "obrigada", "por favor", "desculpa", "com licença", "olá", "adeus", "tchau", "sim", "não"],
-    dictionaryForm: ["estar farto de", "estou farta disto"],
+    common: ["está bem", "tudo bem", "vamos", "anda", "rápido", "claro", "pois", "então", "olha"],
     placeholders: `"alguém" / "algo"`,
     region: "Portugal",
   },
   es: {
     interjections: `"¡Venga!" or "¡Ostras!"`,
     basics: ["hola", "adiós", "buenos días", "buenas tardes", "buenas noches", "gracias", "por favor", "perdón", "lo siento", "sí", "no"],
-    dictionaryForm: ["estar harto de", "estoy harta de esto"],
+    common: ["está bien", "vale", "vamos", "rápido", "claro", "bueno", "pues", "mira", "oye"],
     placeholders: `"alguien" / "algo"`,
     region: "Spain",
   },
