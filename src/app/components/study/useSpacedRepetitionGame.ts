@@ -14,12 +14,16 @@ type StudyLoadError = "noCards" | "loadFailed";
 interface UseSpacedRepetitionGameProps {
   episodeId: string;
   studyDirection: StudyDirection;
+  /** The modal stays mounted on the episode page, so cards load (and a study
+   *  session row is created) only while it's open. */
+  open: boolean;
   onClose: () => void;
 }
 
 export function useSpacedRepetitionGame({
   episodeId,
   studyDirection,
+  open,
   onClose,
 }: UseSpacedRepetitionGameProps) {
   const { isAuthenticated, user } = useAuth();
@@ -39,11 +43,18 @@ export function useSpacedRepetitionGame({
   // stable value instead of calling Date.now() during render.
   const [endTime, setEndTime] = useState<number | null>(null);
 
-  // Load cards and create session
+  // Load cards and create session. Starts from a clean slate, so reopening the
+  // modal or switching direction never resumes a stale index or stats.
   const initializeGame = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setCurrentCardIndex(0);
+      setShowAnswer(false);
+      setGameComplete(false);
+      setEndTime(null);
+      setSession(null);
+      setSessionStats({ studied: 0, correct: 0, startTime: Date.now() });
 
       // Get due cards
       const dueCards = await studyService.getDueCards(episodeId, studyDirection, 20);
@@ -72,10 +83,11 @@ export function useSpacedRepetitionGame({
   }, [episodeId, studyDirection, isAuthenticated, user]);
 
   useEffect(() => {
+    if (!open) return;
     (async () => {
       await initializeGame();
     })();
-  }, [initializeGame]);
+  }, [open, initializeGame]);
 
   const handleFlip = useCallback(() => {
     setShowAnswer(!showAnswer);
@@ -147,20 +159,12 @@ export function useSpacedRepetitionGame({
   );
 
   const handleRestart = useCallback(() => {
-    setCurrentCardIndex(0);
-    setShowAnswer(false);
-    setGameComplete(false);
-    setEndTime(null);
-    setSessionStats({
-      studied: 0,
-      correct: 0,
-      startTime: Date.now(),
-    });
     initializeGame();
   }, [initializeGame]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — only while open, so Space still scrolls the page.
   useEffect(() => {
+    if (!open) return;
     const handleKeyPress = (event: KeyboardEvent) => {
       if (loading || gameComplete) return;
 
@@ -186,7 +190,7 @@ export function useSpacedRepetitionGame({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [loading, gameComplete, showAnswer, handleFlip, handleResponse, onClose]);
+  }, [open, loading, gameComplete, showAnswer, handleFlip, handleResponse, onClose]);
 
   // Derived values
   const currentCard = cards[currentCardIndex];

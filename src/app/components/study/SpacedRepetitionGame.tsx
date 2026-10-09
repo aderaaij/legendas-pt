@@ -100,7 +100,7 @@ export function SpacedRepetitionGame({
     initializeGame,
     accuracy,
     duration,
-  } = useSpacedRepetitionGame({ episodeId, studyDirection, onClose });
+  } = useSpacedRepetitionGame({ episodeId, studyDirection, open, onClose });
 
   const toggleDirection = () => {
     setStudyDirection((d) => (d === "pt-en" ? "en-pt" : "pt-en"));

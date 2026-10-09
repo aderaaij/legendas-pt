@@ -37,6 +37,8 @@ export interface CardStudy {
   reps: number;
   lapses: number;
   state: 'New' | 'Learning' | 'Review' | 'Relearning';
+  /** Position in ts-fsrs's short-term (re)learning steps; see src/lib/fsrs.ts. */
+  learning_steps: number;
   last_review?: string;
   last_rating?: 1 | 2 | 3 | 4; // Again, Hard, Good, Easy
   created_at: string;

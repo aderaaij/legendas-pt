@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { FSRS, Card, createEmptyCard, Rating, State, generatorParameters } from 'ts-fsrs';
+import { scheduleReview } from './fsrs';
 import {
   StudySession,
   CardStudy,
@@ -10,14 +10,6 @@ import {
 } from '@/types/spaced-repetition';
 
 export class StudyService {
-  private fsrs: FSRS;
-
-  constructor() {
-    // Initialize FSRS with default parameters
-    const params = generatorParameters();
-    this.fsrs = new FSRS(params);
-  }
-
   /**
    * Get cards due for study for a specific episode
    */
@@ -135,56 +127,20 @@ export class StudyService {
       .eq('study_direction', studyDirection)
       .limit(1);
     
-    const existingStudy = existingStudies?.[0] || null;
+    const existingStudy: CardStudy | null = existingStudies?.[0] || null;
 
-    // Convert existing study to FSRS Card format
-    let fsrsCard: Card;
-    if (existingStudy) {
-      fsrsCard = {
-        due: new Date(existingStudy.due_date),
-        stability: existingStudy.stability,
-        difficulty: existingStudy.difficulty,
-        elapsed_days: existingStudy.elapsed_days,
-        scheduled_days: existingStudy.scheduled_days,
-        reps: existingStudy.reps,
-        lapses: existingStudy.lapses,
-        state: this.mapStateToFSRS(existingStudy.state),
-        last_review: existingStudy.last_review ? new Date(existingStudy.last_review) : undefined,
-        learning_steps: 0,
-      };
-    } else {
-      fsrsCard = createEmptyCard();
-    }
-
-    // Process the rating with FSRS
-    const now = new Date();
-    const schedulingCards = this.fsrs.repeat(fsrsCard, now);
-    
-    // Get the appropriate card based on rating (using numeric keys 1-4)
-    const ratingKey = rating.toString() as '1' | '2' | '3' | '4';
-    const updatedCard = schedulingCards[ratingKey].card;
-
-    // Prepare the updated study data
-    const updatedStudy: Partial<CardStudy> = {
+    const updatedStudy = {
       user_id: user.id,
       phrase_id: phraseId,
       study_direction: studyDirection,
-      due_date: updatedCard.due.toISOString(),
-      stability: updatedCard.stability,
-      difficulty: updatedCard.difficulty,
-      elapsed_days: updatedCard.elapsed_days,
-      scheduled_days: updatedCard.scheduled_days,
-      reps: updatedCard.reps,
-      lapses: updatedCard.lapses,
-      state: this.mapStateFromFSRS(updatedCard.state) as 'New' | 'Learning' | 'Review' | 'Relearning',
-      last_review: now.toISOString(),
-      last_rating: rating,
+      ...scheduleReview(existingStudy, rating),
     };
 
-    // Update or insert the card study
+    // Upsert on the per-direction unique key — without `onConflict` PostgREST
+    // resolves conflicts on the primary key, so every re-review would fail.
     const { data: savedStudy, error } = await supabase
       .from('user_card_studies')
-      .upsert(updatedStudy)
+      .upsert(updatedStudy, { onConflict: 'user_id,phrase_id,study_direction' })
       .select()
       .single();
 
@@ -290,39 +246,6 @@ export class StudyService {
     };
 
     return stats;
-  }
-
-  /**
-   * Helper methods for FSRS conversion
-   */
-  private mapRatingToFSRS(rating: StudyRating): Rating {
-    switch (rating) {
-      case 1: return Rating.Again;
-      case 2: return Rating.Hard;
-      case 3: return Rating.Good;
-      case 4: return Rating.Easy;
-      default: return Rating.Good;
-    }
-  }
-
-  private mapStateToFSRS(state: string): State {
-    switch (state) {
-      case 'New': return State.New;
-      case 'Learning': return State.Learning;
-      case 'Review': return State.Review;
-      case 'Relearning': return State.Relearning;
-      default: return State.New;
-    }
-  }
-
-  private mapStateFromFSRS(state: State): string {
-    switch (state) {
-      case State.New: return 'New';
-      case State.Learning: return 'Learning';
-      case State.Review: return 'Review';
-      case State.Relearning: return 'Relearning';
-      default: return 'New';
-    }
   }
 }
 
