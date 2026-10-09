@@ -13,7 +13,7 @@ import type { StudyRating } from "@/types/spaced-repetition";
 
 const scheduler = fsrs();
 
-export type FsrsState = "New" | "Learning" | "Review" | "Relearning";
+type FsrsState = "New" | "Learning" | "Review" | "Relearning";
 
 /** The FSRS progress columns every study table persists. */
 export interface FsrsProgress {

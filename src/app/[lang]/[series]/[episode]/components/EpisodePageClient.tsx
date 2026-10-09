@@ -19,12 +19,16 @@ import {
   FilterOption,
 } from "@/app/components/phrase/PhraseSortAndFilter";
 import { SpacedRepetitionGame } from "@/app/components/study/SpacedRepetitionGame";
+import { EssentialsSession } from "@/app/components/study/EssentialsSession";
+import type { EpisodeEssential } from "@/types/essentials";
 import { EpisodeInfoSection } from "./EpisodeInfoSection";
+import { useEssentialsProgress } from "./useEssentialsProgress";
 
 interface EpisodePageClientProps {
   show: Show;
   episode: Episode;
   phrases: ExtractedPhrase[];
+  essentials: EpisodeEssential[];
   series: string;
   episodeSlug: string;
 }
@@ -33,6 +37,7 @@ export default function EpisodePageClient({
   show,
   episode,
   phrases,
+  essentials,
 }: EpisodePageClientProps) {
   const [sortOption, setSortOption] = useState<SortOption>("none");
   const [filterOption, setFilterOption] = useState<FilterOption>("all");
@@ -41,6 +46,7 @@ export default function EpisodePageClient({
   );
   const [isExportMode, setIsExportMode] = useState(false);
   const [showStudyGame, setShowStudyGame] = useState(false);
+  const [showEssentials, setShowEssentials] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
@@ -48,6 +54,12 @@ export default function EpisodePageClient({
   const contentLang = toTargetLanguage(show.language);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getProgressForPhrase } = useCardProgress(phrases.map((p) => p.id));
+  const { knownIds, recordReview } = useEssentialsProgress(
+    essentials.map((e) => e.id)
+  );
+  const episodeTitle = `${episodeCode(episode.season, episode.episode_number)}${
+    episode.title ? ` — ${episode.title}` : ""
+  }`;
 
   const handleToggleFavorite = async (phraseId: string): Promise<void> => {
     const result = await toggleFavorite(phraseId);
@@ -125,7 +137,10 @@ export default function EpisodePageClient({
         show={show}
         episode={episode}
         phrases={phrases}
+        essentialsCount={essentials.length}
+        knownEssentials={knownIds.size}
         onStartStudy={() => setShowStudyGame(true)}
+        onStartEssentials={() => setShowEssentials(true)}
       />
 
       <section className="px-5 pb-[60px] pt-1 md:px-10">
@@ -273,13 +288,23 @@ export default function EpisodePageClient({
 
       <SpacedRepetitionGame
         episodeId={episode.id}
-        episodeTitle={`${episodeCode(episode.season, episode.episode_number)}${
-          episode.title ? ` — ${episode.title}` : ""
-        }`}
+        episodeTitle={episodeTitle}
         language={contentLang}
         open={showStudyGame}
         onClose={() => setShowStudyGame(false)}
       />
+
+      {essentials.length > 0 && (
+        <EssentialsSession
+          open={showEssentials}
+          onClose={() => setShowEssentials(false)}
+          essentials={essentials}
+          episodeTitle={episodeTitle}
+          language={contentLang}
+          knownIds={knownIds}
+          onReview={recordReview}
+        />
+      )}
     </div>
   );
 }

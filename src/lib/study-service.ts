@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { scheduleReview } from './fsrs';
+import { scheduleReview, type FsrsProgress } from './fsrs';
+import type { EssentialStudy } from '@/types/essentials';
 import {
   StudySession,
   CardStudy,
@@ -150,6 +151,41 @@ export class StudyService {
     }
 
     return savedStudy;
+  }
+
+  /**
+   * The user's progress on these essentials. Essentials are recognition-only
+   * for now ('pt-en' = target → English, for any target language).
+   */
+  async getEssentialStudies(userId: string, essentialIds: string[]): Promise<EssentialStudy[]> {
+    if (essentialIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('user_essential_studies')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('study_direction', 'pt-en')
+      .in('essential_id', essentialIds);
+
+    if (error) {
+      console.error('Error loading essential progress:', error);
+      return [];
+    }
+    return data ?? [];
+  }
+
+  /** Persist one essential's progress (already scheduled by `scheduleReview`). */
+  async saveEssentialStudy(userId: string, essentialId: string, progress: FsrsProgress): Promise<void> {
+    const { error } = await supabase
+      .from('user_essential_studies')
+      .upsert(
+        { user_id: userId, essential_id: essentialId, study_direction: 'pt-en', ...progress },
+        { onConflict: 'user_id,essential_id,study_direction' }
+      );
+
+    if (error) {
+      console.error('Error saving essential progress:', error);
+      throw error;
+    }
   }
 
   /**

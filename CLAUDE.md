@@ -51,16 +51,17 @@ Vercel (Next.js)  ──enqueue jobs──▶  Supabase (extraction_jobs)  ◀�
   `rtp`/`rtve`, absent = `rtp`); the worker scrapes each episode — and
   `manual_upload` (browser POSTs the file content to
   `/api/manual-upload/start`, which embeds it in the job; the worker extracts it —
-  no scraper). Both enqueue with `status='queued'`; the worker claims
-  `queued → running`.
+  no scraper) — and `essentials_backfill` (pick essentials for already-extracted
+  episodes from their stored subtitle; see "Episode Essentials"). All enqueue
+  with `status='queued'`; the worker claims `queued → running`.
 - **Robustness:** atomic claim (safe to run multiple workers), a per-job
   heartbeat + stale-reclaim (a crashed worker's job auto-resumes; dedup makes
   re-processing safe), per-unit retries with backoff, graceful shutdown, and a
   `worker_status` liveness row surfaced as a "worker online" badge on `/upload`.
 - **Progress** reaches the UI via **Supabase Realtime** on `extraction_jobs`
   (`useExtractionJobs` subscribes; a slow poll is the backstop).
-- **Enqueue endpoints:** `POST /api/series-import/start`, `POST /api/manual-upload/start`
-  (both admin-only, enqueue-only); `POST /api/series-import/preview` lists a
+- **Enqueue endpoints:** `POST /api/series-import/start`, `POST /api/manual-upload/start`,
+  `POST /api/essentials/start` (all admin-only, enqueue-only); `POST /api/series-import/preview` lists a
   series' episodes (and seasons, for RTVE) for the importer UI. There is **no** `/api/extract-phrases` route
   anymore — extraction is the worker's job.
 
@@ -71,7 +72,8 @@ worker-only `docker-compose.yml`). The worker needs `NEXT_PUBLIC_SUPABASE_URL`,
 
 **Required DB migrations** (in `database/`, idempotent — apply with `psql`):
 `extraction_jobs_table.sql`, `add_queued_status.sql`, `worker_status_table.sql`,
-`enable_realtime_extraction_jobs.sql`.
+`enable_realtime_extraction_jobs.sql`, `user_card_studies_learning_steps.sql`,
+`essentials.sql`. Deploy order for schema changes: migration → worker → app.
 
 After this split, the LLM keys (`OPENAI_API_KEY`, etc.) live **only** on the
 worker and should be **removed from the Vercel env**; the `ai`/`@ai-sdk/*` SDK no
@@ -247,6 +249,37 @@ The application includes an advanced spaced repetition system for optimal langua
 - Direction toggle automatically restarts session with fresh cards
 - Intelligent scheduling based on individual memory patterns per cognitive skill
 - Seamless integration with existing authentication and favorites systems
+
+## Episode Essentials
+
+Each episode can have a small **essentials** deck: the 20–30 expressions a
+learner needs to follow it (idioms, slang, key words — short reusable chunks in
+dictionary form, not whole lines). The episode page shows an **Essentials**
+button and a readiness pill ("Essenciais · 18/25 sabidas" → "Pronto para ver").
+
+- **Data** (`database/essentials.sql`): `essentials` is a per-language
+  **lexicon** (unique on `language, normalized_key`); `episode_essentials` links
+  an episode to ranked lexicon items with the line as heard and the meaning in
+  that episode; `user_essential_studies` holds per-user FSRS progress **keyed by
+  lexicon item**, so progress carries across episodes and survives a forced
+  re-extraction. Content tables are public-read and written only by the worker.
+- **Generation** (worker only): `src/lib/llm/extract-essentials.ts` (prompt +
+  model default, `ESSENTIALS_LLM_PROVIDER`/`_MODEL`), `extractEssentialsFromSubtitle`
+  in `src/lib/extractor` (grounding checks via `src/lib/essentials/grounding.ts`,
+  importance ranking), `src/lib/essentials/generate.ts` (extract + save via
+  `src/lib/db/essentials.ts`). Runs as a non-fatal step after each series-import
+  and manual-upload extraction; the `essentials_backfill` job (Essentials tab on
+  `/upload`, or "Regenerate essentials" on the episode edit page) is the retry
+  and backfill path. `src/lib/db/essentials.ts` must not import runtime values
+  from `@/lib/llm` (it's in the Next bundle).
+- **Study:** a finite drill (`src/app/components/study/EssentialsSession/`):
+  the not-yet-known essentials in rank order, "Again" requeues a card a few
+  cards later, the round ends when every card is "Got it". Recognition only
+  (`'pt-en'`). An essential is **known** when its latest rating was ≥ 3 (it
+  doesn't expire). Progress lives in `useEssentialsProgress` on the episode page
+  (shared by the pill and the session); FSRS scheduling is the shared pure
+  `src/lib/fsrs.ts` (also used by the phrase deck — `learning_steps` must be
+  persisted).
 
 ## Environment Variables Required
 

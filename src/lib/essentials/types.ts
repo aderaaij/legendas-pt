@@ -17,7 +17,7 @@ export interface EssentialsBackfillPlan {
   model: string | null;
 }
 
-export type BackfillEpisodeStatus =
+type BackfillEpisodeStatus =
   | "success"
   /** Already had essentials (and not forcing), or the episode is gone. */
   | "skipped"

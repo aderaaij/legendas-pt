@@ -20,6 +20,8 @@ sources (RTP Play, RTVE Play), and the LLM provider, and exposes no inbound port
   absent = `rtp`), writing per-episode progress to the job row.
 - `process-manual-upload.ts` — runs one `manual_upload` job (embedded file,
   `plan.language` = `pt` | `es`).
+- `process-essentials-backfill.ts` — runs one `essentials_backfill` job:
+  (re)generates essentials for a list of episodes from their stored subtitle.
 - `env.ts` / `bootstrap.ts` — env loading + validation (bootstrap runs first).
 
 It reuses the shared, framework-free libraries under `src/lib/*`:
@@ -59,8 +61,12 @@ bypasses RLS), and at least one LLM key (`OPENAI_API_KEY` by default).
 
 ## Behaviour & scope (Phase 1)
 
-- Handles `rtp_series` (RTP or RTVE series import) and `manual_upload` jobs, one job at a time per worker
-  (single internal concurrency).
+- Handles `rtp_series` (RTP or RTVE series import), `manual_upload` and
+  `essentials_backfill` jobs, one job at a time per worker (single internal
+  concurrency). Unknown job types are marked failed.
+- After each successful extraction it also picks the episode's **essentials**
+  (a second, smaller LLM pass; non-fatal — a failure is recorded on the
+  episode's state and the `essentials_backfill` job is the retry path).
 - Claims `queued` jobs with an **atomic claim** (`UPDATE ... WHERE status =
   'queued'`), so running **multiple workers is safe** — each job goes to exactly
   one worker, no double-processing. (One worker is plenty for this workload; the

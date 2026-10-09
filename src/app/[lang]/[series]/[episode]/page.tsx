@@ -12,7 +12,9 @@ import {
   normalizeShowName,
   generateShowSlug,
 } from "@/utils/slugify";
+import { getEpisodeEssentials } from "@/lib/db/essentials";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import type { EpisodeEssential } from "@/types/essentials";
 import { toTargetLanguage } from "@/lib/i18n/languages";
 import EpisodePageClient from "./components/EpisodePageClient";
 
@@ -28,6 +30,7 @@ async function getEpisodeBySlug(seriesSlug: string, episodeSlug: string): Promis
   show: Show;
   episode: Episode;
   phrases: ExtractedPhrase[];
+  essentials: EpisodeEssential[];
 } | null> {
   try {
     // Parse the series slug to get show information
@@ -69,15 +72,17 @@ async function getEpisodeBySlug(seriesSlug: string, episodeSlug: string): Promis
       return null;
     }
 
-    // Load phrases for this episode
-    const episodePhrases = await PhraseExtractionService.getPhrasesForEpisode(
-      targetEpisode.id
-    );
+    // Load phrases and essentials (the latter never throws — see its docs).
+    const [episodePhrases, essentials] = await Promise.all([
+      PhraseExtractionService.getPhrasesForEpisode(targetEpisode.id),
+      getEpisodeEssentials(targetEpisode.id),
+    ]);
 
     return {
       show: matchingShow,
       episode: targetEpisode,
       phrases: episodePhrases,
+      essentials,
     };
   } catch (err) {
     console.error("Error loading episode data:", err);
@@ -148,13 +153,14 @@ export default async function EpisodePage({ params }: Props) {
     notFound();
   }
 
-  const { show, episode, phrases } = data;
+  const { show, episode, phrases, essentials } = data;
 
   return (
     <EpisodePageClient
       show={show}
       episode={episode}
       phrases={phrases}
+      essentials={essentials}
       series={series}
       episodeSlug={episodeSlug}
     />

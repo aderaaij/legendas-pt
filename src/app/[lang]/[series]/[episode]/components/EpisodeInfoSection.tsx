@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, Settings } from "lucide-react";
+import { Brain, CheckCircle2, Settings, Sparkles } from "lucide-react";
 
 import { Show, Episode, ExtractedPhrase } from "@/lib/supabase";
 import {
@@ -17,14 +17,34 @@ interface EpisodeInfoSectionProps {
   show: Show;
   episode: Episode;
   phrases: ExtractedPhrase[];
+  essentialsCount: number;
+  knownEssentials: number;
   onStartStudy: () => void;
+  onStartEssentials: () => void;
 }
+
+const primaryButton = {
+  className:
+    "flex items-center gap-[9px] rounded-lg px-[26px] py-3 text-[14.5px] font-bold text-white",
+  style: { background: "var(--accent)", boxShadow: "0 10px 28px -8px var(--accent)" },
+};
+const secondaryButton = {
+  className: "flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold",
+  style: {
+    border: "1px solid var(--border2)",
+    background: "rgba(255,255,255,.06)",
+    color: "var(--text)",
+  },
+};
 
 export const EpisodeInfoSection = ({
   show,
   episode,
   phrases,
+  essentialsCount,
+  knownEssentials,
   onStartStudy,
+  onStartEssentials,
 }: EpisodeInfoSectionProps) => {
   const { isAdmin } = useAuth();
   const { lang, t } = useLanguage();
@@ -33,6 +53,10 @@ export const EpisodeInfoSection = ({
   const channel = show.network || show.source;
   const date = formatShortDate(episode.air_date, lang);
   const runtime = episode.duration_minutes ?? episode.runtime;
+  const hasEssentials = essentialsCount > 0;
+  const ready = hasEssentials && knownEssentials >= essentialsCount;
+  // Essentials lead until you're ready to watch; then the full deck does.
+  const essentialsLead = hasEssentials && !ready;
 
   const tags = [
     date,
@@ -128,15 +152,21 @@ export const EpisodeInfoSection = ({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {hasEssentials && (
+              <button
+                onClick={onStartEssentials}
+                title={t.essentials.buttonHint}
+                {...(essentialsLead ? primaryButton : secondaryButton)}
+              >
+                <Sparkles className="h-4 w-4" />
+                {t.essentials.button}
+              </button>
+            )}
             {phrases.length > 0 && (
               <button
                 onClick={onStartStudy}
-                className="flex items-center gap-[9px] rounded-lg px-[26px] py-3 text-[14.5px] font-bold text-white"
-                style={{
-                  background: "var(--accent)",
-                  boxShadow: "0 10px 28px -8px var(--accent)",
-                }}
+                {...(essentialsLead ? secondaryButton : primaryButton)}
               >
                 <Brain className="h-4 w-4" />
                 {t.episode.startStudy}
@@ -148,16 +178,26 @@ export const EpisodeInfoSection = ({
                   episode.season,
                   episode.episode_number
                 )}/edit`}
-                className="flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold"
-                style={{
-                  border: "1px solid var(--border2)",
-                  background: "rgba(255,255,255,.06)",
-                  color: "var(--text)",
-                }}
+                {...secondaryButton}
               >
                 <Settings className="h-[15px] w-[15px]" />
                 {t.episode.editEpisode}
               </Link>
+            )}
+            {hasEssentials && (
+              <span
+                className="flex items-center gap-[6px] rounded-full px-3 py-[6px] text-[12px] font-bold"
+                style={
+                  ready
+                    ? { color: "var(--green)", background: "color-mix(in srgb, var(--green) 15%, transparent)" }
+                    : { color: "var(--muted)", background: "rgba(255,255,255,.08)", border: "1px solid var(--border)" }
+                }
+              >
+                {ready && <CheckCircle2 className="h-[14px] w-[14px]" />}
+                {ready
+                  ? t.essentials.ready
+                  : `${t.essentials.button} · ${t.essentials.readiness(knownEssentials, essentialsCount)}`}
+              </span>
             )}
           </div>
         </div>

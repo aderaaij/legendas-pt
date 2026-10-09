@@ -11,6 +11,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { TargetLanguage } from "@/lib/i18n/languages";
 import { FavoriteButton } from "../common/FavoriteButton";
+import { RatingButtons } from "./RatingButtons";
 
 interface StudyCardProps {
   card: StudyCardType;
@@ -171,28 +172,18 @@ export function StudyCard({
 
       {/* Ratings or hint */}
       {showAnswer ? (
-        <div className="px-6 pb-[22px]">
-          <div className="mb-[14px] text-center text-[13px]" style={{ color: "var(--muted)" }}>
-            {t.study.howDidItGo}
-          </div>
-          <div className="grid grid-cols-2 gap-[11px]">
-            {RATINGS.map(({ rating, key, bg, fg }) => (
-              <button
-                key={rating}
-                onClick={() => handleResponse(rating)}
-                className="rounded-xl p-[14px] text-left transition-transform hover:scale-[1.02]"
-                style={{ background: bg, color: fg }}
-              >
-                <div className="text-[15px] font-extrabold">
-                  {t.study.ratings[key].label}
-                </div>
-                <div className="text-[11.5px] opacity-80">
-                  {t.study.ratings[key].hint} · {rating}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        <RatingButtons
+          prompt={t.study.howDidItGo}
+          options={RATINGS.map(({ rating, key, bg, fg }) => ({
+            rating,
+            label: t.study.ratings[key].label,
+            hint: t.study.ratings[key].hint,
+            shortcut: String(rating),
+            bg,
+            fg,
+          }))}
+          onRate={handleResponse}
+        />
       ) : (
         <div className="px-6 pb-6 text-center text-[12.5px]" style={{ color: "var(--faint)" }}>
           {t.study.keyHintBefore}{" "}
